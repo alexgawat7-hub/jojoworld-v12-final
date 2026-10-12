@@ -1,1 +1,94 @@
-const express=require('express');const bodyParser=require('body-parser');const fs=require('fs');const app=express();app.use(bodyParser.json());const ADMIN_ID="100064525073153";const GCASH_NUM="09517080795";const PAYPAL_EMAIL="alexgawat7@gmail.com";const VERIFY_TOKEN="jojoworld_v12";const PAGE_TOKEN=process.env.PAGE_TOKEN;let db={users:{},groups:{},pendings:{}};if(fs.existsSync('./db.json'))db=JSON.parse(fs.readFileSync('./db.json'));function save(){fs.writeFileSync('./db.json',JSON.stringify(db,null,2));}const CITY_COORDS={"manila":[14.5995,120.9842],"cebu":[10.3157,123.8854],"davao":[7.1907,125.4553],"tokyo":[35.6762,139.6503],"seoul":[37.5665,126.9780],"bangkok":[13.7563,100.5018],"singapore":[1.3521,103.8198],"dubai":[25.2048,55.2708],"london":[51.5074,-0.1278],"new york":[40.7128,-74.0060],"paris":[48.8566,2.3522],"sydney":[-33.8688,151.2093]};function getDistance(l1,l2){const c1=CITY_COORDS[l1?.toLowerCase()]||[14.5995,120.9842];const c2=CITY_COORDS[l2?.toLowerCase()]||[14.5995,120.9842];const R=6371;const dLat=(c2[0]-c1[0])*Math.PI/180;const dLon=(c2[1]-c1[1])*Math.PI/180;const a=Math.sin(dLat/2)**2+Math.cos(c1[0]*Math.PI/180)*Math.cos(c2[0]*Math.PI/180)*Math.sin(dLon/2)**2;return(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);}function zodiac(m,d){if((m==3&&d>=21)||(m==4&&d<=19))return"♈ Aries";if((m==4&&d>=20)||(m==5&&d<=20))return"♉ Taurus";if((m==5&&d>=21)||(m==6&&d<=20))return"♊ Gemini";if((m==6&&d>=21)||(m==7&&d<=22))return"♋ Cancer";if((m==7&&d>=23)||(m==8&&d<=22))return"♌ Leo";if((m==8&&d>=23)||(m==9&&d<=22))return"♍ Virgo";if((m==9&&d>=23)||(m==10&&d<=22))return"♎ Libra";if((m==10&&d>=23)||(m==11&&d<=21))return"♏ Scorpio";if((m==11&&d>=22)||(m==12&&d<=21))return"♐ Sagittarius";if((m==12&&d>=22)||(m==1&&d<=19))return"♑ Capricorn";if((m==1&&d>=20)||(m==2&&d<=18))return"♒ Aquarius";return"♓ Pisces";}function send(id,text,qr=null){const body={recipient:{id},message:{text}};if(qr)body.message.quick_replies=qr;fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`,{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}function sendButtons(id,type){if(type==="TOPUP_MENU"){return send(id,"💰 TOP UP - Pindot lang boss:",[{content_type:"text",title:"GCash P50=300c",payload:"TOPUP GCASH 50"},{content_type:"text",title:"GCash P100=700c",payload:"TOPUP GCASH 100"},{content_type:"text",title:"GCash P200=1600c",payload:"TOPUP GCASH 200"},{content_type:"text",title:"GCash P500=4500c",payload:"TOPUP GCASH 500"},{content_type:"text",title:"PayPal $5=700c",payload:"TOPUP PAYPAL 5"},{content_type:"text",title:"PayPal $10=1600c",payload:"TOPUP PAYPAL 10"},{content_type:"text",title:"📋 Rates",payload:"TOP UP RATES"},{content_type:"text",title:"📦 Pending",payload:"MY PENDING"}]);}if(type==="MAIN_MENU"){return send(id,"📋 MENU - Pindot ka lang:",[{content_type:"text",title:"👤 Profile",payload:"PROFILE"},{content_type:"text",title:"💘 Near Me",payload:"NEAR ME"},{content_type:"text",title:"🌍 Near World",payload:"NEAR WORLD"},{content_type:"text",title:"👥 Near Group",payload:"NEAR GROUP"},{content_type:"text",title:"🏆 Top",payload:"LEADERBOARD"},{content_type:"text",title:"💰 Top Up",payload:"TOP UP"},{content_type:"text",title:"🎁 Daily",payload:"DAILY"},{content_type:"text",title:"💼 Wallet",payload:"WALLET"}]);}}app.get('/webhook',(req,res)=>{if(req.query['hub.verify_token']===VERIFY_TOKEN)res.send(req.query['hub.challenge']);else res.send('Error');});app.post('/webhook',async(req,res)=>{const entry=req.body.entry?.[0]?.messaging?.[0];if(!entry)return res.sendStatus(200);const sender=entry.sender.id;let text=entry.message?.text||entry.message?.quick_reply?.payload||"";text=text.trim();const up=text.toUpperCase();if(!db.users[sender])db.users[sender]={id:sender,step:"new",coins:0,pics:[],match:null,group:null,rating:5,votes:0,badges:[],streak:0,lastDaily:null,bio:"Wala pa",interests:"Wala pa",status:"Single",birthday:null,zodiac:"",location:"Manila",age:0,gender:"",joined:Date.now(),spent:0,matches:0};const u=db.users[sender];const isAdmin=sender===ADMIN_ID;if(up==="MY ID"){send(sender,`🆔 ID mo: ${sender}`);return res.sendStatus(200);}if(up==="PENDING"&&isAdmin){let list=Object.entries(db.pendings).map(([c,p])=>`${c} - ${p.user} - ${p.type} ${p.amount} - ${p.status}`).join("\n")||"Wala pending";send(sender,`📦 PENDING:\n${list}`);return res.sendStatus(200);}if(up.startsWith("APPROVE ")&&isAdmin){const code=up.split(" ")[1];const p=db.pendings[code];if(!p){send(sender,"❌ Wala code");return res.sendStatus(200);}const t=db.users[p.user];const rates={"50":300,"100":700,"200":1600,"300":2500,"500":4500,"1000":10000,"5":700,"10":1600,"20":3200};const add=rates[p.amount]||300;if(t){t.coins+=add;p.status="APPROVED";save();send(p.user,`✅ APPROVED! +${add}c Code:${code} Bal:${t.coins}c`);send(sender,`✅ Approved ${code} +${add}c kay ${p.user}`);}return res.sendStatus(200);}if(u.step==="new"&&up==="REGISTER"){u.step="ask_gender";save();send(sender,"👋 Register! MALE or FEMALE?");return res.sendStatus(200);}if(u.step==="ask_gender"){u.gender=up.includes("MALE")&&!up.includes("FE")?"MALE":"FEMALE";u.step="ask_age";save();send(sender,"🎂 Ilan taon? 18+ only");return res.sendStatus(200);}if(u.step==="ask_age"){const age=parseInt(text);if(age<18){send(sender,"❌ 18+ only!");return res.sendStatus(200);}u.age=age;u.step="ask_loc";save();send(sender,"📍 Saan ka? ex: Manila, Tokyo, Dubai");return res.sendStatus(200);}if(u.step==="ask_loc"){u.location=text;u.step="done";u.coins+=100;u.badges.push("✅ Verified");save();send(sender,`✅ Registered! +100c FREE 📍${u.location}`);sendButtons(sender,"MAIN_MENU");return res.sendStatus(200);}if(u.step!=="done"&&up!=="REGISTER"){send(sender,"Type REGISTER para start");return res.sendStatus(200);}if(["WALLET","MENU","HI","START"].includes(up)){send(sender,`💼 WALLET\n💰 ${u.coins}c | Spent ${u.spent}c\n👤 ${u.gender} ${u.age} ${u.location}\n📸 ${u.pics.length}/12 | 🔥${u.matches}`);sendButtons(sender,"MAIN_MENU");return res.sendStatus(200);}if(up==="PROFILE"){const dist=u.match?getDistance(u.location,db.users[u.match]?.location):"0";const badges=u.badges.join(" | ")||"Wala pa";const days=Math.floor((Date.now()-u.joined)/86400000);const rank=Object.values(db.users).sort((a,b)=>b.coins-a.coins).findIndex(x=>x.id===sender)+1;const card=`╔══ PROFILE ══╗\n👤 ${u.gender} - ${u.badges.includes("✅ Verified")?"VERIFIED ✅":""}\n⭐ ${u.rating.toFixed(1)} (${u.votes} votes) | 🏆 Rank #${rank}\n📍 ${u.location} 📍 ${dist}km | 🎂${u.age} ${u.gender} ${u.zodiac}\n💬 BIO: "${u.bio}"\n❤️ Interests: ${u.interests}\n💞 Status: ${u.status}\n💰 ${u.coins}c | Spent ${u.spent}c\n📸 ${u.pics.length}/12 | 🔥${u.matches} Matches\n👥 ${u.group||"No Group"} (${u.group?Object.values(db.users).filter(x=>x.group===u.group).length:0} members)\n📅 Joined ${days} days | ⚡ Online Now\n🏅 BADGES: ${badges}\n[USER] ID: ${sender.slice(-4)}\n╚═══════════════╝`;send(sender,card);return res.sendStatus(200);}if(up.startsWith("EDIT BIO ")){u.bio=text.slice(9);save();send(sender,`✅ Bio: ${u.bio}`);return res.sendStatus(200);}if(up.startsWith("EDIT INTERESTS ")){u.interests=text.slice(15);save();send(sender,`✅ Interests: ${u.interests}`);return res.sendStatus(200);}if(up.startsWith("SET STATUS ")){u.status=text.slice(11);save();send(sender,`✅ Status: ${u.status}`);return res.sendStatus(200);}if(up.startsWith("SET BIRTHDAY ")){const d=text.slice(13);const [y,m,day]=d.split("-").map(Number);u.birthday=d;u.zodiac=zodiac(m,day);save();send(sender,`✅ Birthday ${d} ${u.zodiac}`);return res.sendStatus(200);}if(up==="TOP UP"||up==="TOP UP RATES"){sendButtons(sender,"TOPUP_MENU");send(sender,`💰 RATES:\nGCash: P50=300c P100=700c P200=1600c P500=4500c\nPayPal: $5=700c $10=1600c\nGCash: ${GCASH_NUM}\nPayPal: ${PAYPAL_EMAIL}\nUnlimited coins - approve lang!`);return res.sendStatus(200);}if(up.startsWith("TOPUP GCASH ")||up.startsWith("TOPUP PAYPAL ")){const parts=text.split(" ");const type=parts[1];const amount=parts[2];const code=Math.random().toString(36).substring(2,7).toUpperCase();db.pendings[code]={user:sender,type,amount,status:"PENDING",time:Date.now()};save();send(sender,`💳 ${type} ${amount} - Code: ${code}\nSend to ${type==="GCASH"?GCASH_NUM:PAYPAL_EMAIL}\nAmount: ${type==="GCASH"?"P"+amount:"$"+amount}\nSend receipt PIC dito! Code: ${code}`,[{content_type:"text",title:"✅ I Sent Receipt",payload:"RECEIPT SENT "+code},{content_type:"text",title:"❌ Cancel",payload:"CANCEL "+code}]);return res.sendStatus(200);}if(up==="NEAR ME"||up==="FIND MATCH"){if(u.coins<10){send(sender,"❌ Kulang 10c");return res.sendStatus(200);}u.coins-=10;u.spent+=10;let cand=Object.values(db.users).filter(x=>x.id!==sender&&x.step==="done"&&!x.match);if(up==="NEAR ME")cand.sort((a,b)=>parseFloat(getDistance(u.location,a.location))-parseFloat(getDistance(u.location,b.location)));const match=cand[0];if(!match){send(sender,"❌ Wala available");return res.sendStatus(200);}u.match=match.id;match.match=sender;u.matches++;match.matches++;save();const dist=getDistance(u.location,match.location);send(sender,`💘 MATCHED! 👤 ${match.gender} ${match.age} ${match.location} 📍${dist}km\n⭐ ${match.rating.toFixed(1)} | "${match.bio}"\nType CHAT MATCH Hi (5c)`);send(match.id,`💘 MATCHED! 👤 ${u.gender} ${u.age} ${u.location} 📍${dist}km`);return res.sendStatus(200);}if(up.startsWith("CHAT MATCH ")){if(!u.match){send(sender,"❌ Wala match");return res.sendStatus(200);}if(u.coins<5){send(sender,"❌ Kulang 5c");return res.sendStatus(200);}u.coins-=5;u.spent+=5;save();const msg=text.slice(11);const t=db.users[u.match];const dist=getDistance(u.location,t.location);send(t.id,`💬 ${u.gender} ${u.age} 📍${dist}km: ${msg}\n[USER] ${sender.slice(-4)}`);send(sender,"✅ Sent!");return res.sendStatus(200);}if(up==="DISTANCE"&&u.match){const t=db.users[u.match];send(sender,`📍 Distance: ${getDistance(u.location,t.location)}km from ${t.location}`);return res.sendStatus(200);}if(["END","STOP"].includes(up)&&u.match){const t=db.users[u.match];if(t)t.match=null;u.match=null;save();send(sender,"✅ Ended");if(t)send(t.id,"⚠️ Match ended");return res.sendStatus(200);}if(up==="NEAR GROUP"){const groups={};Object.values(db.users).forEach(x=>{if(x.group)groups[x.group]=(groups[x.group]||0)+1;});let txt="👥 GROUPS:\n";Object.entries(groups).forEach(([g,c])=>txt+=`${g} - ${c} members\n`);send(sender,txt||"Wala groups JOIN GROUP Manila");return res.sendStatus(200);}if(up.startsWith("JOIN GROUP ")){const g=text.slice(11);u.group=g;save();send(sender,`✅ Joined ${g} ${Object.values(db.users).filter(x=>x.group===g).length} members`);Object.values(db.users).forEach(x=>{if(x.group===g&&x.id!==sender)send(x.id,`✅ ${u.gender} ${u.age} joined ${g}`);});return res.sendStatus(200);}if(up==="VIEW NEAR"){let nearby=Object.values(db.users).filter(x=>x.id!==sender&&x.group===u.group).slice(0,5);let txt=`👥 ${u.group} NEAR (5):\n`;nearby.forEach(x=>{txt+=`👤 ${x.gender} ${x.age} ${x.location} 📍${getDistance(u.location,x.location)}km ⭐${x.rating.toFixed(1)} [USER] ${x.id.slice(-4)}\n`;});send(sender,txt||"Wala ka group");return res.sendStatus(200);}if(up==="GROUP MEMBERS"||up==="MEMBERS"){let members=Object.values(db.users).filter(x=>x.group===u.group);let txt=`👥 ${u.group} MEMBERS ${members.length}:\n`;members.forEach(x=>txt+=`👤 ${x.gender} ${x.age} ${x.location} 📍${getDistance(u.location,x.location)}km [${x.id===sender?"YOU":x.id===ADMIN_ID?"ADMIN":"USER"}]\n`);send(sender,txt);return res.sendStatus(200);}if(up.startsWith("GROUP CHAT ")){if(!u.group){send(sender,"❌ Join group muna");return res.sendStatus(200);}if(u.coins<5){send(sender,"❌ Kulang 5c");return res.sendStatus(200);}u.coins-=5;u.spent+=5;save();const msg=text.slice(11);Object.values(db.users).forEach(x=>{if(x.group===u.group)send(x.id,`👥 [${u.group}] 👤 ${u.gender} ${u.age} ${u.location} [USER]: ${msg}`);});return res.sendStatus(200);}if(up==="LEAVE GROUP"){const oldG=u.group;u.group=null;save();send(sender,`✅ Left ${oldG}`);Object.values(db.users).forEach(x=>{if(x.group===oldG)send(x.id,`⚠️ ${u.gender} ${u.age} left ${oldG}`);});return res.sendStatus(200);}if(up.startsWith("SET LOCATION ")){u.location=text.slice(13);save();send(sender,`✅ Location set to ${u.location}`);return res.sendStatus(200);}if(up==="PLACES LIST"||up==="PLACES"){send(sender,`🌍 PLACES 60+:\nManila, Cebu, Davao, Tokyo, Seoul, Bangkok, Singapore, Dubai, London, New York, Paris, Sydney, etc\nSET LOCATION <city>`);return res.sendStatus(200);}if(up==="NEAR WORLD"||up==="WORLD NEAR"){let all=Object.values(db.users).filter(x=>x.id!==sender).slice(0,10);let txt="🌍 WORLD NEAR:\n";all.forEach(x=>txt+=`👤 ${x.gender} ${x.age} ${x.location} 📍${getDistance(u.location,x.location)}km ⭐${x.rating.toFixed(1)} [USER]\n`);send(sender,txt);return res.sendStatus(200);}if(up==="DAILY"||up==="DAILY BONUS"){const today=new Date().toDateString();if(u.lastDaily===today){send(sender,"❌ Nag daily ka na today!");return res.sendStatus(200);}const yest=new Date(Date.now()-86400000).toDateString();if(u.lastDaily===yest)u.streak++;else u.streak=1;let add=50;if(u.streak>=3)add=100;if(u.streak>=7)add=200;u.coins+=add;u.lastDaily=today;save();send(sender,`🎁 DAILY +${add}c Streak ${u.streak} Bal ${u.coins}c`);return res.sendStatus(200);}if(["LEADERBOARD","TOP","RANK"].includes(up)){let sorted=Object.values(db.users).sort((a,b)=>b.coins-a.coins).slice(0,10);let txt="🏆 TOP 10 RICHEST:\n";sorted.forEach((x,i)=>txt+=`${i+1}. ${x.gender} ${x.age} ${x.location} - ${x.coins}c [USER]\n`);send(sender,txt);return res.sendStatus(200);}if(up.startsWith("RATE ")){if(!u.match){send(sender,"❌ Wala match");return res.sendStatus(200);}const r=parseInt(text.split(" ")[1]);const t=db.users[u.match];t.rating=((t.rating*t.votes)+r)/(t.votes+1);t.votes++;save();send(sender,`✅ Rated ${r} ⭐`);return res.sendStatus(200);}send(sender,"❓ Type MENU para kita buttons");res.sendStatus(200);});app.listen(process.env.PORT||3000,()=>console.log("V12 RUNNING"));
+// JOJOWORLD V12 WORLDWIDE - FINAL FIXED + BUTTONS
+const express = require('express');
+const bodyParser = require('body-parser');
+const fs = require('fs');
+const app = express();
+app.use(bodyParser.json());
+
+const ADMIN_ID = "100064525073153";
+const GCASH_NUM = "09517080795";
+const PAYPAL_EMAIL = "alexgawat7@gmail.com";
+const PAGE_TOKEN = process.env.PAGE_TOKEN;
+const VERIFY_TOKEN = "jojoworld_v12";
+
+let db = { users: {}, groups: {}, pendings: {} };
+if (fs.existsSync('./db.json')) db = JSON.parse(fs.readFileSync('./db.json'));
+function save(){ fs.writeFileSync('./db.json', JSON.stringify(db,null,2)); }
+
+// CITY COORDS FOR DISTANCE
+const CITY_COORDS = {
+  "manila": [14.5995,120.9842], "quezon city": [14.6760,121.0437], "cebu": [10.3157,123.8854],
+  "davao": [7.1907,125.4553], "tokyo": [35.6762,139.6503], "osaka": [34.6937,135.5023],
+  "seoul": [37.5665,126.9780], "beijing": [39.9042,116.4074], "shanghai": [31.2304,121.4737],
+  "hong kong": [22.3193,114.1694], "singapore": [1.3521,103.8198], "bangkok": [13.7563,100.5018],
+  "kuala lumpur": [3.1390,101.6869], "jakarta": [6.2088,106.8456], "dubai": [25.2048,55.2708],
+  "london": [51.5074,-0.1278], "new york": [40.7128,-74.0060], "los angeles": [34.0522,-118.2437],
+  "paris": [48.8566,2.3522], "berlin": [52.5200,13.4050], "rome": [41.9028,12.4964],
+  "sydney": [33.8688,151.2093], "toronto": [43.6532,-79.3832], "mexico city": [19.4326,-99.1332]
+};
+
+function getDistance(loc1, loc2){
+  const c1 = CITY_COORDS[loc1?.toLowerCase()] || [14.5995,120.9842];
+  const c2 = CITY_COORDS[loc2?.toLowerCase()] || [14.5995,120.9842];
+  const R=6371; const dLat=(c2[0]-c1[0])*Math.PI/180; const dLon=(c2[1]-c1[1])*Math.PI/180;
+  const a=Math.sin(dLat/2)**2 + Math.cos(c1[0]*Math.PI/180)*Math.cos(c2[0]*Math.PI/180)*Math.sin(dLon/2)**2;
+  return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);
+}
+function zodiac(m,d){
+  if((m==3&&d>=21)||(m==4&&d<=19))return "♈ Aries"; if((m==4&&d>=20)||(m==5&&d<=20))return "♉ Taurus";
+  if((m==5&&d>=21)||(m==6&&d<=20))return "♊ Gemini"; if((m==6&&d>=21)||(m==7&&d<=22))return "♋ Cancer";
+  if((m==7&&d>=23)||(m==8&&d<=22))return "♌ Leo"; if((m==8&&d>=23)||(m==9&&d<=22))return "♍ Virgo";
+  if((m==9&&d>=23)||(m==10&&d<=22))return "♎ Libra"; if((m==10&&d>=23)||(m==11&&d<=21))return "♏ Scorpio";
+  if((m==11&&d>=22)||(m==12&&d<=21))return "♐ Sagittarius"; if((m==12&&d>=22)||(m==1&&d<=19))return "♑ Capricorn";
+  if((m==1&&d>=20)||(m==2&&d<=18))return "♒ Aquarius"; return "♓ Pisces";
+}
+function send(id, text, quick_replies=null){
+  const body={ recipient:{id}, message:{ text } };
+  if(quick_replies) body.message.quick_replies = quick_replies;
+  fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`,{
+    method:"POST", headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+}
+function sendButtons(id, text){
+  // TOP UP BUTTONS + MENU BUTTONS
+  if(text==="TOPUP_MENU"){
+    return send(id, "💰 TOP UP - Pindot lang boss para madali:",[
+      {content_type:"text", title:"GCash P50=300c", payload:"TOPUP GCASH 50"},
+      {content_type:"text", title:"GCash P100=700c", payload:"TOPUP GCASH 100"},
+      {content_type:"text", title:"GCash P200=1600c", payload:"TOPUP GCASH 200"},
+      {content_type:"text", title:"GCash P500=4500c", payload:"TOPUP GCASH 500"},
+      {content_type:"text", title:"PayPal $5=700c", payload:"TOPUP PAYPAL 5"},
+      {content_type:"text", title:"PayPal $10=1600c", payload:"TOPUP PAYPAL 10"},
+      {content_type:"text", title:"📋 Rates", payload:"TOP UP RATES"},
+      {content_type:"text", title:"📦 Pending", payload:"MY PENDING"}
+    ]);
+  }
+  if(text==="MAIN_MENU"){
+    return send(id, "📋 JOJOWORLD MENU - Pindot ka lang:",[
+      {content_type:"text", title:"👤 Profile", payload:"PROFILE"},
+      {content_type:"text", title:"💘 Near Me", payload:"NEAR ME"},
+      {content_type:"text", title:"🌍 Near World", payload:"NEAR WORLD"},
+      {content_type:"text", title:"👥 Near Group", payload:"NEAR GROUP"},
+      {content_type:"text", title:"🏆 Top", payload:"LEADERBOARD"},
+      {content_type:"text", title:"💰 Top Up", payload:"TOP UP"},
+      {content_type:"text", title:"🎁 Daily", payload:"DAILY"},
+      {content_type:"text", title:"💼 Wallet", payload:"WALLET"}
+    ]);
+  }
+}
+
+app.get('/webhook', (req,res)=>{
+  if(req.query['hub.verify_token']===VERIFY_TOKEN) res.send(req.query['hub.challenge']);
+  else res.send('Error');
+});
+
+app.post('/webhook', async (req,res)=>{
+  const entry = req.body.entry?.[0]?.messaging?.[0];
+  if(!entry) return res.sendStatus(200);
+  const sender = entry.sender.id;
+  let text = entry.message?.text || entry.message?.quick_reply?.payload || "";
+  text = text.trim();
+  const upText = text.toUpperCase();
+
+  if(!db.users[sender]){
+    db.users[sender] = { id:sender, step:"new", coins:0, pics:[], match:null, group:null, rating:5, votes:0, badges:[], streak:0, lastDaily:null, bio:"Wala pa", interests:"Wala pa", status:"Single", birthday:null, zodiac:"", location:"Manila
