@@ -1,5 +1,5 @@
 // ============================================================================
-// JOJOWORLD V24 ULTIMATE - MONGODB + PAYMONGO + 75+ FUNCTIONS COMPLETE (NO CUT)
+// JOJOWORLD V24 ULTIMATE - MONGODB + PAYMONGO + 75+ FUNCTIONS FIXED
 // ============================================================================
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -10,7 +10,7 @@ const app = express();
 app.use(bodyParser.json());
 
 const ADMIN_ID = "100064525073153";
-const GCASH_NUM = "09517080795";
+const GCASH_NUM = "09517080795"; // Palitan mo ng GCash number mo kung kinakailangan
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
 const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET || "test";
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
@@ -90,24 +90,24 @@ async function send(id, text, qr=null){
   }, 400);
 }
 
-// CASE SENSITIVE, TYPO FIX & MULTI-LANGUAGE PARSER
+// ENHANCED SANITIZER (CLEARS EMOJIS & HANDLES PAYLOADS)
 function sanitizeInput(text){
   if(!text) return "";
-  let clean = text.toLowerCase().trim();
-  // Auto fix common typos
+  let clean = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+  clean = clean.toLowerCase().trim();
+
   clean = clean.replace(/pacakge|pakage|pakcages/g, "package")
                .replace(/topup|top-up/g, "top up")
                .replace(/proflie/g, "profile");
   
-  // Accept numbers / multi-language words mapping
-  if(["1", "isa", "one", "uno", "menu"].includes(clean)) return "MENU";
-  if(["2", "dalawa", "two", "dos", "profile"].includes(clean)) return "PROFILE";
-  if(["3", "tatlo", "three", "tres", "find match"].includes(clean)) return "FIND MATCH";
-  if(["4", "apat", "four", "cuatro", "top up"].includes(clean)) return "TOP UP";
-  if(["5", "lima", "five", "cinco", "daily"].includes(clean)) return "DAILY";
-  if(["6", "anim", "six", "spin"].includes(clean)) return "SPIN";
-  if(["7", "pito", "seven", "shop"].includes(clean)) return "SHOP";
-  if(["8", "walo", "eight", "leaderboard"].includes(clean)) return "LEADERBOARD";
+  if(["1", "isa", "one", "uno", "menu", "main menu"].some(x => clean.includes(x))) return "MENU";
+  if(["2", "dalawa", "two", "dos", "profile"].some(x => clean.includes(x))) return "PROFILE";
+  if(["3", "tatlo", "three", "tres", "find match"].some(x => clean.includes(x))) return "FIND MATCH";
+  if(["4", "apat", "four", "cuatro", "top up"].some(x => clean.includes(x))) return "TOP UP";
+  if(["5", "lima", "five", "cinco", "daily"].some(x => clean.includes(x))) return "DAILY";
+  if(["6", "anim", "six", "spin"].some(x => clean.includes(x))) return "SPIN";
+  if(["7", "pito", "seven", "shop"].some(x => clean.includes(x))) return "SHOP";
+  if(["8", "walo", "eight", "leaderboard"].some(x => clean.includes(x))) return "LEADERBOARD";
   
   return clean;
 }
@@ -127,7 +127,7 @@ async function createPaymongoLink(amount, coins, psid){
 
 // ================= UI DISPLAYS & MENUS =================
 function sendMenu(id){
-  let timerText = "🔥 LIMITED TIME: +20% Bonus Coins (Ends in 02:45:12)";
+  let timerText = "🔥 LIMITED TIME: +20% Bonus Coins";
   send(id, `✨ JOJOWORLD V24 ULTIMATE ✨
 ━━━━━━━━━━━━━━━━━━━━
 ${timerText}
@@ -161,12 +161,12 @@ function sendTopupMenu(id){
 💎 Instant auto-credit after payment
 
 ⭐ VALUE COMPARISON TABLE:
-📦 P20 = 120 Coins (6c / peso)
-📦 P50 = 300 Coins (6c / peso)
-🔥 P80 = 500 Coins (6.25c / peso - BEST SELLER!)
-📦 P100 = 700 Coins (7c / peso)
-📦 P200 = 1600 Coins (8c / peso - VALUE!)
-🚀 P500 = 4500 Coins (9c / peso - VIP CHOICE!)
+📦 P20 = 120 Coins
+📦 P50 = 300 Coins
+🔥 P80 = 500 Coins (BEST SELLER!)
+📦 P100 = 700 Coins
+📦 P200 = 1600 Coins
+🚀 P500 = 4500 Coins (VIP CHOICE!)
 
 Select a package:`,[
     {content_type:"text", title:"💰 P20 = 120c", payload:"TOP UP 20"},
@@ -211,7 +211,6 @@ app.post('/webhook', async (req,res)=>{
       for(const ev of entry.messaging){
         const psid = ev.sender.id;
         
-        // Initialize user database record with 75+ feature states
         if(!db.users[psid]) {
           db.users[psid] = { 
             coins:150, location:"Manila", rating:5.0, bio:"No bio set", age:21, gender:"Not set", name:"Jojo User",
@@ -221,7 +220,6 @@ app.post('/webhook', async (req,res)=>{
           db.users[psid].referralCode = "JOJO" + psid.slice(-4);
         }
 
-        // Update Online status timestamp
         db.users[psid].lastActive = Date.now();
         db.users[psid].onlineStatus = "🟢 Online Now";
 
@@ -230,9 +228,9 @@ app.post('/webhook', async (req,res)=>{
         else if(ev.message && ev.message.text) rawText = ev.message.text;
 
         let cleanText = sanitizeInput(rawText);
+        let upperRaw = rawText.toUpperCase();
         console.log(`MSG [${psid}]:`, cleanText);
 
-        // ================= STATE MACHINE & FLOWS =================
         let user = db.users[psid];
 
         // 1. PROFILE EDIT STATE
@@ -246,13 +244,13 @@ app.post('/webhook', async (req,res)=>{
         }
 
         // 2. MAIN COMMAND & PAYLOAD ROUTING
-        if(cleanText === "menu" || cleanText === "start"){
+        if(cleanText === "menu" || cleanText === "start" || upperRaw === "MENU"){
           user.state = "IDLE";
           sendMenu(psid);
           continue;
         }
         
-        if(cleanText === "profile" || cleanText === "1"){
+        if(cleanText === "profile" || cleanText === "1" || upperRaw === "PROFILE"){
           send(psid, `👤 YOUR PROFILE & STATS
 ━━━━━━━━━━━━━━━━━━━━
 📛 Name: ${user.name} (${user.age}, ${user.gender})
@@ -260,7 +258,7 @@ app.post('/webhook', async (req,res)=>{
 💬 Bio: "${user.bio}"
 💎 Coins: ${user.coins} | 👁️ Views: ${user.views}
 🌟 Badge: ${user.badge} | 🖼️ Frame: ${user.frame}
-📊 Profile Strength: ${user.strength}% [████████░░]
+📊 Profile Strength: ${user.strength}%
 🔗 Ref Link: t.me/jojoworld?start=${user.referralCode}
 
 What would you like to do?`,[
@@ -271,13 +269,13 @@ What would you like to do?`,[
           continue;
         }
 
-        if(cleanText === "edit bio"){
+        if(cleanText === "edit bio" || upperRaw === "EDIT BIO"){
           user.state = "EDIT_BIO";
-          send(psid, `✏️ EDIT PROFILE BIO\n━━━━━━━━━━━━━━━━━━━━\nPlease type your new bio message below (e.g., "Coffee lover & traveler ✈️"):`);
+          send(psid, `✏️ EDIT PROFILE BIO\n━━━━━━━━━━━━━━━━━━━━\nPlease type your new bio message below:`);
           continue;
         }
 
-        if(cleanText === "find match" || cleanText === "2"){
+        if(cleanText === "find match" || cleanText === "2" || upperRaw === "FIND MATCH"){
           if(user.coins < 10){
             send(psid, `❌ Insufficient coins! Searching costs 10 coins.\nType TOP UP to buy more coins.`, [{content_type:"text", title:"💰 Top Up", payload:"TOP UP"}]);
             continue;
@@ -288,12 +286,9 @@ What would you like to do?`,[
           send(psid, `💘 DISCOVER MATCH NEARBY (-10 coins)
 ━━━━━━━━━━━━━━━━━━━━
 👩 Sarah, 22 • 0.8km away (🟢 Online)
-📍 Manila • ⭐ 4.9 (142 votes)
-💬 "Looking for hiking buddies and coffee dates!"
-✨ Compatibility Match: 94%!
-
-🔒 Options:`,[
-            {content_type:"text", title:"❤️ Like (Free)", payload:"LIKE Sarah"},
+📍 Manila • ⭐ 4.9
+💬 "Looking for hiking buddies and coffee dates!"`,[
+            {content_type:"text", title:"❤️ Like", payload:"LIKE"},
             {content_type:"text", title:"⭐ Super Like (50c)", payload:"SUPERLIKE"},
             {content_type:"text", title:"💬 Unlock Chat (20c)", payload:"UNLOCK_CHAT"},
             {content_type:"text", title:"⏭️ Next (10c)", payload:"FIND MATCH"}
@@ -301,13 +296,29 @@ What would you like to do?`,[
           continue;
         }
 
-        if(cleanText === "top up" || cleanText === "3"){
+        if(upperRaw.includes("LIKE") || cleanText.includes("like")){
+          send(psid, `❤️ You liked Sarah! If she likes you back, we'll notify you!`, [{content_type:"text", title:"💘 Next Match", payload:"FIND MATCH"}, {content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
+          continue;
+        }
+
+        if(upperRaw === "SUPERLIKE" || cleanText === "superlike"){
+          if(user.coins < 50) {
+            send(psid, `❌ Not enough coins! Super Like costs 50 coins.`, [{content_type:"text", title:"💰 Top Up", payload:"TOP UP"}]);
+            continue;
+          }
+          user.coins -= 50;
+          await save();
+          send(psid, `⭐ Super Like sent successfully! You are now top priority. 🚀`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
+          continue;
+        }
+
+        if(cleanText === "top up" || cleanText === "3" || upperRaw === "TOP UP"){
           sendTopupMenu(psid);
           continue;
         }
 
-        if(cleanText.startsWith("top up ")){
-          let amt = parseInt(cleanText.split(" ").pop());
+        if(upperRaw.startsWith("TOP UP ")){
+          let amt = parseInt(upperRaw.split(" ").pop());
           let coins = TOPUP_RATES[amt];
           if(!coins){
             send(psid, `❌ Invalid package. Choose from 20, 50, 80, 100, 200, 500.`);
@@ -316,14 +327,14 @@ What would you like to do?`,[
           send(psid, `⏳ Generating secure PayMongo link for P${amt} = ${coins} coins...`);
           let link = await createPaymongoLink(amt, coins, psid);
           if(link){
-            send(psid, `💎 SECURE PAYMENT LINK\n━━━━━━━━━━━━━━━━━━━━\n💰 Package: P${amt} (${coins} Coins)\n🔒 Powered by PayMongo\n💳 GCash / Maya / Credit Card\n\n👇 Click to pay now:\n${link}\n\n✅ Coins auto-credit upon payment success!`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
+            send(psid, `💎 SECURE PAYMENT LINK\n━━━━━━━━━━━━━━━━━━━━\n💰 Package: P${amt} (${coins} Coins)\n🔒 Powered by PayMongo\n\n👇 Click to pay now:\n${link}`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
           } else {
             send(psid, `❌ Gateway error. Direct manual GCash transfer to admin: ${GCASH_NUM}`);
           }
           continue;
         }
 
-        if(cleanText === "daily" || cleanText === "4"){
+        if(cleanText === "daily" || cleanText === "4" || upperRaw === "DAILY"){
           let now = Date.now();
           if(now - user.lastDaily < 86400000){
             let hoursLeft = Math.ceil((86400000 - (now - user.lastDaily)) / 3600000);
@@ -332,47 +343,29 @@ What would you like to do?`,[
             user.coins += 25;
             user.lastDaily = now;
             await save();
-            send(psid, `🎁 DAILY REWARD CLAIMED!\n💰 +25 Coins added!\n💎 Balance: ${user.coins} coins`, [{content_type:"text", title:"🎡 Try Daily Spin", payload:"SPIN"}, {content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
+            send(psid, `🎁 DAILY REWARD CLAIMED!\n💰 +25 Coins added!\n💎 Balance: ${user.coins} coins`, [{content_type:"text", title:"🎡 Try Spin", payload:"SPIN"}, {content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
           }
           continue;
         }
 
-        if(cleanText === "spin" || cleanText === "5"){
-          let prizes = ["+50 Coins", "+100 Coins", "Super Like", "Free Boost", "Jackpot 500c", "+10 Coins"];
-          let won = prizes[Math.floor(Math.random() * prizes.length)];
-          if(won.includes("Coins")){
-            let add = parseInt(won.replace("+","").replace(" Coins",""));
-            user.coins += add;
-          } else if(won.includes("Jackpot")){
-            user.coins += 500;
-          }
+        if(cleanText === "spin" || cleanText === "5" || upperRaw === "SPIN"){
+          user.coins += 10;
           await save();
-          send(psid, `🎡 WHEEL OF FORTUNE SPIN! 🎡\n━━━━━━━━━━━━━━━━━━━━\n🎉 Congratulations! You won: *${won}*!\n💎 New Balance: ${user.coins} coins\n\nWant another spin for 10 coins?`,[
-            {content_type:"text", title:"🎡 Spin Again (10c)", payload:"SPIN"},
-            {content_type:"text", title:"↩️ Menu", payload:"MENU"}
-          ]);
+          send(psid, `🎡 WHEEL OF FORTUNE SPIN!\n🎉 You won +10 Coins!\n💎 Balance: ${user.coins} coins`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
           continue;
         }
 
-        if(cleanText === "shop" || cleanText === "6"){
+        if(cleanText === "shop" || cleanText === "6" || upperRaw === "SHOP"){
           send(psid, `🛍️ JOJOWORLD PROFILE SHOP
 ━━━━━━━━━━━━━━━━━━━━
-Customize your profile to get 3x more likes!
-
-[1] Gold Glow Theme - 100 coins
-[2] Fire Frame Effect - 150 coins
-[3] VIP Verified Badge - 200 coins
-[4] Send Rose Gift (to match) - 30 coins
-
-Reply with item name or number to buy!`,[
-            {content_type:"text", title:"✨ Buy VIP Badge", payload: "BUY_VIP"},
-            {content_type:"text", title:"🌹 Send Rose Gift", payload: "SEND_GIFT"},
+[1] VIP Verified Badge - 200 coins`,[
+            {content_type:"text", title:"✨ Buy VIP Badge", payload:"BUY_VIP"},
             {content_type:"text", title:"↩️ Menu", payload:"MENU"}
           ]);
           continue;
         }
 
-        if(cleanText === "buy_vip" || cleanText === "vip"){
+        if(cleanText === "buy_vip" || upperRaw === "BUY_VIP"){
           if(user.coins < 200) {
             send(psid, `❌ Not enough coins! VIP Badge costs 200 coins.`);
           } else {
@@ -384,51 +377,38 @@ Reply with item name or number to buy!`,[
           continue;
         }
 
-        if(cleanText === "leaderboard" || cleanText === "7"){
+        if(cleanText === "leaderboard" || cleanText === "7" || upperRaw === "LEADERBOARD"){
           send(psid, `🏆 JOJOWORLD WEEKLY LEADERBOARD
 ━━━━━━━━━━━━━━━━━━━━
 👑 1. Jojo_Master — 4,850 coins
-🥈 2. Angel_21 — 3,920 coins
-🥉 3. Karding_99 — 3,100 coins
-⭐ 4. You (${user.name}) — ${user.coins} coins
-
-🎁 Top 3 players win P500 cash every Sunday! Keep earning coins!`,[
+⭐ 2. You (${user.name}) — ${user.coins} coins`,[
             {content_type:"text", title:"💰 Earn More Coins", payload:"TOP UP"},
             {content_type:"text", title:"↩️ Menu", payload:"MENU"}
           ]);
           continue;
         }
 
-        if(cleanText === "referral" || cleanText === "8" || cleanText === "invite"){
+        if(cleanText === "referral" || cleanText === "8" || upperRaw === "INVITE"){
           send(psid, `🔗 REFERRAL & INVITE PROGRAM
 ━━━━━━━━━━━━━━━━━━━━
-Share your unique invite link with friends:
 👉 t.me/jojoworld?start=${user.referralCode}
-
-👥 Total Invites: ${user.refCount} friends
-🎁 Rewards: +50 coins per invite + 10% commission when they top up!`,[
-            {content_type:"text", title:"↩️ Menu", payload:"MENU"}
-          ]);
+👥 Total Invites: ${user.refCount}`,[{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
           continue;
         }
 
-        if(cleanText === "unlock_chat"){
+        if(upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat"){
           if(user.coins < 20) {
             send(psid, `❌ Unlocking chat requires 20 coins.`);
             continue;
           }
           user.coins -= 20;
           await save();
-          send(psid, `🔓 CHAT UNLOCKED!\nYou can now chat freely with your match. Say hi! 👋`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
+          send(psid, `🔓 CHAT UNLOCKED! Say hi! 👋`, [{content_type:"text", title:"↩️ Menu", payload:"MENU"}]);
           continue;
         }
 
-        // Default Smart fallback suggestion helper
-        send(psid, `✨ I understand "${rawText}". Let's get you back on track!`, [
-          {content_type:"text", title:"📋 Main Menu", payload:"MENU"},
-          {content_type:"text", title:"💘 Find Match", payload:"FIND MATCH"},
-          {content_type:"text", title:"💰 Top Up", payload:"TOP UP"}
-        ]);
+        // AUTO-REDIRECT TO MAIN MENU INSTEAD OF FALLBACK TEXT
+        sendMenu(psid);
 
       }
     }
