@@ -1,4 +1,4 @@
-// JOJOWORLD V23 FINAL - MONGODB + PAYMONGO - FOR J'S
+// JOJOWORLD V23 FINAL - MONGODB + PAYMONGO - FOR J'S - COMPLETE NO CUT
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -31,6 +31,7 @@ if (fs.existsSync('./db.json')){
   }catch(e){}
 }
 
+// ================= PART 2: HELPERS =================
 async function save(){
   try{ fs.writeFileSync('./db.json', JSON.stringify(db,null,2)); }catch(e){}
   if(MONGODB_URI && mongoose.connection.readyState===1){
@@ -44,9 +45,12 @@ async function save(){
 
 const TOPUP_RATES = { 20:120, 50:300, 80:500, 100:700, 200:1600, 500:4500 };
 const CITY_COORDS = {
-  "manila":[14.5995,120.9842], "quezon city":[14.6760,121.0437],
-  "cebu":[10.3157,123.8854], "davao":[7.1907,125.4553],
-  "tokyo":[35.6762,139.6503], "seoul":[37.5665,126.9780],
+  "manila":[14.5995,120.9842],
+  "quezon city":[14.6760,121.0437],
+  "cebu":[10.3157,123.8854],
+  "davao":[7.1907,125.4553],
+  "tokyo":[35.6762,139.6503],
+  "seoul":[37.5665,126.9780],
   "singapore":[1.3521,103.8198]
 };
 
@@ -64,7 +68,9 @@ function send(id,text,qr=null){
   const body={ recipient:{id}, message:{ text } };
   if(qr) body.message.quick_replies=qr;
   fetch(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`,{
-    method:"POST", headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)
   }).catch(()=>{});
 }
 
@@ -80,7 +86,9 @@ async function createPaymongoLink(amount, coins, psid){
     console.log(e.response?.data||e.message);
     return null;
   }
-}// ===== PART B =====
+}
+
+// ================= PART 3: UI DISPLAY =================
 function sendButtons(id,type){
   if(type==="TOPUP_MENU"){
     return send(id, `💰 JOJOWORLD TOP-UP CENTER
@@ -148,7 +156,9 @@ This is a demo profile. More users coming soon!`,[
     {content_type:"text", title:"⏭️ Next", payload:"NEAR ME"},
     {content_type:"text", title:"↩️ Menu", payload:"MENU"}
   ]);
-              }// ===== PART C - MAIN WEBHOOK =====
+}
+
+// ================= PART 4: WEBHOOKS =================
 app.get('/webhook', (req,res)=>{
   if(req.query['hub.verify_token']===VERIFY_TOKEN){
     return res.send(req.query['hub.challenge']);
@@ -174,7 +184,9 @@ app.post('/paymongo-webhook', async (req,res)=>{
         await send(remarks, `✅ PAYMENT RECEIVED!\n💰 +${coins} Coins Added!\n💎 Balance: ${db.users[remarks].coins} coins\n\nThanks boss! 🚀`);
       }
     }
-  }catch(e){ console.log("webhook err", e.message); }
+  }catch(e){
+    console.log("webhook err", e.message);
+  }
   res.sendStatus(200);
 });
 
@@ -182,7 +194,6 @@ app.post('/webhook', async (req,res)=>{
   try{
     const body = req.body;
     if(body.object!=='page') return res.sendStatus(200);
-
     for(const entry of body.entry){
       for(const ev of entry.messaging){
         const psid = ev.sender.id;
@@ -192,11 +203,13 @@ app.post('/webhook', async (req,res)=>{
         if(ev.message && ev.message.quick_reply){
           let payload = ev.message.quick_reply.payload;
           console.log("QR:", payload, psid);
-
           if(payload.startsWith("TOP UP")){
             let amt = parseInt(payload.split(" ").pop());
             let coins = TOPUP_RATES[amt];
-            if(!coins){ send(psid, "Invalid package"); continue; }
+            if(!coins){
+              send(psid, "Invalid package");
+              continue;
+            }
             send(psid, `⏳ Creating secure link for P${amt} = ${coins} coins...`);
             let link = await createPaymongoLink(amt, coins, psid);
             if(link){
@@ -206,14 +219,28 @@ app.post('/webhook', async (req,res)=>{
             }
             continue;
           }
-
-          if(payload==="TOP UP"){ sendButtons(psid, "TOPUP_MENU"); continue; }
-          if(payload==="MENU"){ sendButtons(psid, "MENU"); continue; }
-          if(payload==="NEAR ME"){ sendNearMe(psid, null); continue; }
+          if(payload==="TOP UP"){
+            sendButtons(psid, "TOPUP_MENU");
+            continue;
+          }
+          if(payload==="MENU"){
+            sendButtons(psid, "MENU");
+            continue;
+          }
+          if(payload==="NEAR ME"){
+            sendNearMe(psid, null);
+            continue;
+          }
           if(payload==="DAILY"){
             let last = db.users[psid].lastDaily||0;
-            if(Date.now()-last < 86400000){ send(psid, `🎁 Already claimed! Come back tomorrow.`); }
-            else{ db.users[psid].coins+=20; db.users[psid].lastDaily=Date.now(); save(); send(psid, `🎁 Daily +20 coins! Balance: ${db.users[psid].coins}`); }
+            if(Date.now()-last < 86400000){
+              send(psid, `🎁 Already claimed! Come back tomorrow.`);
+            } else{
+              db.users[psid].coins+=20;
+              db.users[psid].lastDaily=Date.now();
+              save();
+              send(psid, `🎁 Daily +20 coins! Balance: ${db.users[psid].coins}`);
+            }
             continue;
           }
           if(payload==="PROFILE"){
@@ -223,17 +250,26 @@ app.post('/webhook', async (req,res)=>{
           }
         }
 
+// ================= PART 5: TEXT HANDLER + SERVER =================
         // TEXT HANDLER
         if(ev.message && ev.message.text){
           let text = ev.message.text.toLowerCase().trim();
           console.log("TEXT:", text);
-
-          if(text==="menu" || text==="start"){ sendButtons(psid, "MENU"); continue; }
-          if(text==="top up" || text==="topup" || text==="top-up"){ sendButtons(psid, "TOPUP_MENU"); continue; }
+          if(text==="menu" || text==="start"){
+            sendButtons(psid, "MENU");
+            continue;
+          }
+          if(text==="top up" || text==="topup" || text==="top-up"){
+            sendButtons(psid, "TOPUP_MENU");
+            continue;
+          }
           if(text.startsWith("buy ")){
             let amt = parseInt(text.split(" ")[1]);
             let coins = TOPUP_RATES[amt];
-            if(!coins){ send(psid, `Available: 20,50,80,100,200,500`); continue; }
+            if(!coins){
+              send(psid, `Available: 20,50,80,100,200,500`);
+              continue;
+            }
             let link = await createPaymongoLink(amt, coins, psid);
             if(link) send(psid, `💰 P${amt} = ${coins} coins\n👇 ${link}`);
             continue;
@@ -244,12 +280,14 @@ app.post('/webhook', async (req,res)=>{
           }
           // default
           if(!ev.message.quick_reply){
-             sendButtons(psid, "MENU");
+            sendButtons(psid, "MENU");
           }
         }
       }
     }
-  }catch(e){ console.log(e.message); }
+  }catch(e){
+    console.log(e.message);
+  }
   res.sendStatus(200);
 });
 
