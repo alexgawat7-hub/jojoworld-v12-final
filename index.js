@@ -1,5 +1,5 @@
 // ============================================================================
-// JOJOWORLD V24 ULTIMATE - MASTER CHECKLIST FIXED (ALL 8 POINTS INTEGRATED)
+// JOJOWORLD V24 ULTIMATE - PRODUCTION READY & FIXED 1-ON-1 CHAT
 // ============================================================================
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -16,15 +16,8 @@ const PAGE_TOKEN = process.env.PAGE_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "jojoworld_v24";
 const MONGODB_URI = process.env.MONGODB_URI;
 
-// PAGE NAME FOR MESSENGER LINK (Palitan ayon sa Facebook Page username)
+// PAGE NAME FOR MESSENGER LINK
 const PAGE_USERNAME = process.env.PAGE_USERNAME || "Princelucky";
-
-// ================= MONGODB SETUP =================
-if (MONGODB_URI) {
-  mongoose.connect(MONGODB_URI)
-    .then(() => console.log("✅ MongoDB OK"))
-    .catch(e => console.log("❌ MongoDB Error:", e.message));
-}
 
 const UserSchema = new mongoose.Schema({ psid: String, data: Object }, { strict: false });
 const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
@@ -40,6 +33,24 @@ if (fs.existsSync('./db.json')) {
     if (localDb.users) db.users = localDb.users;
     if (localDb.jackpotPool) db.jackpotPool = localDb.jackpotPool;
   } catch (e) {}
+}
+
+// ================= MONGODB SETUP & STARTUP LOADER =================
+if (MONGODB_URI) {
+  mongoose.connect(MONGODB_URI)
+    .then(async () => {
+      console.log("✅ MongoDB OK");
+      try {
+        const jackpotDoc = await JackpotModel.findOne({ id: "global" });
+        if (jackpotDoc && jackpotDoc.amount) {
+          db.jackpotPool = jackpotDoc.amount;
+          console.log("🏆 Jackpot Pool loaded from DB:", db.jackpotPool);
+        }
+      } catch (e) {
+        console.log("Error loading jackpot:", e.message);
+      }
+    })
+    .catch(e => console.log("❌ MongoDB Error:", e.message));
 }
 
 // ================= DB PERSISTENCE HELPERS =================
@@ -94,38 +105,40 @@ const GIFTS = {
   CAR: { name: "🏎️ Sports Car", cost: 300, bonus: 150 }
 };
 
-// INSTANT REPLY WITH TYPING INDICATOR
+// ASYNC SAFE SEND FUNCTION WITH TYPING INDICATOR
 async function send(id, text, qr = null) {
   try {
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, {
       recipient: { id },
       sender_action: "typing_on"
     });
-  } catch (e) {}
+    
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-  setTimeout(async () => {
     const body = { recipient: { id }, message: { text } };
     if (qr) body.message.quick_replies = qr;
-    try {
-      await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
-    } catch (e) {}
-  }, 300);
+    
+    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
+  } catch (e) {
+    console.log(`❌ Send Error (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
+  }
 }
 
+// SANITIZE INPUT FUNCTION
 function sanitizeInput(text) {
   if (!text) return "";
   let clean = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
   clean = clean.toLowerCase().trim();
 
-  if (["1", "isa", "one", "uno", "menu", "main menu"].some(x => clean === x)) return "MENU";
-  if (["2", "dalawa", "two", "dos", "profile"].some(x => clean === x)) return "PROFILE";
-  if (["3", "tatlo", "three", "tres", "find match"].some(x => clean === x)) return "FIND MATCH";
-  if (["4", "apat", "four", "cuatro", "top up"].some(x => clean === x)) return "TOP UP";
-  if (["5", "lima", "five", "cinco", "daily"].some(x => clean === x)) return "DAILY";
-  if (["6", "anim", "six", "spin"].some(x => clean === x)) return "SPIN";
-  if (["7", "pito", "seven", "shop"].some(x => clean === x)) return "SHOP";
-  if (["8", "walo", "eight", "leaderboard"].some(x => clean === x)) return "LEADERBOARD";
-  if (["9", "siyam", "nine", "referral", "invite"].some(x => clean === x)) return "INVITE";
+  if (["menu", "main menu", "start"].some(x => clean === x)) return "MENU";
+  if (["1", "isa", "one", "uno", "profile"].some(x => clean === x)) return "PROFILE";
+  if (["2", "dalawa", "two", "dos", "find match"].some(x => clean === x)) return "FIND MATCH";
+  if (["3", "tatlo", "three", "tres", "top up"].some(x => clean === x)) return "TOP UP";
+  if (["4", "apat", "four", "cuatro", "daily"].some(x => clean === x)) return "DAILY";
+  if (["5", "lima", "five", "cinco", "spin"].some(x => clean === x)) return "SPIN";
+  if (["6", "anim", "six", "shop"].some(x => clean === x)) return "SHOP";
+  if (["7", "pito", "seven", "leaderboard"].some(x => clean === x)) return "LEADERBOARD";
+  if (["8", "walo", "eight", "referral", "invite"].some(x => clean === x)) return "INVITE";
 
   return clean;
 }
@@ -242,7 +255,7 @@ app.post('/webhook', async (req, res) => {
           if (parts[1]) referralParam = "REF_" + parts[1].trim();
         }
 
-        // LOAD FRESH DATA FROM MONGODB (CHECKLIST POINT #2)
+        // LOAD FRESH DATA FROM MONGODB
         let user = await loadUserFromDB(psid);
 
         if (!user) {
@@ -278,8 +291,8 @@ app.post('/webhook', async (req, res) => {
             if (referrerPsid !== psid) {
               let referrer = await loadUserFromDB(referrerPsid);
               if (referrer) {
-                user.coins += 50; // Bonus for new user
-                referrer.coins += 100; // Reward for referrer
+                user.coins += 50; 
+                referrer.coins += 100; 
                 referrer.refCount = (referrer.refCount || 0) + 1;
                 await saveUserToDB(referrerPsid);
                 send(referrerPsid, `🎉 REFERRAL SUCCESS!\nA new user joined using your link! 🎁\n💰 +100 Coins credited to your wallet!`);
@@ -298,9 +311,7 @@ app.post('/webhook', async (req, res) => {
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
 
-        // -------------------------------------------------------------
-        // ACTIVE CHAT STATE LOOP FIX (CHECKLIST POINT #3)
-        // -------------------------------------------------------------
+        // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING") {
           if (upperRaw === "END_CHAT" || cleanText === "end chat") {
             let partnerPsid = user.activeMatchPsid;
@@ -327,10 +338,20 @@ app.post('/webhook', async (req, res) => {
             continue;
           }
 
-          // Forward chat message if matched with live user
+          // Relay message to live paired partner if valid
           if (user.activeMatchPsid) {
-            send(user.activeMatchPsid, `💬 Match: ${rawText}`);
-            send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
+            let partner = await loadUserFromDB(user.activeMatchPsid);
+            if (partner && partner.state === "CHATTING") {
+              send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
+              send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
+            } else {
+              send(psid, `⚠️ Your match has disconnected or ended the chat.`, [
+                { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+              ]);
+              user.state = "IDLE";
+              user.activeMatchPsid = null;
+            }
           } else {
             send(psid, `💬 Match Reply: "That sounds awesome! Tell me more 😊"`, [
               { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
@@ -341,9 +362,7 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // -------------------------------------------------------------
-        // PROFILE EDITING HANDLERS (CHECKLIST POINT #4)
-        // -------------------------------------------------------------
+        // PROFILE EDITING HANDLERS
         if (user.state === "EDIT_NAME_AGE") {
           let parts = rawText.split(",");
           if (parts.length < 2 || isNaN(parts[1].trim())) {
@@ -386,18 +405,17 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // -------------------------------------------------------------
         // MAIN MENU ROUTING
-        // -------------------------------------------------------------
-        if (cleanText === "menu" || cleanText === "start" || upperRaw === "MENU") {
+        if (cleanText === "menu" || upperRaw === "MENU") {
           user.state = "IDLE";
+          user.activeMatchPsid = null;
           await saveUserToDB(psid);
           sendMenu(psid);
           continue;
         }
 
         // VIEW PROFILE
-        if (cleanText === "profile" || cleanText === "1" || upperRaw === "PROFILE") {
+        if (cleanText === "profile" || upperRaw === "PROFILE") {
           let giftSummary = Object.entries(user.giftsReceived || {})
             .map(([k, v]) => `${GIFTS[k]?.name || k} x${v}`)
             .join(" | ") || "None yet 🎁";
@@ -424,7 +442,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // EDIT PROFILE SUB-MENU (CHECKLIST POINT #4)
+        // EDIT PROFILE SUB-MENU
         if (upperRaw === "EDIT_PROFILE_MENU") {
           let editCostText = (user.profileEdits || 0) === 0 ? "FREE (1st Edit)" : "Costs 20 Coins";
           send(psid, `✏️ EDIT PROFILE MENU (${editCostText})\n━━━━━━━━━━━━━━━━━━━━\nSelect what you'd like to update:`, [
@@ -436,7 +454,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // CHECK EDIT ECONOMY RULE
+        // EDIT ECONOMY RULE
         if (upperRaw.startsWith("REQ_EDIT_")) {
           if ((user.profileEdits || 0) > 0 && user.coins < 20) {
             send(psid, `❌ Insufficient coins! Subsequent profile edits cost 20 coins.`, [
@@ -463,7 +481,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // ZODIAC SELECTOR (CHECKLIST POINT #5)
+        // ZODIAC SELECTOR
         if (upperRaw === "SET_ZODIAC_MENU") {
           send(psid, `♈ SELECT YOUR ZODIAC SIGN:\n━━━━━━━━━━━━━━━━━━━━`, [
             { content_type: "text", title: "♈ Aries", payload: "ZODIAC_♈ Aries" },
@@ -475,7 +493,7 @@ Choose an action below:`, [
             { content_type: "text", title: "♎ Libra", payload: "ZODIAC_♎ Libra" },
             { content_type: "text", title: "♏ Scorpio", payload: "ZODIAC_♏ Scorpio" },
             { content_type: "text", title: "♐ Sagitt.", payload: "ZODIAC_♐ Sagittarius" },
-            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♑ Capricorn" }
+            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♐ Capricorn" }
           ]);
           continue;
         }
@@ -487,7 +505,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // RELATIONSHIP GOAL SELECTOR (CHECKLIST POINT #5)
+        // RELATIONSHIP GOAL SELECTOR
         if (upperRaw === "SET_GOAL_MENU") {
           send(psid, `🎯 SELECT RELATIONSHIP GOAL:\n━━━━━━━━━━━━━━━━━━━━`, [
             { content_type: "text", title: "☕ Coffee Dates", payload: "GOAL_☕ Coffee Dates" },
@@ -506,7 +524,7 @@ Choose an action below:`, [
         }
 
         // FIND MATCH
-        if (cleanText === "find match" || cleanText === "2" || upperRaw === "FIND MATCH") {
+        if (cleanText === "find match" || upperRaw === "FIND MATCH") {
           if (user.coins < 10) {
             send(psid, `❌ Insufficient coins! Searching costs 10 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
             continue;
@@ -528,7 +546,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // GIFTING SYSTEM (CHECKLIST POINT #6)
+        // GIFTING SYSTEM
         if (upperRaw === "SEND_GIFT_MENU") {
           send(psid, `🎁 SELECT A GIFT TO SEND:
 ━━━━━━━━━━━━━━━━━━━━
@@ -562,6 +580,18 @@ Choose an action below:`, [
           user.giftsCount = (user.giftsCount || 0) + 1;
           await saveUserToDB(psid);
 
+          // If paired in active chat, notify partner too
+          if (user.activeMatchPsid) {
+            let partner = await loadUserFromDB(user.activeMatchPsid);
+            if (partner) {
+              if (!partner.giftsReceived) partner.giftsReceived = {};
+              partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
+              partner.coins += gift.bonus; // receiver bonus
+              await saveUserToDB(user.activeMatchPsid);
+              send(user.activeMatchPsid, `🎁 SURPRISE! Your match sent you a ${gift.name} (+${gift.bonus} coins bonus!) ❤️`);
+            }
+          }
+
           send(psid, `🎉 GIFT SENT! You sent ${gift.name}! Your match appreciated it so much! ❤️`, [
             { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -569,32 +599,59 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT
+        // UNLOCK CHAT & PAIR REAL USERS
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
             continue;
           }
-          user.coins -= 20;
-          user.state = "CHATTING"; // SET CHATTING STATE (CHECKLIST POINT #3)
-          await saveUserToDB(psid);
 
-          send(psid, `🔓 CHAT UNLOCKED! You are now connected with your match!\n\n💬 Type your message below to start chatting:`, [
-            { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-            { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-          ]);
+          user.coins -= 20;
+          user.state = "CHATTING";
+
+          // Find another online/idle user to pair with
+          let partnerPsid = Object.keys(db.users).find(pId => 
+            pId !== psid && db.users[pId].state === "IDLE"
+          );
+
+          if (partnerPsid) {
+            let partner = db.users[partnerPsid];
+            user.activeMatchPsid = partnerPsid;
+            partner.activeMatchPsid = psid;
+            partner.state = "CHATTING";
+
+            await saveUserToDB(psid);
+            await saveUserToDB(partnerPsid);
+
+            send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
+
+            send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
+          } else {
+            user.activeMatchPsid = null;
+            await saveUserToDB(psid);
+            send(psid, `🔓 CHAT UNLOCKED! Searching for online match... (Simulated connection active)\n\n💬 Type your message below:`, [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
+          }
           continue;
         }
 
-        // SCATTER SLOT WHEEL OF FORTUNE (CHECKLIST POINT #7 & #8)
-        if (cleanText === "spin" || cleanText === "5" || upperRaw === "SPIN") {
+        // SCATTER SLOT WHEEL OF FORTUNE
+        if (cleanText === "spin" || upperRaw === "SPIN") {
           if (user.coins < 10) {
             send(psid, `❌ Spin costs 10 coins! Balance: ${user.coins} coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
             continue;
           }
 
           user.coins -= 10;
-          db.jackpotPool += 3; // Add 3 coins to progressive jackpot pool
+          db.jackpotPool += 3;
 
           let combos = [
             { visual: "💥 [ 💣 | ❌ | 💣 ]", win: 0, text: "Zonk! Better luck next time!" },
@@ -606,17 +663,17 @@ Choose an action below:`, [
           let rand = Math.random();
           let result = combos[0];
           if (rand < 0.02) {
-            result = combos[3]; // Jackpot 2% chance
+            result = combos[3];
           } else if (rand < 0.20) {
-            result = combos[2]; // Big Win 18% chance
+            result = combos[2];
           } else if (rand < 0.55) {
-            result = combos[1]; // Small Win 35% chance
+            result = combos[1];
           }
 
           if (result.visual.includes("👑")) {
             user.coins += db.jackpotPool;
             let wonJackpot = db.jackpotPool;
-            db.jackpotPool = 1000; // Reset Jackpot
+            db.jackpotPool = 1000;
             await saveUserToDB(psid);
 
             send(psid, `🎰 SCATTER SPIN WHEEL 🎰\n━━━━━━━━━━━━━━━━━━━━\n${result.visual}\n\n🏆 UNBELIEVABLE! YOU WON THE JACKPOT OF ${wonJackpot} COINS!\n💎 Balance: ${user.coins} coins`, [
@@ -637,7 +694,7 @@ Choose an action below:`, [
         }
 
         // TOP UP & PAYMONGO ROUTING
-        if (cleanText === "top up" || cleanText === "4" || upperRaw === "TOP UP") {
+        if (cleanText === "top up" || upperRaw === "TOP UP") {
           sendTopupMenu(psid);
           continue;
         }
@@ -662,7 +719,7 @@ Choose an action below:`, [
         }
 
         // DAILY BONUS
-        if (cleanText === "daily" || cleanText === "4" || upperRaw === "DAILY") {
+        if (cleanText === "daily" || upperRaw === "DAILY") {
           let now = Date.now();
           if (now - user.lastDaily < 86400000) {
             let hoursLeft = Math.ceil((86400000 - (now - user.lastDaily)) / 3600000);
@@ -680,7 +737,7 @@ Choose an action below:`, [
         }
 
         // SHOP & THEMES
-        if (cleanText === "shop" || cleanText === "6" || upperRaw === "SHOP") {
+        if (cleanText === "shop" || upperRaw === "SHOP") {
           send(psid, `🛍️ JOJOWORLD PROFILE SHOP
 ━━━━━━━━━━━━━━━━━━━━
 [1] 👑 VIP Verified Badge - 200 coins
@@ -717,7 +774,7 @@ Choose an action below:`, [
         }
 
         // LEADERBOARD
-        if (cleanText === "leaderboard" || cleanText === "7" || upperRaw === "LEADERBOARD") {
+        if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
           send(psid, `🏆 JOJOWORLD LEADERBOARD
 ━━━━━━━━━━━━━━━━━━━━
 🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins
@@ -731,8 +788,8 @@ Choose an action below:`, [
           continue;
         }
 
-        // REFERRAL MESSENGER DIRECT LINK (CHECKLIST POINT #1)
-        if (cleanText === "invite" || cleanText === "8" || upperRaw === "INVITE") {
+        // REFERRAL MESSENGER DIRECT LINK
+        if (cleanText === "invite" || upperRaw === "INVITE") {
           let messengerLink = `https://m.me/${PAGE_USERNAME}?start=REF_${psid}`;
           send(psid, `🔗 REFERRAL & INVITE PROGRAM
 ━━━━━━━━━━━━━━━━━━━━
@@ -756,5 +813,5 @@ ${messengerLink}
   res.sendStatus(200);
 });
 
-app.get('/', (req, res) => res.send('JojoWorld V24 ULTIMATE Running - All 8 Checklist Points Live!'));
+app.get('/', (req, res) => res.send('JojoWorld V24 ULTIMATE Running - All Checklist Points Live!'));
 app.listen(process.env.PORT || 10000, () => console.log("V24 Ultimate Server Running"));
