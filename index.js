@@ -1,5 +1,5 @@
 // ============================================================================
-// JOJOWORLD V24 ULTIMATE - PRODUCTION READY & FIXED 1-ON-1 CHAT
+// JOJOWORLD V25 ULTIMATE - PRODUCTION READY & FIXED 1-ON-1 CHAT
 // ============================================================================
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -22,7 +22,7 @@ const GCASH_NUM = process.env.GCASH_NUM || "09517080795";
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
 const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "jojoworld_v24";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "jojoworld_v25";
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // PAGE NAME FOR MESSENGER LINK
@@ -34,7 +34,7 @@ const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
 const JackpotSchema = new mongoose.Schema({ id: String, amount: Number }, { strict: false });
 const JackpotModel = mongoose.models.JJackpot || mongoose.model('JJackpot', JackpotSchema);
 
-let db = { users: {}, jackpotPool: 1000 };
+let db = { users: {}, jackpotPool: 1500 };
 
 if (fs.existsSync('./db.json')) {
   try {
@@ -48,7 +48,7 @@ if (fs.existsSync('./db.json')) {
 if (MONGODB_URI) {
   mongoose.connect(MONGODB_URI)
     .then(async () => {
-      console.log("✅ MongoDB OK");
+      console.log("✅ MongoDB Connected Successfully");
       try {
         const jackpotDoc = await JackpotModel.findOne({ id: "global" });
         if (jackpotDoc && jackpotDoc.amount) {
@@ -122,7 +122,7 @@ async function send(id, text, qr = null) {
       sender_action: "typing_on"
     });
     
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 350));
 
     const body = { recipient: { id }, message: { text } };
     if (qr) body.message.quick_replies = qr;
@@ -156,7 +156,7 @@ function sanitizeInput(text) {
 async function createPaymongoLink(amount, coins, psid) {
   try {
     const res = await axios.post('https://api.paymongo.com/v1/links', {
-      data: { attributes: { amount: amount * 100, description: `${coins} Coins JojoWorld`, remarks: psid.toString() } }
+      data: { attributes: { amount: amount * 100, description: `${coins} Coins JojoWorld V25`, remarks: psid.toString() } }
     }, {
       headers: { Authorization: `Basic ${Buffer.from(PAYMONGO_SECRET + ':').toString('base64')}`, 'Content-Type': 'application/json' }
     });
@@ -168,11 +168,11 @@ async function createPaymongoLink(amount, coins, psid) {
 
 // ================= UI MENUS =================
 function sendMenu(id) {
-  send(id, `✨ JOJOWORLD V24 ULTIMATE ✨
+  send(id, `✨ JOJOWORLD V25 ULTIMATE ✨
 ━━━━━━━━━━━━━━━━━━━━
 🔥 LIMITED TIME: +20% Bonus Coins
 💘 Find match & connect worldwide
-🎁 Daily bonuses & Spin rewards
+🎁 Daily bonuses & Scatter rewards
 
 [1] 👤 My Profile
 [2] 💘 Find Match (10c)
@@ -219,6 +219,7 @@ Select a package below:`, [
     { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
   ]);
 }
+
 // ================= WEBHOOKS =================
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) return res.send(req.query['hub.challenge']);
@@ -265,7 +266,7 @@ app.post('/paymongo-webhook', async (req, res) => {
       if (coins > 0 && user) {
         user.coins = (user.coins || 0) + coins;
         await saveUserToDB(psid);
-        await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld! 🚀`);
+        await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld V25! 🚀`);
       }
     }
   } catch (e) {
@@ -274,15 +275,12 @@ app.post('/paymongo-webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// MESSENGER WEBHOOK
 app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
     if (body.object !== 'page') return res.sendStatus(200);
 
     for (const entry of body.entry) {
-      if (!entry.messaging) continue; // 🛡️ Fix: Iwasan ang crash kung walang messaging array
-
       for (const ev of entry.messaging) {
         const psid = ev.sender.id;
 
@@ -300,10 +298,10 @@ app.post('/webhook', async (req, res) => {
 
         if (!user) {
           db.users[psid] = {
-            coins: 150,
+            coins: 200,
             location: "Manila",
             rating: 5.0,
-            bio: "Hello JojoWorld!",
+            bio: "Hello JojoWorld V25!",
             age: 21,
             gender: "Not set",
             name: "Jojo Member",
@@ -352,6 +350,22 @@ app.post('/webhook', async (req, res) => {
 
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
+
+        // ADMIN COMMAND SUITE
+        if (psid === ADMIN_ID && upperRaw.startsWith("ADMIN_ADDCOINS_")) {
+          let parts = upperRaw.replace("ADMIN_ADDCOINS_", "").split("_");
+          let targetPsid = parts[0];
+          let addAmt = parseInt(parts[1]) || 1000;
+          let targetUser = await loadUserFromDB(targetPsid);
+          if (targetUser) {
+            targetUser.coins += addAmt;
+            await saveUserToDB(targetPsid);
+            send(psid, `👑 [ADMIN] Added ${addAmt} coins to user ${targetPsid}.`);
+          } else {
+            send(psid, `❌ [ADMIN] User not found.`);
+          }
+          continue;
+        }
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING") {
@@ -409,7 +423,7 @@ app.post('/webhook', async (req, res) => {
               await saveUserToDB(psid);
             }
           } else {
-            send(psid, `💬 Match Reply: "That sounds awesome! Tell me more 😊"`, [
+            send(psid, `💬 Match Reply: "That sounds awesome! Let's hang out soon 😊"`, [
               { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
               { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
             ]);
@@ -489,7 +503,7 @@ app.post('/webhook', async (req, res) => {
             .map(([k, v]) => `${GIFTS[k]?.name || k} x${v}`)
             .join(" | ") || "None yet 🎁";
 
-          send(psid, `👤 YOUR PROFILE & STATS
+          send(psid, `👤 YOUR PROFILE & STATS (V25)
 ━━━━━━━━━━━━━━━━━━━━
 📛 Name: ${user.name} (${user.age})
 📍 Location: ${user.location}
@@ -598,10 +612,10 @@ Choose an action below:`, [
 
           send(psid, `💘 DISCOVER MATCH NEARBY (-10 coins)
 ━━━━━━━━━━━━━━━━━━━━
-👩 Sarah, 22 • 0.8km away (🟢 Online)
-📍 Manila • ♈ Zodiac: ♌ Leo
+👩 Princess, 21 • 0.5km away (🟢 Online)
+📍 Manila • ♈ Zodiac: ♎ Libra
 🎯 Goal: ☕ Coffee Dates
-💬 "Looking for awesome friends and coffee dates!"`, [
+💬 "Looking for meaningful conversations and good coffee!"`, [
             { content_type: "text", title: "❤️ Like", payload: "LIKE" },
             { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
             { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
@@ -664,7 +678,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING FIXED)
+        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING)
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
@@ -684,10 +698,7 @@ Choose an action below:`, [
                   "data.state": "IDLE"
                 },
                 {
-                  $set: { 
-                    "data.state": "CHATTING",
-                    "data.activeMatchPsid": psid // 🛠️ Fix: Sinama na ang partner match ID sa DB update
-                  }
+                  $set: { "data.state": "CHATTING" }
                 },
                 { new: true }
               );
@@ -707,24 +718,23 @@ Choose an action below:`, [
 
           if (partnerPsid) {
             let partner = await loadUserFromDB(partnerPsid);
-            if (partner) { // 🛡️ Fix: Sinigurong may valid partner bago baguhin ang props
-              user.activeMatchPsid = partnerPsid;
-              partner.activeMatchPsid = psid;
-              partner.state = "CHATTING";
+            user.activeMatchPsid = partnerPsid;
+            partner.activeMatchPsid = psid;
+            partner.state = "CHATTING";
+            if (partner) partner.state = "CHATTING";
 
-              await saveUserToDB(psid);
-              await saveUserToDB(partnerPsid);
+            await saveUserToDB(psid);
+            await saveUserToDB(partnerPsid);
 
-              send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
-                { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-                { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-              ]);
+            send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
 
-              send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
-                { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-                { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-              ]);
-            }
+            send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
           } else {
             user.activeMatchPsid = null;
             await saveUserToDB(psid);
@@ -744,29 +754,29 @@ Choose an action below:`, [
           }
 
           user.coins -= 10;
-          db.jackpotPool += 3;
+          db.jackpotPool += 5;
 
           let combos = [
             { visual: "💥 [ 💣 | ❌ | 💣 ]", win: 0, text: "Zonk! Better luck next time!" },
-            { visual: "🪙 [ 🪙 | 🪙 | 🎁 ]", win: 15, text: "Small Win! +15 Coins!" },
-            { visual: "💎 [ 💎 | 💎 | 💎 ]", win: 50, text: "BIG WIN! Multiplier +50 Coins!" },
+            { visual: "🪙 [ 🪙 | 🪙 | 🎁 ]", win: 20, text: "Small Win! +20 Coins!" },
+            { visual: "💎 [ 💎 | 💎 | 💎 ]", win: 75, text: "BIG WIN! Multiplier +75 Coins!" },
             { visual: "👑 [ 👑 | 👑 | 👑 ]", win: db.jackpotPool, text: "🎉 GRAND JACKPOT WINNER!" }
           ];
 
           let rand = Math.random();
           let result = combos[0];
-          if (rand < 0.02) {
+          if (rand < 0.025) {
             result = combos[3];
-          } else if (rand < 0.20) {
+          } else if (rand < 0.22) {
             result = combos[2];
-          } else if (rand < 0.55) {
+          } else if (rand < 0.58) {
             result = combos[1];
           }
 
           if (result.visual.includes("👑")) {
             user.coins += db.jackpotPool;
             let wonJackpot = db.jackpotPool;
-            db.jackpotPool = 1000;
+            db.jackpotPool = 1500;
             await saveUserToDB(psid);
 
             send(psid, `🎰 SCATTER SPIN WHEEL 🎰\n━━━━━━━━━━━━━━━━━━━━\n${result.visual}\n\n🏆 UNBELIEVABLE! YOU WON THE JACKPOT OF ${wonJackpot} COINS!\n💎 Balance: ${user.coins} coins`, [
@@ -818,10 +828,10 @@ Choose an action below:`, [
             let hoursLeft = Math.ceil((86400000 - (now - user.lastDaily)) / 3600000);
             send(psid, `🎁 Daily bonus already claimed! Come back in ${hoursLeft} hours.`, [{ content_type: "text", title: "↩️ Menu", payload: "MENU" }]);
           } else {
-            user.coins += 25;
+            user.coins += 35;
             user.lastDaily = now;
             await saveUserToDB(psid);
-            send(psid, `🎁 DAILY REWARD CLAIMED!\n💰 +25 Coins added!\n💎 Balance: ${user.coins} coins`, [
+            send(psid, `🎁 DAILY REWARD CLAIMED!\n💰 +35 Coins added!\n💎 Balance: ${user.coins} coins`, [
               { content_type: "text", title: "🎡 Scatter Spin", payload: "SPIN" },
               { content_type: "text", title: "↩️ Menu", payload: "MENU" }
             ]);
@@ -865,7 +875,7 @@ Choose an action below:`, [
 
         // LEADERBOARD
         if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
-          send(psid, `🏆 JOJOWORLD LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 4,850 coins\n🥈 2. You (${user.name}) — ${user.coins} coins`, [
+          send(psid, `🏆 JOJOWORLD V25 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 5,200 coins\n🥈 2. Elite_Prenz — 4,100 coins\n🥉 3. You (${user.name}) — ${user.coins} coins`, [
             { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
             { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -890,5 +900,5 @@ Choose an action below:`, [
   res.sendStatus(200);
 });
 
-app.get('/', (req, res) => res.send('JojoWorld V24 ULTIMATE Running - All Checklist Points Live!'));
-app.listen(process.env.PORT || 10000, () => console.log("V24 Ultimate Server Running"));
+app.get('/', (req, res) => res.send('JojoWorld V25 ULTIMATE Running - All Systems Operational!'));
+app.listen(process.env.PORT || 10000, () => console.log("V25 Ultimate Server Running"));
