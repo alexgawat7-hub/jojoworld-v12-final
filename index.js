@@ -219,7 +219,6 @@ Select a package below:`, [
     { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
   ]);
 }
-
 // ================= WEBHOOKS =================
 app.get('/webhook', (req, res) => {
   if (req.query['hub.verify_token'] === VERIFY_TOKEN) return res.send(req.query['hub.challenge']);
@@ -275,12 +274,15 @@ app.post('/paymongo-webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
+// MESSENGER WEBHOOK
 app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
     if (body.object !== 'page') return res.sendStatus(200);
 
     for (const entry of body.entry) {
+      if (!entry.messaging) continue; // 🛡️ Fix: Iwasan ang crash kung walang messaging array
+
       for (const ev of entry.messaging) {
         const psid = ev.sender.id;
 
@@ -338,7 +340,6 @@ app.post('/webhook', async (req, res) => {
             }
           }
 
-          // FIX: Agarang i-save ang bagong user sa database
           await saveUserToDB(psid);
         }
 
@@ -544,7 +545,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // ZODIAC SELECTOR (FIXED ZODIAC SYMBOLS)
+        // ZODIAC SELECTOR
         if (upperRaw === "SET_ZODIAC_MENU") {
           send(psid, `♈ SELECT YOUR ZODIAC SIGN:\n━━━━━━━━━━━━━━━━━━━━`, [
             { content_type: "text", title: "♈ Aries", payload: "ZODIAC_♈ Aries" },
@@ -663,7 +664,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING)
+        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING FIXED)
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
@@ -683,7 +684,10 @@ Choose an action below:`, [
                   "data.state": "IDLE"
                 },
                 {
-                  $set: { "data.state": "CHATTING" }
+                  $set: { 
+                    "data.state": "CHATTING",
+                    "data.activeMatchPsid": psid // 🛠️ Fix: Sinama na ang partner match ID sa DB update
+                  }
                 },
                 { new: true }
               );
@@ -703,23 +707,24 @@ Choose an action below:`, [
 
           if (partnerPsid) {
             let partner = await loadUserFromDB(partnerPsid);
-            user.activeMatchPsid = partnerPsid;
-            partner.activeMatchPsid = psid;
-            partner.state = "CHATTING";
-            if (partner) partner.state = "CHATTING";
+            if (partner) { // 🛡️ Fix: Sinigurong may valid partner bago baguhin ang props
+              user.activeMatchPsid = partnerPsid;
+              partner.activeMatchPsid = psid;
+              partner.state = "CHATTING";
 
-            await saveUserToDB(psid);
-            await saveUserToDB(partnerPsid);
+              await saveUserToDB(psid);
+              await saveUserToDB(partnerPsid);
 
-            send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
-              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-            ]);
+              send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
+                { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+                { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+              ]);
 
-            send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
-              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-            ]);
+              send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
+                { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+                { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+              ]);
+            }
           } else {
             user.activeMatchPsid = null;
             await saveUserToDB(psid);
