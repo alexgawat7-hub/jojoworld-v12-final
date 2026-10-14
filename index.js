@@ -9,7 +9,13 @@ const axios = require('axios');
 const crypto = require('crypto'); // Dagdag para sa PayMongo Webhook Verification
 
 const app = express();
-app.use(bodyParser.json());
+
+// FIX 1: Body-parser rawBody configuration para sa PayMongo Webhook HMAC signature
+app.use(bodyParser.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 
 const ADMIN_ID = process.env.ADMIN_ID || "100064525073153";
 const GCASH_NUM = process.env.GCASH_NUM || "09517080795";
@@ -124,7 +130,7 @@ async function send(id, text, qr = null) {
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
   } catch (e) {
     console.log(`❌ Send Error (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
-    throw e; // Iniaangat ang error para mahawakan sa caller function
+    throw e;
   }
 }
 
@@ -220,10 +226,9 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
-// SECURED PAYMONGO WEBHOOK
+// SECURED PAYMONGO WEBHOOK (FIXED USING req.rawBody)
 app.post('/paymongo-webhook', async (req, res) => {
   try {
-    // Check HMAC signature kung nakaset ang PAYMONGO_WEBHOOK_SECRET
     if (PAYMONGO_WEBHOOK_SECRET) {
       const signatureHeader = req.headers['paymongo-signature'];
       if (!signatureHeader) return res.sendStatus(400);
@@ -237,10 +242,9 @@ app.post('/paymongo-webhook', async (req, res) => {
         if (key === 'li') li = val;
       });
 
-      const payload = JSON.stringify(req.body);
       const computedSignature = crypto
         .createHmac('sha256', PAYMONGO_WEBHOOK_SECRET)
-        .update(`${t}.${payload}`)
+        .update(`${t}.${req.rawBody}`)
         .digest('hex');
 
       if (computedSignature !== te && computedSignature !== li) {
@@ -382,7 +386,6 @@ app.post('/webhook', async (req, res) => {
                 await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
                 await send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
               } catch (err) {
-                // Disconnect handle kapag nagka-error sa pagsend sa kausap
                 user.state = "IDLE";
                 user.activeMatchPsid = null;
                 await saveUserToDB(psid);
@@ -411,13 +414,18 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // PROFILE EDITING HANDLERS
+        // PROFILE EDITING HANDLERS (FIXED: Deduct coins only upon successful input save)
         if (user.state === "EDIT_NAME_AGE") {
           let parts = rawText.split(",");
           if (parts.length < 2 || isNaN(parts[1].trim())) {
             send(psid, `⚠️ Invalid format! Please type Name and Age separated by a comma.\nExample: *Juan, 24*`);
             continue;
           }
+
+          if ((user.profileEdits || 0) > 0) {
+            user.coins -= 20;
+          }
+
           user.name = parts[0].trim();
           user.age = parseInt(parts[1].trim());
           user.state = "IDLE";
@@ -431,6 +439,10 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (user.state === "EDIT_LOCATION") {
+          if ((user.profileEdits || 0) > 0) {
+            user.coins -= 20;
+          }
+
           user.location = rawText.trim();
           user.state = "IDLE";
           user.profileEdits = (user.profileEdits || 0) + 1;
@@ -443,6 +455,10 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (user.state === "EDIT_BIO") {
+          if ((user.profileEdits || 0) > 0) {
+            user.coins -= 20;
+          }
+
           user.bio = rawText.trim();
           user.state = "IDLE";
           user.profileEdits = (user.profileEdits || 0) + 1;
@@ -503,17 +519,13 @@ Choose an action below:`, [
           continue;
         }
 
-        // EDIT ECONOMY RULE
+        // EDIT ECONOMY RULE (FIXED: Checks balance without prematurely deducting coins)
         if (upperRaw.startsWith("REQ_EDIT_")) {
           if ((user.profileEdits || 0) > 0 && user.coins < 20) {
             send(psid, `❌ Insufficient coins! Subsequent profile edits cost 20 coins.`, [
               { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
             ]);
             continue;
-          }
-
-          if ((user.profileEdits || 0) > 0) {
-            user.coins -= 20;
           }
 
           if (upperRaw === "REQ_EDIT_NAME_AGE") {
@@ -541,8 +553,8 @@ Choose an action below:`, [
             { content_type: "text", title: "♍ Virgo", payload: "ZODIAC_♍ Virgo" },
             { content_type: "text", title: "♎ Libra", payload: "ZODIAC_♎ Libra" },
             { content_type: "text", title: "♏ Scorpio", payload: "ZODIAC_♏ Scorpio" },
-            { content_type: "text", title: "♐ Sagitt.", payload: "ZODIAC_♐ Sagittarius" },
-            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♐ Capricorn" }
+            { content_type: "text", title: "♐ Sagitt.", payload: "ZODIAC_♈ Sagittarius" },
+            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♈ Capricorn" }
           ]);
           continue;
         }
@@ -629,13 +641,12 @@ Choose an action below:`, [
           user.giftsCount = (user.giftsCount || 0) + 1;
           await saveUserToDB(psid);
 
-          // If paired in active chat, notify partner too
           if (user.activeMatchPsid) {
             let partner = await loadUserFromDB(user.activeMatchPsid);
             if (partner) {
               if (!partner.giftsReceived) partner.giftsReceived = {};
               partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
-              partner.coins += gift.bonus; // receiver bonus
+              partner.coins += gift.bonus;
               await saveUserToDB(user.activeMatchPsid);
               try {
                 send(user.activeMatchPsid, `🎁 SURPRISE! Your match sent you a ${gift.name} (+${gift.bonus} coins bonus!) ❤️`);
@@ -650,7 +661,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS (MONGODB MATCHMAKING FIXED)
+        // UNLOCK CHAT & PAIR REAL USERS (FIXED: ATOMIC MONGODB MATCHMAKING VIA findOneAndUpdate)
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
@@ -662,13 +673,18 @@ Choose an action below:`, [
 
           let partnerPsid = null;
 
-          // Maghanap ng IDLE partner sa MongoDB
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
             try {
-              const matchDoc = await UserModel.findOne({
-                psid: { $ne: psid },
-                "data.state": "IDLE"
-              });
+              const matchDoc = await UserModel.findOneAndUpdate(
+                {
+                  psid: { $ne: psid },
+                  "data.state": "IDLE"
+                },
+                {
+                  $set: { "data.state": "CHATTING" }
+                },
+                { new: true }
+              );
               if (matchDoc) {
                 partnerPsid = matchDoc.psid;
               }
@@ -677,7 +693,6 @@ Choose an action below:`, [
             }
           }
 
-          // Fallback sa RAM kung walang nahanap sa DB
           if (!partnerPsid) {
             partnerPsid = Object.keys(db.users).find(pId => 
               pId !== psid && db.users[pId]?.state === "IDLE"
@@ -689,6 +704,7 @@ Choose an action below:`, [
             user.activeMatchPsid = partnerPsid;
             partner.activeMatchPsid = psid;
             partner.state = "CHATTING";
+            if (partner) partner.state = "CHATTING";
 
             await saveUserToDB(psid);
             await saveUserToDB(partnerPsid);
@@ -808,10 +824,7 @@ Choose an action below:`, [
 
         // SHOP & THEMES
         if (cleanText === "shop" || upperRaw === "SHOP") {
-          send(psid, `🛍️ JOJOWORLD PROFILE SHOP
-━━━━━━━━━━━━━━━━━━━━
-[1] 👑 VIP Verified Badge - 200 coins
-[2] 💎 Gold Profile Frame - 150 coins`, [
+          send(psid, `🛍️ JOJOWORLD PROFILE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[1] 👑 VIP Verified Badge - 200 coins\n[2] 💎 Gold Profile Frame - 150 coins`, [
             { content_type: "text", title: "👑 VIP Badge (200c)", payload: "BUY_VIP" },
             { content_type: "text", title: "💎 Gold Frame (150c)", payload: "BUY_FRAME" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -845,12 +858,7 @@ Choose an action below:`, [
 
         // LEADERBOARD
         if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
-          send(psid, `🏆 JOJOWORLD LEADERBOARD
-━━━━━━━━━━━━━━━━━━━━
-🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins
-
-🥇 1. Jojo_Master — 4,850 coins
-🥈 2. You (${user.name}) — ${user.coins} coins`, [
+          send(psid, `🏆 JOJOWORLD LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 4,850 coins\n🥈 2. You (${user.name}) — ${user.coins} coins`, [
             { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
             { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -861,15 +869,7 @@ Choose an action below:`, [
         // REFERRAL MESSENGER DIRECT LINK
         if (cleanText === "invite" || upperRaw === "INVITE") {
           let messengerLink = `https://m.me/${PAGE_USERNAME}?start=REF_${psid}`;
-          send(psid, `🔗 REFERRAL & INVITE PROGRAM
-━━━━━━━━━━━━━━━━━━━━
-🎁 Share your unique Messenger link below to earn rewards!
-
-👇 Your Referral Link:
-${messengerLink}
-
-👥 Total Successful Invites: ${user.refCount || 0}
-💰 Earn +100 Coins for every friend who joins!`, [{ content_type: "text", title: "↩️ Menu", payload: "MENU" }]);
+          send(psid, `🔗 REFERRAL & INVITE PROGRAM\n━━━━━━━━━━━━━━━━━━━━\n🎁 Share your unique Messenger link below to earn rewards!\n\n👇 Your Referral Link:\n${messengerLink}\n\n👥 Total Successful Invites: ${user.refCount || 0}\n💰 Earn +100 Coins for every friend who joins!`, [{ content_type: "text", title: "↩️ Menu", payload: "MENU" }]);
           continue;
         }
 
