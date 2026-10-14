@@ -6,12 +6,15 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const crypto = require('crypto'); // Dagdag para sa PayMongo Webhook Verification
+
 const app = express();
 app.use(bodyParser.json());
 
 const ADMIN_ID = process.env.ADMIN_ID || "100064525073153";
 const GCASH_NUM = process.env.GCASH_NUM || "09517080795";
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
+const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "jojoworld_v24";
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -121,6 +124,7 @@ async function send(id, text, qr = null) {
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
   } catch (e) {
     console.log(`❌ Send Error (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
+    throw e; // Iniaangat ang error para mahawakan sa caller function
   }
 }
 
@@ -216,11 +220,39 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
+// SECURED PAYMONGO WEBHOOK
 app.post('/paymongo-webhook', async (req, res) => {
   try {
+    // Check HMAC signature kung nakaset ang PAYMONGO_WEBHOOK_SECRET
+    if (PAYMONGO_WEBHOOK_SECRET) {
+      const signatureHeader = req.headers['paymongo-signature'];
+      if (!signatureHeader) return res.sendStatus(400);
+
+      const parts = signatureHeader.split(',');
+      let t, te, li;
+      parts.forEach(part => {
+        const [key, val] = part.split('=');
+        if (key === 't') t = val;
+        if (key === 'te') te = val;
+        if (key === 'li') li = val;
+      });
+
+      const payload = JSON.stringify(req.body);
+      const computedSignature = crypto
+        .createHmac('sha256', PAYMONGO_WEBHOOK_SECRET)
+        .update(`${t}.${payload}`)
+        .digest('hex');
+
+      if (computedSignature !== te && computedSignature !== li) {
+        console.log("❌ Fake/Invalid PayMongo Signature detected!");
+        return res.sendStatus(401);
+      }
+    }
+
     const ev = req.body.data;
     if (!ev) return res.sendStatus(200);
     const attr = ev.attributes?.data?.attributes || ev.attributes;
+
     if (attr.status === 'paid' && attr.remarks) {
       let amt = Math.round(attr.amount / 100);
       let coins = TOPUP_RATES[amt] || 0;
@@ -233,7 +265,9 @@ app.post('/paymongo-webhook', async (req, res) => {
         await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld! 🚀`);
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.log("PayMongo Webhook error:", e.message);
+  }
   res.sendStatus(200);
 });
 
@@ -325,10 +359,12 @@ app.post('/webhook', async (req, res) => {
                 partner.state = "IDLE";
                 partner.activeMatchPsid = null;
                 await saveUserToDB(partnerPsid);
-                send(partnerPsid, `🔴 The active chat session has been ended by your match.`, [
-                  { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
-                  { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-                ]);
+                try {
+                  send(partnerPsid, `🔴 The active chat session has been ended by your match.`, [
+                    { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                    { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+                  ]);
+                } catch(e) {}
               }
             }
             send(psid, `🔴 Chat ended successfully.`, [
@@ -342,8 +378,20 @@ app.post('/webhook', async (req, res) => {
           if (user.activeMatchPsid) {
             let partner = await loadUserFromDB(user.activeMatchPsid);
             if (partner && partner.state === "CHATTING") {
-              send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
-              send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
+              try {
+                await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
+                await send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
+              } catch (err) {
+                // Disconnect handle kapag nagka-error sa pagsend sa kausap
+                user.state = "IDLE";
+                user.activeMatchPsid = null;
+                await saveUserToDB(psid);
+
+                send(psid, `⚠️ Hindi naisend ang mensahe. Nadisconnect ang kausap mo.`, [
+                  { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                  { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+                ]);
+              }
             } else {
               send(psid, `⚠️ Your match has disconnected or ended the chat.`, [
                 { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
@@ -351,6 +399,7 @@ app.post('/webhook', async (req, res) => {
               ]);
               user.state = "IDLE";
               user.activeMatchPsid = null;
+              await saveUserToDB(psid);
             }
           } else {
             send(psid, `💬 Match Reply: "That sounds awesome! Tell me more 😊"`, [
@@ -588,7 +637,9 @@ Choose an action below:`, [
               partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
               partner.coins += gift.bonus; // receiver bonus
               await saveUserToDB(user.activeMatchPsid);
-              send(user.activeMatchPsid, `🎁 SURPRISE! Your match sent you a ${gift.name} (+${gift.bonus} coins bonus!) ❤️`);
+              try {
+                send(user.activeMatchPsid, `🎁 SURPRISE! Your match sent you a ${gift.name} (+${gift.bonus} coins bonus!) ❤️`);
+              } catch(e) {}
             }
           }
 
@@ -599,7 +650,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS
+        // UNLOCK CHAT & PAIR REAL USERS (MONGODB MATCHMAKING FIXED)
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
@@ -609,13 +660,32 @@ Choose an action below:`, [
           user.coins -= 20;
           user.state = "CHATTING";
 
-          // Find another online/idle user to pair with
-          let partnerPsid = Object.keys(db.users).find(pId => 
-            pId !== psid && db.users[pId].state === "IDLE"
-          );
+          let partnerPsid = null;
+
+          // Maghanap ng IDLE partner sa MongoDB
+          if (MONGODB_URI && mongoose.connection.readyState === 1) {
+            try {
+              const matchDoc = await UserModel.findOne({
+                psid: { $ne: psid },
+                "data.state": "IDLE"
+              });
+              if (matchDoc) {
+                partnerPsid = matchDoc.psid;
+              }
+            } catch (e) {
+              console.log("Matchmaking query error:", e.message);
+            }
+          }
+
+          // Fallback sa RAM kung walang nahanap sa DB
+          if (!partnerPsid) {
+            partnerPsid = Object.keys(db.users).find(pId => 
+              pId !== psid && db.users[pId]?.state === "IDLE"
+            );
+          }
 
           if (partnerPsid) {
-            let partner = db.users[partnerPsid];
+            let partner = await loadUserFromDB(partnerPsid);
             user.activeMatchPsid = partnerPsid;
             partner.activeMatchPsid = psid;
             partner.state = "CHATTING";
