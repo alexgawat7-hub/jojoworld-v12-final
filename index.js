@@ -6,11 +6,11 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const axios = require('axios');
-const crypto = require('crypto'); // Dagdag para sa PayMongo Webhook Verification
+const crypto = require('crypto'); // Para sa PayMongo Webhook Verification
 
 const app = express();
 
-// FIX 1: Body-parser rawBody configuration para sa PayMongo Webhook HMAC signature
+// Body-parser rawBody configuration para sa PayMongo Webhook HMAC signature
 app.use(bodyParser.json({
   verify: (req, res, buf) => {
     req.rawBody = buf;
@@ -226,7 +226,7 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
-// SECURED PAYMONGO WEBHOOK (FIXED USING req.rawBody)
+// SECURED PAYMONGO WEBHOOK
 app.post('/paymongo-webhook', async (req, res) => {
   try {
     if (PAYMONGO_WEBHOOK_SECRET) {
@@ -337,6 +337,9 @@ app.post('/webhook', async (req, res) => {
               }
             }
           }
+
+          // FIX: Agarang i-save ang bagong user sa database
+          await saveUserToDB(psid);
         }
 
         user.lastActive = Date.now();
@@ -414,7 +417,7 @@ app.post('/webhook', async (req, res) => {
           continue;
         }
 
-        // PROFILE EDITING HANDLERS (FIXED: Deduct coins only upon successful input save)
+        // PROFILE EDITING HANDLERS
         if (user.state === "EDIT_NAME_AGE") {
           let parts = rawText.split(",");
           if (parts.length < 2 || isNaN(parts[1].trim())) {
@@ -519,7 +522,6 @@ Choose an action below:`, [
           continue;
         }
 
-        // EDIT ECONOMY RULE (FIXED: Checks balance without prematurely deducting coins)
         if (upperRaw.startsWith("REQ_EDIT_")) {
           if ((user.profileEdits || 0) > 0 && user.coins < 20) {
             send(psid, `❌ Insufficient coins! Subsequent profile edits cost 20 coins.`, [
@@ -542,7 +544,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // ZODIAC SELECTOR
+        // ZODIAC SELECTOR (FIXED ZODIAC SYMBOLS)
         if (upperRaw === "SET_ZODIAC_MENU") {
           send(psid, `♈ SELECT YOUR ZODIAC SIGN:\n━━━━━━━━━━━━━━━━━━━━`, [
             { content_type: "text", title: "♈ Aries", payload: "ZODIAC_♈ Aries" },
@@ -553,8 +555,8 @@ Choose an action below:`, [
             { content_type: "text", title: "♍ Virgo", payload: "ZODIAC_♍ Virgo" },
             { content_type: "text", title: "♎ Libra", payload: "ZODIAC_♎ Libra" },
             { content_type: "text", title: "♏ Scorpio", payload: "ZODIAC_♏ Scorpio" },
-            { content_type: "text", title: "♐ Sagitt.", payload: "ZODIAC_♈ Sagittarius" },
-            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♈ Capricorn" }
+            { content_type: "text", title: "♐ Sagitt.", payload: "ZODIAC_♐ Sagittarius" },
+            { content_type: "text", title: "♑ Capric.", payload: "ZODIAC_♑ Capricorn" }
           ]);
           continue;
         }
@@ -661,7 +663,7 @@ Choose an action below:`, [
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS (FIXED: ATOMIC MONGODB MATCHMAKING VIA findOneAndUpdate)
+        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING)
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
           if (user.coins < 20) {
             send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
