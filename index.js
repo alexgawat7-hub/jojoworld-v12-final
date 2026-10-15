@@ -20,14 +20,21 @@ app.use(bodyParser.json({
   }
 }));
 
-const ADMIN_ID = process.env.ADMIN_ID;
-const GCASH_NUM = process.env.GCASH_NUM;
-const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
-const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
-const PAGE_TOKEN = process.env.PAGE_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-const META_APP_SECRET = process.env.META_APP_SECRET;
-const MONGODB_URI = process.env.MONGODB_URI;
+function configuredValue(value) {
+  if (typeof value !== "string" || !value.trim()) return undefined;
+  const trimmed = value.trim();
+  if (/replace_with|replace_me|YOUR_CLUSTER|YOUR_DATABASE|USERNAME|PASSWORD/i.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+const ADMIN_ID = configuredValue(process.env.ADMIN_ID);
+const GCASH_NUM = configuredValue(process.env.GCASH_NUM);
+const PAYMONGO_SECRET = configuredValue(process.env.PAYMONGO_SECRET);
+const PAYMONGO_WEBHOOK_SECRET = configuredValue(process.env.PAYMONGO_WEBHOOK_SECRET);
+const PAGE_TOKEN = configuredValue(process.env.PAGE_TOKEN);
+const VERIFY_TOKEN = configuredValue(process.env.VERIFY_TOKEN);
+const META_APP_SECRET = configuredValue(process.env.META_APP_SECRET);
+const MONGODB_URI = configuredValue(process.env.MONGODB_URI);
 
 // PAGE NAME FOR MESSENGER LINK
 const PAGE_USERNAME = process.env.PAGE_USERNAME || "Princelucky";
@@ -1020,7 +1027,7 @@ ${renderGiftCatalog()}
             }
           } else if (!MONGODB_URI) {
             partnerPsid = user.pendingMatchPsid
-              ? (db.users[user.pendingMatchPsid]?.state === "IDLE" ? user.pendingMatchPsid : null)
+              ? (db.users[user.pendingMatchPsid]?.state === "IDLE" && !db.users[user.pendingMatchPsid]?.activeMatchPsid ? user.pendingMatchPsid : null)
               : (Object.keys(db.users).find(pId =>
                   pId !== psid &&
                   db.users[pId]?.state === "IDLE" &&
