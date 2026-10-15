@@ -107,11 +107,11 @@ const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 
 
 // GIFTS CONFIG
 const GIFTS = {
-  ROSE: { name: "🌹 Red Rose", cost: 10, bonus: 5 },
-  COFFEE: { name: "☕ Coffee Cup", cost: 25, bonus: 12 },
-  BEAR: { name: "🧸 Teddy Bear", cost: 50, bonus: 25 },
-  RING: { name: "💍 Diamond Ring", cost: 100, bonus: 50 },
-  CAR: { name: "🏎️ Sports Car", cost: 300, bonus: 150 }
+  ROSE: { name: "🌹 Red Rose", cost: 25, bonus: 5 },
+  COFFEE: { name: "☕ Coffee Cup", cost: 60, bonus: 12 },
+  BEAR: { name: "🧸 Teddy Bear", cost: 120, bonus: 25 },
+  RING: { name: "💍 Diamond Ring", cost: 250, bonus: 50 },
+  CAR: { name: "🏎️ Sports Car", cost: 750, bonus: 150 }
 };
 
 // ASYNC SAFE SEND FUNCTION WITH TYPING INDICATOR
@@ -499,11 +499,15 @@ app.post('/webhook', async (req, res) => {
 
         // VIEW PROFILE
         if (cleanText === "profile" || upperRaw === "PROFILE") {
-          let giftSummary = Object.entries(user.giftsReceived || {})
+          const giftsReceived = user.giftsReceived && typeof user.giftsReceived === "object" ? user.giftsReceived : {};
+          const giftEntries = Object.entries(giftsReceived)
+            .filter(([, count]) => Number.isFinite(count) && count > 0);
+          const totalGiftsReceived = giftEntries.reduce((total, [, count]) => total + count, 0);
+          const giftSummary = giftEntries
             .map(([k, v]) => `${GIFTS[k]?.name || k} x${v}`)
             .join(" | ") || "None yet 🎁";
 
-          send(psid, `👤 YOUR PROFILE & STATS (V25)
+          send(psid, `👤 YOUR PROFILE & STATS (V26)
 ━━━━━━━━━━━━━━━━━━━━
 📛 Name: ${user.name} (${user.age})
 📍 Location: ${user.location}
@@ -512,6 +516,7 @@ app.post('/webhook', async (req, res) => {
 💬 Bio: "${user.bio}"
 💎 Coins: ${user.coins} | 👁️ Views: ${user.views}
 🌟 Badge: ${user.badge} | 🖼️ Frame: ${user.frame}
+🎁 Total Gifts Received: ${totalGiftsReceived}
 🎁 Gifts Showcase: ${giftSummary}
 🔗 Ref Link: https://m.me/${PAGE_USERNAME}?start=REF_${psid}
 
@@ -643,36 +648,57 @@ Choose an action below:`, [
         }
 
         if (upperRaw.startsWith("GIFT_")) {
-          let giftKey = upperRaw.replace("GIFT_", "");
-          let gift = GIFTS[giftKey];
+          const giftKey = upperRaw.replace("GIFT_", "");
+          const gift = GIFTS[giftKey];
 
-          if (!gift) continue;
-          if (user.coins < gift.cost) {
-            send(psid, `❌ Insufficient coins to send ${gift.name}!`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
+          if (!gift) {
+            send(psid, "⚠️ That gift is not available.");
+            continue;
+          }
+
+          // Gifts count as RECEIVED only on the recipient's profile.
+          const recipientPsid = user.activeMatchPsid;
+          if (!recipientPsid || recipientPsid === psid) {
+            send(psid, "❌ You need an active match before sending a gift. No coins were deducted.", [
+              { content_type: "text", title: "💘 Find Match", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Menu", payload: "MENU" }
+            ]);
+            continue;
+          }
+
+          const partner = await loadUserFromDB(recipientPsid);
+          if (!partner || partner.activeMatchPsid !== psid) {
+            send(psid, "❌ Your match is no longer active. No coins were deducted.", [
+              { content_type: "text", title: "💘 Find Match", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Menu", payload: "MENU" }
+            ]);
+            continue;
+          }
+
+          if (!Number.isFinite(user.coins) || user.coins < gift.cost) {
+            send(psid, `❌ Insufficient coins to send ${gift.name}! Price: ${gift.cost} coins.`, [
+              { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
+            ]);
             continue;
           }
 
           user.coins -= gift.cost;
-          if (!user.giftsReceived) user.giftsReceived = {};
-          user.giftsReceived[giftKey] = (user.giftsReceived[giftKey] || 0) + 1;
-          user.giftsCount = (user.giftsCount || 0) + 1;
-          await saveUserToDB(psid);
-
-          if (user.activeMatchPsid) {
-            let partner = await loadUserFromDB(user.activeMatchPsid);
-            if (partner) {
-              if (!partner.giftsReceived) partner.giftsReceived = {};
-              partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
-              partner.coins += gift.bonus;
-              await saveUserToDB(user.activeMatchPsid);
-              try {
-                send(user.activeMatchPsid, `🎁 SURPRISE! Your match sent you a ${gift.name} (+${gift.bonus} coins bonus!) ❤️`);
-              } catch(e) {}
-            }
+          if (!partner.giftsReceived || typeof partner.giftsReceived !== "object" || Array.isArray(partner.giftsReceived)) {
+            partner.giftsReceived = {};
           }
+          partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
+          partner.giftsCount = Object.values(partner.giftsReceived)
+            .reduce((total, count) => total + (Number.isFinite(count) && count > 0 ? count : 0), 0);
+          partner.coins = (Number.isFinite(partner.coins) ? partner.coins : 0) + gift.bonus;
 
-          send(psid, `🎉 GIFT SENT! You sent ${gift.name}! Your match appreciated it so much! ❤️`, [
-            { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
+          await saveUserToDB(psid);
+          await saveUserToDB(recipientPsid);
+
+          send(recipientPsid, `🎁 SURPRISE! ${user.name || "Your match"} sent you ${gift.name}! Bonus: +${gift.bonus} coins. Total gifts received: ${partner.giftsCount}. ❤️`, [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" }
+          ]);
+          send(psid, `🎉 GIFT SENT! You sent ${gift.name} to ${partner.name || "your match"} for ${gift.cost} coins. They received +${gift.bonus} bonus coins! ❤️`, [
+            { content_type: "text", title: "💬 Chat", payload: "MENU" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
           ]);
           continue;
