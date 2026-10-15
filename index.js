@@ -457,7 +457,7 @@ app.post('/webhook', async (req, res) => {
           let parts = upperRaw.replace("ADMIN_ADDCOINS_", "").split("_");
           const targetPsid = parts[0];
           const addAmt = parts[1] === undefined || parts[1] === "" ? 1000 : Number(parts[1]);
-          if (!/^\\d{5,32}$/.test(targetPsid) || !Number.isSafeInteger(addAmt) || addAmt < 1 || addAmt > 1000000) {
+          if (!/^\d{5,32}$/.test(targetPsid) || !Number.isSafeInteger(addAmt) || addAmt < 1 || addAmt > 1000000) {
             send(psid, "❌ Invalid command. Use ADMIN_ADDCOINS_<PSID>_<positive amount up to 1000000>.");
             continue;
           }
