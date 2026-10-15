@@ -68,7 +68,9 @@ if (fs.existsSync('./db.json')) {
     const localDb = JSON.parse(fs.readFileSync('./db.json'));
     if (localDb.users) db.users = localDb.users;
     if (localDb.jackpotPool) db.jackpotPool = localDb.jackpotPool;
-  } catch (e) {}
+  } catch (e) {
+    console.error("Could not read local db.json; starting with an empty local cache:", e.message);
+  }
 }
 
 // ================= MONGODB SETUP & STARTUP LOADER =================
@@ -557,12 +559,10 @@ app.post('/webhook', async (req, res) => {
                 partner.state = "IDLE";
                 partner.activeMatchPsid = null;
                 await saveUserToDB(partnerPsid);
-                try {
-                  send(partnerPsid, `🔴 The active chat session has been ended by your match.`, [
-                    { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
-                    { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-                  ]);
-                } catch(e) {}
+                send(partnerPsid, `🔴 The active chat session has been ended by your match.`, [
+                  { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                  { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+                ]);
               }
             }
             send(psid, `🔴 Chat ended successfully.`, [
@@ -1164,7 +1164,8 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw.startsWith("TOP UP ")) {
-          let amt = parseInt(upperRaw.split(" ").pop());
+          const amountMatch = /^TOP UP\\s+(\\d+)$/.exec(upperRaw);
+          const amt = amountMatch ? Number(amountMatch[1]) : NaN;
           let coins = TOPUP_RATES[amt];
           if (!coins) {
             send(psid, `❌ Invalid package. Choose from 20, 50, 80, 100, 200, 500.`);
