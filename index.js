@@ -23,7 +23,7 @@ app.use(bodyParser.json({
 function configuredValue(value) {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const trimmed = value.trim();
-  if (/replace_with|replace_me|YOUR_CLUSTER|YOUR_DATABASE|USERNAME|PASSWORD/i.test(trimmed)) return undefined;
+  if (/replace_with|replace_me|YOUR_CLUSTER|YOUR_DATABASE|mongodb(?:\\+srv)?:\\/\\/USERNAME:PASSWORD@/i.test(trimmed)) return undefined;
   return trimmed;
 }
 
@@ -253,7 +253,7 @@ function sanitizeInput(text) {
 }
 
 async function createPaymongoLink(amount, coins, psid) {
-  if (!PAYMONGO_SECRET || !PAYMONGO_WEBHOOK_SECRET) return null;
+  if (!PAYMONGO_SECRET || !PAYMONGO_WEBHOOK_SECRET || !MONGODB_URI || mongoose.connection.readyState !== 1) return null;
   try {
     const res = await axios.post('https://api.paymongo.com/v1/links', {
       data: { attributes: { amount: amount * 100, description: `${coins} Coins JojoWorld V26`, remarks: psid.toString() } }
@@ -1319,7 +1319,7 @@ app.get('/ready', (req, res) => {
     paymongoWebhookSecret: Boolean(PAYMONGO_WEBHOOK_SECRET)
   };
   const messengerReady = checks.pageToken && checks.verifyToken && checks.metaAppSecret && checks.mongodbConnected;
-  const paymentsReady = checks.paymongoSecret && checks.paymongoWebhookSecret;
+  const paymentsReady = checks.paymongoSecret && checks.paymongoWebhookSecret && checks.mongodb && checks.mongodbConnected;
   res.status(messengerReady ? 200 : 503).json({
     status: messengerReady ? 'ready' : 'needs_configuration',
     messengerReady,
