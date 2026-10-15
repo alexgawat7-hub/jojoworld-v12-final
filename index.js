@@ -125,6 +125,41 @@ async function saveUserToDB(psid) {
   return true;
 }
 
+// Persist both sides of a gift transfer together to prevent one-sided wallet updates.
+async function saveGiftTransfer(senderPsid, recipientPsid) {
+  if (MONGODB_URI) {
+    if (mongoose.connection.readyState !== 1) return false;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        await UserModel.updateOne(
+          { psid: senderPsid },
+          { $set: { psid: senderPsid, data: db.users[senderPsid] } },
+          { upsert: true, session }
+        );
+        await UserModel.updateOne(
+          { psid: recipientPsid },
+          { $set: { psid: recipientPsid, data: db.users[recipientPsid] } },
+          { upsert: true, session }
+        );
+      });
+    } catch (error) {
+      console.error("Gift transfer transaction failed:", error.message);
+      return false;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  try {
+    fs.writeFileSync('./db.json', JSON.stringify(db, null, 2));
+  } catch (error) {
+    console.error("Gift transfer local snapshot failed:", error.message);
+    if (!MONGODB_URI) return false;
+  }
+  return true;
+}
+
 const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 };
 
 // Shared V26 Gift Hub catalog keeps Messenger prices in sync with tests.
@@ -714,6 +749,8 @@ ${renderGiftCatalog()}
             continue;
           }
 
+          const senderSnapshot = JSON.parse(JSON.stringify(user));
+          const recipientSnapshot = JSON.parse(JSON.stringify(partner));
           let giftResult;
           try {
             giftResult = applyGift({
@@ -734,9 +771,15 @@ ${renderGiftCatalog()}
             throw error;
           }
 
-          // Persist both sides before sending a success notification.
-          await saveUserToDB(psid);
-          await saveUserToDB(recipientPsid);
+          // Never report success unless both wallet/profile changes persist together.
+          const giftSaved = await saveGiftTransfer(psid, recipientPsid);
+          if (!giftSaved) {
+            db.users[psid] = senderSnapshot;
+            db.users[recipientPsid] = recipientSnapshot;
+            user = db.users[psid];
+            send(psid, "❌ Hindi na-save ang gift transfer. Walang successful na gift na naitala; subukan ulit mamaya.");
+            continue;
+          }
 
           try {
             await send(recipientPsid, `🎁 SURPRISE! ${user.name || "Your match"} sent you ${giftResult.gift.name}! Bonus: +${giftResult.gift.bonus} coins. Total gifts received: ${partner.giftsCount}. ❤️`, [
