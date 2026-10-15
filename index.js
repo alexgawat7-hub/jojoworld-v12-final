@@ -528,8 +528,14 @@ app.post('/webhook', async (req, res) => {
           }
           let targetUser = await loadUserFromDB(targetPsid);
           if (targetUser) {
-            targetUser.coins += addAmt;
-            await saveUserToDB(targetPsid);
+            const previousCoins = Number(targetUser.coins);
+            const safePreviousCoins = Number.isFinite(previousCoins) && previousCoins >= 0 ? previousCoins : 0;
+            targetUser.coins = safePreviousCoins + addAmt;
+            if (!await saveUserToDB(targetPsid)) {
+              targetUser.coins = safePreviousCoins;
+              send(psid, "❌ Coins were not added because the database save failed.");
+              continue;
+            }
             send(psid, `👑 [ADMIN] Added ${addAmt} coins to user ${targetPsid}.`);
           } else {
             send(psid, `❌ [ADMIN] User not found.`);
@@ -1051,6 +1057,7 @@ ${renderGiftCatalog()}
             continue;
           }
 
+          const spinSnapshot = { coins: user.coins, jackpotPool: db.jackpotPool };
           user.coins -= 10;
           db.jackpotPool += 5;
 
@@ -1075,7 +1082,12 @@ ${renderGiftCatalog()}
             user.coins += db.jackpotPool;
             let wonJackpot = db.jackpotPool;
             db.jackpotPool = 1500;
-            await saveUserToDB(psid);
+            if (!await saveUserToDB(psid)) {
+              user.coins = spinSnapshot.coins;
+              db.jackpotPool = spinSnapshot.jackpotPool;
+              send(psid, "⚠️ Hindi na-save ang spin. Walang coins na ikakaltas; subukan ulit mamaya.");
+              continue;
+            }
 
             send(psid, `🎰 SCATTER SPIN WHEEL 🎰\n━━━━━━━━━━━━━━━━━━━━\n${result.visual}\n\n🏆 UNBELIEVABLE! YOU WON THE JACKPOT OF ${wonJackpot} COINS!\n💎 Balance: ${user.coins} coins`, [
               { content_type: "text", title: "🎰 Spin Again (-10c)", payload: "SPIN" },
@@ -1083,7 +1095,12 @@ ${renderGiftCatalog()}
             ]);
           } else {
             user.coins += result.win;
-            await saveUserToDB(psid);
+            if (!await saveUserToDB(psid)) {
+              user.coins = spinSnapshot.coins;
+              db.jackpotPool = spinSnapshot.jackpotPool;
+              send(psid, "⚠️ Hindi na-save ang spin. Walang coins na ikakaltas; subukan ulit mamaya.");
+              continue;
+            }
 
             send(psid, `🎰 SCATTER SPIN WHEEL 🎰\n━━━━━━━━━━━━━━━━━━━━\n${result.visual}\n\n${result.text}\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n💎 Balance: ${user.coins} coins`, [
               { content_type: "text", title: "🎰 Spin Again (-10c)", payload: "SPIN" },
@@ -1130,9 +1147,15 @@ ${renderGiftCatalog()}
             let hoursLeft = Math.ceil((86400000 - (now - user.lastDaily)) / 3600000);
             send(psid, `🎁 Daily bonus already claimed! Come back in ${hoursLeft} hours.`, [{ content_type: "text", title: "↩️ Menu", payload: "MENU" }]);
           } else {
+            const previousDailyState = { coins: user.coins, lastDaily: user.lastDaily };
             user.coins += 35;
             user.lastDaily = now;
-            await saveUserToDB(psid);
+            if (!await saveUserToDB(psid)) {
+              user.coins = previousDailyState.coins;
+              user.lastDaily = previousDailyState.lastDaily;
+              send(psid, "⚠️ Hindi na-save ang daily bonus. Subukan ulit mamaya.");
+              continue;
+            }
             send(psid, `🎁 DAILY REWARD CLAIMED!\n💰 +35 Coins added!\n💎 Balance: ${user.coins} coins`, [
               { content_type: "text", title: "🎡 Scatter Spin", payload: "SPIN" },
               { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -1155,9 +1178,15 @@ ${renderGiftCatalog()}
           if (user.coins < 200) {
             send(psid, `❌ Not enough coins! VIP Badge costs 200 coins.`);
           } else {
+            const previousVipState = { coins: user.coins, badge: user.badge };
             user.coins -= 200;
             user.badge = "👑 VIP Elite";
-            await saveUserToDB(psid);
+            if (!await saveUserToDB(psid)) {
+              user.coins = previousVipState.coins;
+              user.badge = previousVipState.badge;
+              send(psid, "⚠️ Hindi na-save ang VIP purchase. Walang coins na ikakaltas.");
+              continue;
+            }
             send(psid, `🎉 SUCCESS! You are now a VIP Elite member! 👑`);
           }
           continue;
@@ -1167,9 +1196,15 @@ ${renderGiftCatalog()}
           if (user.coins < 150) {
             send(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
           } else {
+            const previousFrameState = { coins: user.coins, frame: user.frame };
             user.coins -= 150;
             user.frame = "💎 Gold Frame";
-            await saveUserToDB(psid);
+            if (!await saveUserToDB(psid)) {
+              user.coins = previousFrameState.coins;
+              user.frame = previousFrameState.frame;
+              send(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
+              continue;
+            }
             send(psid, `🎉 SUCCESS! Gold Frame unlocked! 💎`);
           }
           continue;
