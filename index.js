@@ -170,7 +170,7 @@ async function saveUserToDB(psid, { saveJackpot = true } = {}) {
 }
 
 // Persist both sides of a gift transfer together to prevent one-sided wallet updates.
-async function saveGiftTransfer(senderPsid, recipientPsid) {
+async function saveUserPair(senderPsid, recipientPsid) {
   if (MONGODB_URI) {
     if (mongoose.connection.readyState !== 1) return false;
     const session = await mongoose.startSession();
@@ -496,11 +496,23 @@ app.post('/webhook', async (req, res) => {
             if (referrerPsid !== psid) {
               let referrer = await loadUserFromDB(referrerPsid);
               if (referrer) {
-                user.coins += 50; 
-                referrer.coins += 100; 
+                const newUserSnapshot = JSON.parse(JSON.stringify(user));
+                const referrerSnapshot = JSON.parse(JSON.stringify(referrer));
+                const previousReferrerCoins = Number(referrer.coins);
+                user.coins = (Number.isFinite(Number(user.coins)) ? Number(user.coins) : 0) + 50;
+                referrer.coins = (Number.isFinite(previousReferrerCoins) && previousReferrerCoins >= 0 ? previousReferrerCoins : 0) + 100;
                 referrer.refCount = (referrer.refCount || 0) + 1;
-                await saveUserToDB(referrerPsid);
-                send(referrerPsid, `🎉 REFERRAL SUCCESS!\nA new user joined using your link! 🎁\n💰 +100 Coins credited to your wallet!`);
+                const referralSaved = await saveUserPair(psid, referrerPsid);
+                if (referralSaved) {
+                  send(referrerPsid, `🎉 REFERRAL SUCCESS!
+A new user joined using your link! 🎁
+💰 +100 Coins credited to your wallet!`);
+                } else {
+                  db.users[psid] = newUserSnapshot;
+                  db.users[referrerPsid] = referrerSnapshot;
+                  user = db.users[psid];
+                  send(psid, "⚠️ Hindi na-save ang referral reward. Hindi naibigay ang bonus; maaari ka pa ring magpatuloy.");
+                }
               }
             }
           }
@@ -962,7 +974,7 @@ ${renderGiftCatalog()}
           }
 
           // Never report success unless both wallet/profile changes persist together.
-          const giftSaved = await saveGiftTransfer(psid, recipientPsid);
+          const giftSaved = await saveUserPair(psid, recipientPsid);
           if (!giftSaved) {
             db.users[psid] = senderSnapshot;
             db.users[recipientPsid] = recipientSnapshot;
