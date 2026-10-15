@@ -1429,15 +1429,19 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === "BUY_VIP") {
+          // [FIXED] Duplicate VIP validation happens before deducting coins.
+          if (user.vip || user.badge === "👑 VIP Elite") { send(psid, "❌ Meron ka na VIP boss!"); continue; }
           if (user.coins < 200) {
             send(psid, `❌ Not enough coins! VIP Badge costs 200 coins.`);
           } else {
-            const previousVipState = { coins: user.coins, badge: user.badge };
+            const previousVipState = { coins: user.coins, badge: user.badge, vip: user.vip };
             user.coins -= 200;
+            user.vip = true;
             user.badge = "👑 VIP Elite";
             if (!await saveUserToDB(psid)) {
               user.coins = previousVipState.coins;
               user.badge = previousVipState.badge;
+              user.vip = previousVipState.vip;
               send(psid, "⚠️ Hindi na-save ang VIP purchase. Walang coins na ikakaltas.");
               continue;
             }
@@ -1447,15 +1451,19 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === "BUY_FRAME") {
+          // [FIXED] Duplicate gold-frame validation happens before deducting coins.
+          if (user.goldFrame || String(user.frame || "").toLowerCase().includes("gold")) { send(psid, "❌ Meron ka na Gold Frame boss!"); continue; }
           if (user.coins < 150) {
             send(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
           } else {
-            const previousFrameState = { coins: user.coins, frame: user.frame };
+            const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame };
             user.coins -= 150;
+            user.goldFrame = true;
             user.frame = "💎 Gold Frame";
             if (!await saveUserToDB(psid)) {
               user.coins = previousFrameState.coins;
               user.frame = previousFrameState.frame;
+              user.goldFrame = previousFrameState.goldFrame;
               send(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
               continue;
             }
