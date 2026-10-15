@@ -702,6 +702,7 @@ Choose an action below:`, [
               candidate = await UserModel.findOne({
                 psid: { $ne: psid },
                 "data.state": "IDLE",
+                "data.activeMatchPsid": null,
                 "data.lastActive": { $gte: searchCutoff }
               }).select("psid data").lean();
             } catch (error) {
@@ -711,6 +712,7 @@ Choose an action below:`, [
             const candidatePsid = Object.keys(db.users).find(candidateId =>
               candidateId !== psid &&
               db.users[candidateId]?.state === "IDLE" &&
+              !db.users[candidateId]?.activeMatchPsid &&
               Number(db.users[candidateId]?.lastActive || 0) >= searchCutoff
             );
             if (candidatePsid) candidate = { psid: candidatePsid, data: db.users[candidatePsid] };
@@ -867,7 +869,8 @@ ${renderGiftCatalog()}
               // Atomically reserve an idle partner so two users cannot select the same row.
               const candidateFilter = {
                 psid: user.pendingMatchPsid ? user.pendingMatchPsid : { $ne: psid },
-                "data.state": "IDLE"
+                "data.state": "IDLE",
+                "data.activeMatchPsid": null
               };
               if (!user.pendingMatchPsid) candidateFilter.psid = { $ne: psid };
               const matchDoc = await UserModel.findOneAndUpdate(
@@ -885,6 +888,7 @@ ${renderGiftCatalog()}
               : (Object.keys(db.users).find(pId =>
                   pId !== psid &&
                   db.users[pId]?.state === "IDLE" &&
+                  !db.users[pId]?.activeMatchPsid &&
                   Number(db.users[pId]?.lastActive || 0) >= Date.now() - 15 * 60 * 1000
                 ) || null);
           }
@@ -907,7 +911,13 @@ ${renderGiftCatalog()}
             if (partner) {
               partner.state = "IDLE";
               partner.activeMatchPsid = null;
+              partner.pendingMatchPsid = null;
               await saveUserToDB(partnerPsid);
+            } else if (MONGODB_URI && mongoose.connection.readyState === 1) {
+              await UserModel.updateOne(
+                { psid: partnerPsid },
+                { $set: { "data.state": "IDLE", "data.activeMatchPsid": null, "data.pendingMatchPsid": null } }
+              );
             }
             await saveUserToDB(psid);
             send(psid, "⚠️ Hindi ma-confirm ang match. Walang coins na ikakaltas; subukan ulit mamaya.");
@@ -926,6 +936,13 @@ ${renderGiftCatalog()}
             Object.assign(user, originalUser);
             partner.state = "IDLE";
             partner.activeMatchPsid = null;
+            partner.pendingMatchPsid = null;
+            if (MONGODB_URI && mongoose.connection.readyState === 1) {
+              await UserModel.updateOne(
+                { psid: partnerPsid },
+                { $set: { "data.state": "IDLE", "data.activeMatchPsid": null, "data.pendingMatchPsid": null } }
+              );
+            }
             await saveUserToDB(partnerPsid);
             await saveUserToDB(psid);
             send(psid, "⚠️ Hindi ma-save ang chat connection. Walang coins na ikakaltas; subukan ulit mamaya.");
