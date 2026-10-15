@@ -1104,9 +1104,7 @@ ${renderGiftCatalog()}
           partner.pendingMatchPsid = null;
           partner.state = "CHATTING";
 
-          const userSaved = await saveUserToDB(psid);
-          const partnerSaved = await saveUserToDB(partnerPsid);
-          if (!userSaved || !partnerSaved) {
+          if (!await saveUserPair(psid, partnerPsid)) {
             Object.assign(user, originalUser);
             partner.state = "IDLE";
             partner.activeMatchPsid = null;
