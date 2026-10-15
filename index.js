@@ -171,21 +171,26 @@ const GIFTS = GIFT_CATALOG;
 
 // ASYNC SAFE SEND FUNCTION WITH TYPING INDICATOR
 async function send(id, text, qr = null) {
+  if (!PAGE_TOKEN || !id) {
+    console.warn("Messenger send skipped: PAGE_TOKEN or recipient PSID is missing.");
+    return false;
+  }
   try {
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, {
       recipient: { id },
       sender_action: "typing_on"
     });
-    
+
     await new Promise(resolve => setTimeout(resolve, 350));
 
     const body = { recipient: { id }, message: { text } };
     if (qr) body.message.quick_replies = qr;
-    
+
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
+    return true;
   } catch (e) {
-    console.log(`❌ Send Error (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
-    throw e;
+    console.error(`Messenger send failed (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
+    return false;
   }
 }
 
@@ -506,7 +511,8 @@ app.post('/webhook', async (req, res) => {
             let partner = await loadUserFromDB(user.activeMatchPsid);
             if (partner && partner.state === "CHATTING") {
               try {
-                await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
+                const delivered = await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
+                if (!delivered) throw new Error("Messenger could not deliver the chat message");
                 await send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
               } catch (err) {
                 user.state = "IDLE";
@@ -1156,10 +1162,12 @@ app.get('/ready', (req, res) => {
     pageToken: Boolean(PAGE_TOKEN),
     verifyToken: Boolean(VERIFY_TOKEN),
     mongodb: Boolean(MONGODB_URI),
+    mongodbConnected: !MONGODB_URI || mongoose.connection.readyState === 1,
+    metaAppSecret: Boolean(META_APP_SECRET),
     paymongoSecret: Boolean(PAYMONGO_SECRET),
     paymongoWebhookSecret: Boolean(PAYMONGO_WEBHOOK_SECRET)
   };
-  const messengerReady = checks.pageToken && checks.verifyToken;
+  const messengerReady = checks.pageToken && checks.verifyToken && checks.metaAppSecret && checks.mongodbConnected;
   const paymentsReady = checks.paymongoSecret && checks.paymongoWebhookSecret;
   res.status(messengerReady ? 200 : 503).json({
     status: messengerReady ? 'ready' : 'needs_configuration',
