@@ -91,28 +91,38 @@ async function loadUserFromDB(psid) {
 }
 
 async function saveUserToDB(psid) {
-  try {
-    fs.writeFileSync('./db.json', JSON.stringify(db, null, 2));
-  } catch (e) {}
-
-  if (MONGODB_URI && mongoose.connection.readyState === 1) {
+  // If MongoDB was configured, do not silently pretend a disconnected database saved data.
+  if (MONGODB_URI) {
+    if (mongoose.connection.readyState !== 1) {
+      console.error("Database save skipped: MongoDB is configured but not connected.");
+      return false;
+    }
     try {
       if (db.users[psid]) {
         await UserModel.findOneAndUpdate(
           { psid },
-          { psid, data: db.users[psid] },
-          { upsert: true, new: true }
+          { $set: { psid, data: db.users[psid] } },
+          { upsert: true, new: true, runValidators: true }
         );
       }
       await JackpotModel.findOneAndUpdate(
         { id: "global" },
-        { id: "global", amount: db.jackpotPool },
-        { upsert: true }
+        { $set: { id: "global", amount: db.jackpotPool } },
+        { upsert: true, runValidators: true }
       );
     } catch (e) {
-      console.log("Error saving DB:", e.message);
+      console.error("Error saving MongoDB data:", e.message);
+      return false;
     }
   }
+
+  try {
+    fs.writeFileSync('./db.json', JSON.stringify(db, null, 2));
+  } catch (e) {
+    console.error("Error saving local database file:", e.message);
+    if (!MONGODB_URI) return false;
+  }
+  return true;
 }
 
 const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 };
@@ -289,13 +299,20 @@ app.post('/paymongo-webhook', async (req, res) => {
       return res.sendStatus(404);
     }
 
+    const previousCoins = user.coins;
     user.coins = Number.isFinite(user.coins) && user.coins >= 0 ? user.coins + coins : coins;
-    await saveUserToDB(psid);
+    const saved = await saveUserToDB(psid);
+    if (!saved) {
+      user.coins = previousCoins;
+      if (!MONGODB_URI || mongoose.connection.readyState !== 1) processedPaymentEvents.delete(ev.id);
+      else await PaymentEventModel.deleteOne({ eventId: ev.id, status: 'processing' });
+      return res.sendStatus(503);
+    }
     if (MONGODB_URI && mongoose.connection.readyState === 1) {
       await PaymentEventModel.updateOne({ eventId: ev.id }, { $set: { status: 'processed' } });
     }
     try {
-      await send(psid, `✅ PAYMENT SUCCESSFUL!\\n💰 +${coins} Coins added to your account!\\n💎 New Balance: ${user.coins} coins\\n\\nEnjoy JojoWorld V26! 🚀`);
+      await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld V26! 🚀`);
     } catch (notifyError) {
       console.error('Payment credited but Messenger notification failed:', notifyError.message);
     }
