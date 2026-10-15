@@ -23,7 +23,8 @@ app.use(bodyParser.json({
 function configuredValue(value) {
   if (typeof value !== "string" || !value.trim()) return undefined;
   const trimmed = value.trim();
-  if (/replace_with|replace_me|YOUR_CLUSTER|YOUR_DATABASE|mongodb(?:\\+srv)?:\\/\\/USERNAME:PASSWORD@/i.test(trimmed)) return undefined;
+  if (/replace_with|replace_me|YOUR_CLUSTER|YOUR_DATABASE/i.test(trimmed) ||
+      /^mongodb(?:\+srv)?:\/\/USERNAME:PASSWORD@/i.test(trimmed)) return undefined;
   return trimmed;
 }
 
