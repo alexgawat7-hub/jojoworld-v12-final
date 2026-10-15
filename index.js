@@ -48,6 +48,16 @@ const PaymentEventSchema = new mongoose.Schema({
 const PaymentEventModel = mongoose.models.JPaymentEvent || mongoose.model('JPaymentEvent', PaymentEventSchema);
 const processedPaymentEvents = new Set();
 
+// Messenger may retry delivery of the same message. Keep a unique message ID
+// record so a wallet-changing command is not applied twice.
+const ProcessedMessengerMessageSchema = new mongoose.Schema({
+  messageId: { type: String, required: true, unique: true },
+  createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 }
+});
+const ProcessedMessengerMessageModel = mongoose.models.JProcessedMessengerMessage ||
+  mongoose.model('JProcessedMessengerMessage', ProcessedMessengerMessageSchema);
+const processedMessengerMessages = new Set();
+
 let db = { users: {}, jackpotPool: 1500 };
 
 if (fs.existsSync('./db.json')) {
@@ -375,6 +385,10 @@ app.post('/webhook', async (req, res) => {
     console.warn('Messenger webhook rejected: missing or invalid Meta signature.');
     return res.sendStatus(401);
   }
+  if (MONGODB_URI && mongoose.connection.readyState !== 1) {
+    console.warn('Messenger webhook deferred: MongoDB is configured but not connected.');
+    return res.sendStatus(503);
+  }
 
   try {
     const body = req.body;
@@ -383,6 +397,23 @@ app.post('/webhook', async (req, res) => {
     for (const entry of body.entry) {
       for (const ev of (Array.isArray(entry.messaging) ? entry.messaging : [])) {
         if (!ev || !ev.sender || !ev.sender.id || (!ev.message && !ev.postback)) continue;
+        const messageId = ev.message && ev.message.mid ? String(ev.message.mid) : null;
+        if (messageId) {
+          if (MONGODB_URI && mongoose.connection.readyState === 1) {
+            try {
+              await ProcessedMessengerMessageModel.create({ messageId });
+            } catch (error) {
+              if (error.code === 11000) continue;
+              throw error;
+            }
+          } else {
+            if (processedMessengerMessages.has(messageId)) continue;
+            processedMessengerMessages.add(messageId);
+            if (processedMessengerMessages.size > 10000) {
+              processedMessengerMessages.delete(processedMessengerMessages.values().next().value);
+            }
+          }
+        }
         const psid = String(ev.sender.id);
 
         // CHECK REFERRAL PARAMETER ON START
@@ -447,7 +478,11 @@ app.post('/webhook', async (req, res) => {
         user.lastActive = Date.now();
         // Persist presence without rewriting the global jackpot on every message.
         const activitySaved = await saveUserToDB(psid, { saveJackpot: false });
-        if (!activitySaved) console.warn("Could not persist activity timestamp for user:", psid);
+        if (!activitySaved) {
+          console.error("Could not persist activity timestamp; command processing stopped for user:", psid);
+          send(psid, "⚠️ Hindi available ang database ngayon. Walang command na pinroseso; subukan ulit mamaya.");
+          continue;
+        }
 
         let rawText = "";
         if (ev.message && ev.message.quick_reply) rawText = ev.message.quick_reply.payload;
