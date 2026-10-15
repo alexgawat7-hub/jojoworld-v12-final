@@ -5,7 +5,7 @@ JojoWorld is a Facebook Messenger bot. The root `index.js` is the current full a
 ## Requirements
 
 - Node.js 20 or newer
-- A Facebook Page and Messenger app with a Page Access Token
+- A Facebook Page and Messenger app with a Page Access Token and Meta App Secret
 - A public HTTPS host for the Messenger webhook
 - MongoDB connection string for persistent production data
 - PayMongo credentials if you want payment top-ups enabled
@@ -33,7 +33,7 @@ JojoWorld is a Facebook Messenger bot. The root `index.js` is the current full a
    npm start
    ```
 
-6. Open `/health` on the hosted URL to confirm the process responds. Open `/ready` to see whether Messenger tokens are configured. The process can start before credentials are configured, but the bot cannot reply to Messenger users until a valid `PAGE_TOKEN` is set and the webhook is configured.
+6. Open `/health` on the hosted URL to confirm the process responds. Open `/ready` to see whether Messenger tokens are configured. The process can start before credentials are configured, but Messenger webhooks are rejected until valid `PAGE_TOKEN`, `VERIFY_TOKEN`, and `META_APP_SECRET` values are set and the webhook is configured.
 
 ## Facebook Messenger webhook
 
