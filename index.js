@@ -922,7 +922,11 @@ A new user joined using your link! 🎁
         }
 
         // VIEW PROFILE
-        if (cleanText === "profile" || upperRaw === "PROFILE") {\n          // [UPGRADED V28] Keep legacy text profile command and include verified display name.\n          user.views = (user.views || 0) + 1;\n          await saveUserToDB(psid, { saveJackpot: false });
+        if (cleanText === "profile" || upperRaw === "PROFILE") {
+          // [UPGRADED V28] Keep legacy text profile command and include verified display name.
+          user.views = (user.views || 0) + 1;\n          await saveUserToDB(psid, { saveJackpot: false });
+          // [ADDED] Canvas preview accompanies the legacy text profile to preserve old behavior.
+          try { const profileImage = await generateProfileCanvas({ ...user, id: psid }); await sendImage(psid, profileImage, `${getDisplayName(user)} • Black Gold Profile`); } catch (canvasError) { console.error("Profile canvas generation failed:", canvasError.message); }
           const giftsReceived = user.giftsReceived && typeof user.giftsReceived === "object" ? user.giftsReceived : {};
           const giftEntries = Object.entries(giftsReceived)
             .filter(([, count]) => Number.isFinite(count) && count > 0);
@@ -1460,8 +1464,11 @@ ${renderGiftCatalog()}
         }
 
         // LEADERBOARD
-        if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {\n          // [UPGRADED V28] Real leaderboard ordering by liquid coins + house value.\n          const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);\n          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net} net worth`).join("\\n");
-          send(psid, `🏆 JOJOWORLD V26 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 5,200 coins\n🥈 2. Elite_Prenz — 4,100 coins\n🥉 3. You (${user.name}) — ${user.coins} coins`, [
+        if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
+          // [UPGRADED V28] Real leaderboard ordering by liquid coins + house value.
+          const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
+          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net} net worth`).join("\n");
+          send(psid, `🏆 JOJOWORLD V28 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`, [
             { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
             { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
