@@ -98,6 +98,11 @@ async function saveUserToDB(psid) {
       return false;
     }
     try {
+      await JackpotModel.findOneAndUpdate(
+        { id: "global" },
+        { $set: { id: "global", amount: db.jackpotPool } },
+        { upsert: true, runValidators: true }
+      );
       if (db.users[psid]) {
         await UserModel.findOneAndUpdate(
           { psid },
@@ -105,11 +110,6 @@ async function saveUserToDB(psid) {
           { upsert: true, new: true, runValidators: true }
         );
       }
-      await JackpotModel.findOneAndUpdate(
-        { id: "global" },
-        { $set: { id: "global", amount: db.jackpotPool } },
-        { upsert: true, runValidators: true }
-      );
     } catch (e) {
       console.error("Error saving MongoDB data:", e.message);
       return false;
