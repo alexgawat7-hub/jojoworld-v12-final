@@ -611,21 +611,36 @@ app.post('/webhook', async (req, res) => {
 
         // PROFILE EDITING HANDLERS
         if (user.state === "EDIT_NAME_AGE") {
-          let parts = rawText.split(",");
-          if (parts.length < 2 || isNaN(parts[1].trim())) {
-            send(psid, `⚠️ Invalid format! Please type Name and Age separated by a comma.\nExample: *Juan, 24*`);
+          const parts = rawText.split(",");
+          const newName = String(parts[0] || "").trim();
+          const newAge = Number(String(parts[1] || "").trim());
+          if (parts.length !== 2 || !newName || newName.length > 40 ||
+              !Number.isInteger(newAge) || newAge < 18 || newAge > 99) {
+            send(psid, "⚠️ Invalid format. Type a name (max 40 characters) and an age from 18 to 99, separated by a comma. Example: Alex, 24");
             continue;
           }
 
-          if ((user.profileEdits || 0) > 0) {
-            user.coins -= 20;
+          if ((user.profileEdits || 0) > 0 && user.coins < 20) {
+            user.state = "IDLE";
+            await saveUserToDB(psid);
+            send(psid, "❌ Subsequent profile edits cost 20 coins. Your edit was not applied.", [
+              { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
+            ]);
+            continue;
           }
 
-          user.name = parts[0].trim();
-          user.age = parseInt(parts[1].trim());
+          const previousProfile = JSON.parse(JSON.stringify(user));
+          if ((user.profileEdits || 0) > 0) user.coins -= 20;
+          user.name = newName;
+          user.age = newAge;
           user.state = "IDLE";
           user.profileEdits = (user.profileEdits || 0) + 1;
-          await saveUserToDB(psid);
+          if (!await saveUserToDB(psid)) {
+            db.users[psid] = previousProfile;
+            user = db.users[psid];
+            send(psid, "⚠️ Hindi na-save ang profile. Walang coins na ikakaltas.");
+            continue;
+          }
           send(psid, `✅ Profile Name & Age updated to **${user.name}, ${user.age}**!`, [
             { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -634,14 +649,28 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (user.state === "EDIT_LOCATION") {
-          if ((user.profileEdits || 0) > 0) {
-            user.coins -= 20;
+          const newLocation = rawText.trim();
+          if (!newLocation || newLocation.length > 80) {
+            send(psid, "⚠️ Location must be between 1 and 80 characters. Please try again.");
+            continue;
           }
-
-          user.location = rawText.trim();
+          if ((user.profileEdits || 0) > 0 && user.coins < 20) {
+            user.state = "IDLE";
+            await saveUserToDB(psid);
+            send(psid, "❌ Subsequent profile edits cost 20 coins. Your edit was not applied.");
+            continue;
+          }
+          const previousProfile = JSON.parse(JSON.stringify(user));
+          if ((user.profileEdits || 0) > 0) user.coins -= 20;
+          user.location = newLocation;
           user.state = "IDLE";
           user.profileEdits = (user.profileEdits || 0) + 1;
-          await saveUserToDB(psid);
+          if (!await saveUserToDB(psid)) {
+            db.users[psid] = previousProfile;
+            user = db.users[psid];
+            send(psid, "⚠️ Hindi na-save ang profile. Walang coins na ikakaltas.");
+            continue;
+          }
           send(psid, `✅ Location updated to **${user.location}**!`, [
             { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
@@ -650,15 +679,29 @@ app.post('/webhook', async (req, res) => {
         }
 
         if (user.state === "EDIT_BIO") {
-          if ((user.profileEdits || 0) > 0) {
-            user.coins -= 20;
+          const newBio = rawText.trim();
+          if (!newBio || newBio.length > 500) {
+            send(psid, "⚠️ Bio must be between 1 and 500 characters. Please try again.");
+            continue;
           }
-
-          user.bio = rawText.trim();
+          if ((user.profileEdits || 0) > 0 && user.coins < 20) {
+            user.state = "IDLE";
+            await saveUserToDB(psid);
+            send(psid, "❌ Subsequent profile edits cost 20 coins. Your edit was not applied.");
+            continue;
+          }
+          const previousProfile = JSON.parse(JSON.stringify(user));
+          if ((user.profileEdits || 0) > 0) user.coins -= 20;
+          user.bio = newBio;
           user.state = "IDLE";
           user.profileEdits = (user.profileEdits || 0) + 1;
-          await saveUserToDB(psid);
-          send(psid, `✅ Bio updated successfully!\n💬 "${user.bio}"`, [
+          if (!await saveUserToDB(psid)) {
+            db.users[psid] = previousProfile;
+            user = db.users[psid];
+            send(psid, "⚠️ Hindi na-save ang profile. Walang coins na ikakaltas.");
+            continue;
+          }
+          send(psid, `✅ Bio updated successfully!\\n💬 "${user.bio}"`, [
             { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
           ]);
@@ -793,6 +836,7 @@ Choose an action below:`, [
                 psid: { $ne: psid },
                 "data.state": "IDLE",
                 "data.activeMatchPsid": null,
+                "data.age": { $gte: 18, $lte: 99 },
                 "data.lastActive": { $gte: searchCutoff }
               }).select("psid data").lean();
             } catch (error) {
@@ -803,6 +847,8 @@ Choose an action below:`, [
               candidateId !== psid &&
               db.users[candidateId]?.state === "IDLE" &&
               !db.users[candidateId]?.activeMatchPsid &&
+              Number(db.users[candidateId]?.age) >= 18 &&
+              Number(db.users[candidateId]?.age) <= 99 &&
               Number(db.users[candidateId]?.lastActive || 0) >= searchCutoff
             );
             if (candidatePsid) candidate = { psid: candidatePsid, data: db.users[candidatePsid] };
