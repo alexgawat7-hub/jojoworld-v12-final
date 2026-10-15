@@ -106,30 +106,47 @@ async function loadUserFromDB(psid) {
 }
 
 async function saveUserToDB(psid, { saveJackpot = true } = {}) {
-  // If MongoDB was configured, do not silently pretend a disconnected database saved data.
   if (MONGODB_URI) {
     if (mongoose.connection.readyState !== 1) {
       console.error("Database save skipped: MongoDB is configured but not connected.");
       return false;
     }
-    try {
-      if (saveJackpot) {
-        await JackpotModel.findOneAndUpdate(
-          { id: "global" },
-          { $set: { id: "global", amount: db.jackpotPool } },
-          { upsert: true, runValidators: true }
-        );
+    if (saveJackpot) {
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          await JackpotModel.findOneAndUpdate(
+            { id: "global" },
+            { $set: { id: "global", amount: db.jackpotPool } },
+            { upsert: true, runValidators: true, session }
+          );
+          if (db.users[psid]) {
+            await UserModel.findOneAndUpdate(
+              { psid },
+              { $set: { psid, data: db.users[psid] } },
+              { upsert: true, new: true, runValidators: true, session }
+            );
+          }
+        });
+      } catch (e) {
+        console.error("MongoDB transaction failed while saving user:", e.message);
+        return false;
+      } finally {
+        await session.endSession();
       }
-      if (db.users[psid]) {
-        await UserModel.findOneAndUpdate(
-          { psid },
-          { $set: { psid, data: db.users[psid] } },
-          { upsert: true, new: true, runValidators: true }
-        );
+    } else {
+      try {
+        if (db.users[psid]) {
+          await UserModel.findOneAndUpdate(
+            { psid },
+            { $set: { psid, data: db.users[psid] } },
+            { upsert: true, new: true, runValidators: true }
+          );
+        }
+      } catch (e) {
+        console.error("MongoDB user save failed:", e.message);
+        return false;
       }
-    } catch (e) {
-      console.error("Error saving MongoDB data:", e.message);
-      return false;
     }
   }
 
