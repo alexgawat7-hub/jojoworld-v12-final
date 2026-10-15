@@ -7,7 +7,7 @@ JojoWorld is a Facebook Messenger bot. The root `index.js` is the current full a
 - Node.js 20 or newer
 - A Facebook Page and Messenger app with a Page Access Token and Meta App Secret
 - A public HTTPS host for the Messenger webhook
-- MongoDB connection string for persistent production data
+- MongoDB connection string for persistent production data; use MongoDB Atlas or another replica-set deployment that supports transactions
 - PayMongo credentials if you want payment top-ups enabled
 
 ## Run locally
@@ -41,7 +41,7 @@ In Meta's developer dashboard, set the callback URL to `https://YOUR-HOST/webhoo
 
 ## Payments and storage
 
-Set `MONGODB_URI` for persistent user data. Without it, the legacy application falls back to local `db.json`, which is not suitable for ephemeral hosting. Configure both `PAYMONGO_SECRET` and `PAYMONGO_WEBHOOK_SECRET` before enabling live payment flows. Use test credentials while validating checkout and webhook behavior.
+Set `MONGODB_URI` for persistent user data. Gift transfers and wallet/jackpot saves use MongoDB transactions, so the database must support transactions (for example, MongoDB Atlas or a replica set). Without it, the legacy application falls back to local `db.json`, which is not suitable for ephemeral hosting; automatic payment top-ups stay disabled unless MongoDB is connected. Configure both `PAYMONGO_SECRET` and `PAYMONGO_WEBHOOK_SECRET` before enabling live payment flows. Use test credentials while validating checkout and webhook behavior.
 
 ## Automated checks
 
