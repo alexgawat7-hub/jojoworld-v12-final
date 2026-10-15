@@ -38,7 +38,7 @@ const META_APP_SECRET = configuredValue(process.env.META_APP_SECRET);
 const MONGODB_URI = configuredValue(process.env.MONGODB_URI);
 
 // PAGE NAME FOR MESSENGER LINK
-const PAGE_USERNAME = process.env.PAGE_USERNAME || "Princelucky";
+const PAGE_USERNAME = configuredValue(process.env.PAGE_USERNAME) || "Princelucky";
 
 const UserSchema = new mongoose.Schema({ psid: { type: String, required: true, unique: true }, data: Object }, { strict: false });
 const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
