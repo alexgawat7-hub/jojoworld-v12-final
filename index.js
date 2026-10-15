@@ -924,7 +924,8 @@ A new user joined using your link! 🎁
         // VIEW PROFILE
         if (cleanText === "profile" || upperRaw === "PROFILE") {
           // [UPGRADED V28] Keep legacy text profile command and include verified display name.
-          user.views = (user.views || 0) + 1;\n          await saveUserToDB(psid, { saveJackpot: false });
+          user.views = (user.views || 0) + 1;
+          await saveUserToDB(psid, { saveJackpot: false });
           // [ADDED] Canvas preview accompanies the legacy text profile to preserve old behavior.
           try { const profileImage = await generateProfileCanvas({ ...user, id: psid }); await sendImage(psid, profileImage, `${getDisplayName(user)} • Black Gold Profile`); } catch (canvasError) { console.error("Profile canvas generation failed:", canvasError.message); }
           const giftsReceived = user.giftsReceived && typeof user.giftsReceived === "object" ? user.giftsReceived : {};
