@@ -8,6 +8,7 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
+const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GIFT_CATALOG, GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
 const app = express();
@@ -25,6 +26,7 @@ const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
 const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const META_APP_SECRET = process.env.META_APP_SECRET;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // PAGE NAME FOR MESSENGER LINK
@@ -222,7 +224,7 @@ async function createPaymongoLink(amount, coins, psid) {
 
 // ================= UI MENUS =================
 function sendMenu(id) {
-  send(id, `✨ JOJOWORLD V25 ULTIMATE ✨
+  send(id, `✨ JOJOWORLD V26 ULTIMATE ✨
 ━━━━━━━━━━━━━━━━━━━━
 🔥 LIMITED TIME: +20% Bonus Coins
 💘 Find match & connect worldwide
@@ -360,13 +362,23 @@ app.post('/paymongo-webhook', async (req, res) => {
   }
 });
 app.post('/webhook', async (req, res) => {
+  if (!META_APP_SECRET) {
+    console.error('Messenger webhook rejected: META_APP_SECRET is not configured.');
+    return res.sendStatus(503);
+  }
+  if (!verifyMessengerSignature(req.rawBody, req.headers['x-hub-signature-256'], META_APP_SECRET)) {
+    console.warn('Messenger webhook rejected: missing or invalid Meta signature.');
+    return res.sendStatus(401);
+  }
+
   try {
     const body = req.body;
-    if (body.object !== 'page') return res.sendStatus(200);
+    if (!body || body.object !== 'page' || !Array.isArray(body.entry)) return res.sendStatus(200);
 
     for (const entry of body.entry) {
-      for (const ev of entry.messaging) {
-        const psid = ev.sender.id;
+      for (const ev of (Array.isArray(entry.messaging) ? entry.messaging : [])) {
+        if (!ev || !ev.sender || !ev.sender.id || (!ev.message && !ev.postback)) continue;
+        const psid = String(ev.sender.id);
 
         // CHECK REFERRAL PARAMETER ON START
         let referralParam = null;
@@ -385,7 +397,7 @@ app.post('/webhook', async (req, res) => {
             coins: 200,
             location: "Manila",
             rating: 5.0,
-            bio: "Hello JojoWorld V25!",
+            bio: "Hello JojoWorld V26!",
             age: 21,
             gender: "Not set",
             name: "Jojo Member",
@@ -425,6 +437,8 @@ app.post('/webhook', async (req, res) => {
           await saveUserToDB(psid);
         }
 
+        const numericCoins = Number(user.coins);
+        user.coins = Number.isFinite(numericCoins) && numericCoins >= 0 ? numericCoins : 0;
         user.lastActive = Date.now();
         // Persist presence without rewriting the global jackpot on every message.
         const activitySaved = await saveUserToDB(psid, { saveJackpot: false });
@@ -441,8 +455,12 @@ app.post('/webhook', async (req, res) => {
         // ADMIN COMMAND SUITE
         if (psid === ADMIN_ID && upperRaw.startsWith("ADMIN_ADDCOINS_")) {
           let parts = upperRaw.replace("ADMIN_ADDCOINS_", "").split("_");
-          let targetPsid = parts[0];
-          let addAmt = parseInt(parts[1]) || 1000;
+          const targetPsid = parts[0];
+          const addAmt = parts[1] === undefined || parts[1] === "" ? 1000 : Number(parts[1]);
+          if (!/^\\d{5,32}$/.test(targetPsid) || !Number.isSafeInteger(addAmt) || addAmt < 1 || addAmt > 1000000) {
+            send(psid, "❌ Invalid command. Use ADMIN_ADDCOINS_<PSID>_<positive amount up to 1000000>.");
+            continue;
+          }
           let targetUser = await loadUserFromDB(targetPsid);
           if (targetUser) {
             targetUser.coins += addAmt;
@@ -1093,7 +1111,7 @@ ${renderGiftCatalog()}
 
         // LEADERBOARD
         if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
-          send(psid, `🏆 JOJOWORLD V25 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 5,200 coins\n🥈 2. Elite_Prenz — 4,100 coins\n🥉 3. You (${user.name}) — ${user.coins} coins`, [
+          send(psid, `🏆 JOJOWORLD V26 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 5,200 coins\n🥈 2. Elite_Prenz — 4,100 coins\n🥉 3. You (${user.name}) — ${user.coins} coins`, [
             { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
             { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
