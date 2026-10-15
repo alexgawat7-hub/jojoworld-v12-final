@@ -7,6 +7,7 @@ const fs = require('fs');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const crypto = require('crypto'); // Para sa PayMongo Webhook Verification
+const { GIFT_CATALOG, GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
 const app = express();
 
@@ -105,14 +106,8 @@ async function saveUserToDB(psid) {
 
 const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 };
 
-// GIFTS CONFIG
-const GIFTS = {
-  ROSE: { name: "🌹 Red Rose", cost: 25, bonus: 5 },
-  COFFEE: { name: "☕ Coffee Cup", cost: 60, bonus: 12 },
-  BEAR: { name: "🧸 Teddy Bear", cost: 120, bonus: 25 },
-  RING: { name: "💍 Diamond Ring", cost: 250, bonus: 50 },
-  CAR: { name: "🏎️ Sports Car", cost: 750, bonus: 150 }
-};
+// Shared V26 Gift Hub catalog keeps Messenger prices in sync with tests.
+const GIFTS = GIFT_CATALOG;
 
 // ASYNC SAFE SEND FUNCTION WITH TYPING INDICATOR
 async function send(id, text, qr = null) {
@@ -631,35 +626,27 @@ Choose an action below:`, [
 
         // GIFTING SYSTEM
         if (upperRaw === "SEND_GIFT_MENU") {
-          send(psid, `🎁 SELECT A GIFT TO SEND:
+          send(psid, `🎁 JOJOWORLD V26 GIFT HUB
 ━━━━━━━━━━━━━━━━━━━━
-🌹 Red Rose - 10c (+5c bonus to receiver)
-☕ Coffee Cup - 25c (+12c bonus to receiver)
-🧸 Teddy Bear - 50c (+25c bonus to receiver)
-💍 Diamond Ring - 100c (+50c bonus to receiver)
-🏎️ Sports Car - 300c (+150c bonus to receiver)`, [
-            { content_type: "text", title: "🌹 Rose (10c)", payload: "GIFT_ROSE" },
-            { content_type: "text", title: "☕ Coffee (25c)", payload: "GIFT_COFFEE" },
-            { content_type: "text", title: "🧸 Bear (50c)", payload: "GIFT_BEAR" },
-            { content_type: "text", title: "💍 Ring (100c)", payload: "GIFT_RING" },
-            { content_type: "text", title: "🏎️ Car (300c)", payload: "GIFT_CAR" }
+${renderGiftCatalog()}
+
+🎯 Gifts can be sent only to your active chat partner.
+🎁 Gift counts appear on the recipient's profile.`, [
+            { content_type: "text", title: "🌹 Rose (25c)", payload: "GIFT_ROSE" },
+            { content_type: "text", title: "☕ Coffee (60c)", payload: "GIFT_COFFEE" },
+            { content_type: "text", title: "🧸 Bear (120c)", payload: "GIFT_BEAR" },
+            { content_type: "text", title: "💍 Ring (250c)", payload: "GIFT_RING" },
+            { content_type: "text", title: "🏎️ Car (750c)", payload: "GIFT_CAR" }
           ]);
           continue;
         }
 
         if (upperRaw.startsWith("GIFT_")) {
           const giftKey = upperRaw.replace("GIFT_", "");
-          const gift = GIFTS[giftKey];
-
-          if (!gift) {
-            send(psid, "⚠️ That gift is not available.");
-            continue;
-          }
-
-          // Gifts count as RECEIVED only on the recipient's profile.
           const recipientPsid = user.activeMatchPsid;
+
           if (!recipientPsid || recipientPsid === psid) {
-            send(psid, "❌ You need an active match before sending a gift. No coins were deducted.", [
+            send(psid, "❌ You need an active chat partner before sending a gift. No coins were deducted.", [
               { content_type: "text", title: "💘 Find Match", payload: "FIND MATCH" },
               { content_type: "text", title: "↩️ Menu", payload: "MENU" }
             ]);
@@ -667,39 +654,49 @@ Choose an action below:`, [
           }
 
           const partner = await loadUserFromDB(recipientPsid);
-          if (!partner || partner.activeMatchPsid !== psid) {
-            send(psid, "❌ Your match is no longer active. No coins were deducted.", [
+          if (!partner || partner.activeMatchPsid !== psid || partner.state !== "CHATTING" || user.state !== "CHATTING") {
+            send(psid, "❌ Your chat partner is no longer active. No coins were deducted.", [
               { content_type: "text", title: "💘 Find Match", payload: "FIND MATCH" },
               { content_type: "text", title: "↩️ Menu", payload: "MENU" }
             ]);
             continue;
           }
 
-          if (!Number.isFinite(user.coins) || user.coins < gift.cost) {
-            send(psid, `❌ Insufficient coins to send ${gift.name}! Price: ${gift.cost} coins.`, [
-              { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
-            ]);
-            continue;
+          let giftResult;
+          try {
+            giftResult = applyGift({
+              senderPsid: psid,
+              recipientPsid,
+              sender: user,
+              recipient: partner,
+              giftKey
+            });
+          } catch (error) {
+            if (error instanceof GiftHubError) {
+              const help = error.code === "INSUFFICIENT_COINS"
+                ? [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]
+                : [];
+              send(psid, `❌ ${error.message} No coins were deducted.`, help);
+              continue;
+            }
+            throw error;
           }
 
-          user.coins -= gift.cost;
-          if (!partner.giftsReceived || typeof partner.giftsReceived !== "object" || Array.isArray(partner.giftsReceived)) {
-            partner.giftsReceived = {};
-          }
-          partner.giftsReceived[giftKey] = (partner.giftsReceived[giftKey] || 0) + 1;
-          partner.giftsCount = Object.values(partner.giftsReceived)
-            .reduce((total, count) => total + (Number.isFinite(count) && count > 0 ? count : 0), 0);
-          partner.coins = (Number.isFinite(partner.coins) ? partner.coins : 0) + gift.bonus;
-
+          // Persist both sides before sending a success notification.
           await saveUserToDB(psid);
           await saveUserToDB(recipientPsid);
 
-          send(recipientPsid, `🎁 SURPRISE! ${user.name || "Your match"} sent you ${gift.name}! Bonus: +${gift.bonus} coins. Total gifts received: ${partner.giftsCount}. ❤️`, [
-            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" }
-          ]);
-          send(psid, `🎉 GIFT SENT! You sent ${gift.name} to ${partner.name || "your match"} for ${gift.cost} coins. They received +${gift.bonus} bonus coins! ❤️`, [
-            { content_type: "text", title: "💬 Chat", payload: "MENU" },
-            { content_type: "text", title: "↩️ Menu", payload: "MENU" }
+          try {
+            await send(recipientPsid, `🎁 SURPRISE! ${user.name || "Your match"} sent you ${giftResult.gift.name}! Bonus: +${giftResult.gift.bonus} coins. Total gifts received: ${partner.giftsCount}. ❤️`, [
+              { content_type: "text", title: "👤 View Profile", payload: "PROFILE" }
+            ]);
+          } catch (notifyError) {
+            console.log("Gift recipient notification failed:", notifyError.message);
+          }
+
+          send(psid, `🎉 GIFT SENT! You sent ${giftResult.gift.name} to ${partner.name || "your match"} for ${giftResult.gift.cost} coins. They received +${giftResult.gift.bonus} bonus coins! Your balance: ${user.coins} coins. ❤️`, [
+            { content_type: "text", title: "🎁 Send Another Gift", payload: "SEND_GIFT_MENU" },
+            { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
           ]);
           continue;
         }
