@@ -90,7 +90,7 @@ async function loadUserFromDB(psid) {
   return db.users[psid] || null;
 }
 
-async function saveUserToDB(psid) {
+async function saveUserToDB(psid, { saveJackpot = true } = {}) {
   // If MongoDB was configured, do not silently pretend a disconnected database saved data.
   if (MONGODB_URI) {
     if (mongoose.connection.readyState !== 1) {
@@ -98,11 +98,13 @@ async function saveUserToDB(psid) {
       return false;
     }
     try {
-      await JackpotModel.findOneAndUpdate(
-        { id: "global" },
-        { $set: { id: "global", amount: db.jackpotPool } },
-        { upsert: true, runValidators: true }
-      );
+      if (saveJackpot) {
+        await JackpotModel.findOneAndUpdate(
+          { id: "global" },
+          { $set: { id: "global", amount: db.jackpotPool } },
+          { upsert: true, runValidators: true }
+        );
+      }
       if (db.users[psid]) {
         await UserModel.findOneAndUpdate(
           { psid },
@@ -424,6 +426,9 @@ app.post('/webhook', async (req, res) => {
         }
 
         user.lastActive = Date.now();
+        // Persist presence without rewriting the global jackpot on every message.
+        const activitySaved = await saveUserToDB(psid, { saveJackpot: false });
+        if (!activitySaved) console.warn("Could not persist activity timestamp for user:", psid);
 
         let rawText = "";
         if (ev.message && ev.message.quick_reply) rawText = ev.message.quick_reply.payload;
@@ -886,6 +891,7 @@ ${renderGiftCatalog()}
 
           if (!partnerPsid) {
             Object.assign(user, originalUser);
+            user.pendingMatchPsid = null;
             await saveUserToDB(psid);
             send(psid, "😕 Wala pang available na totoong match ngayon. Walang coins na ikakaltas. Subukan ulit mamaya.", [
               { content_type: "text", title: "🔎 Find Match", payload: "FIND MATCH" },
@@ -897,6 +903,7 @@ ${renderGiftCatalog()}
           const partner = await loadUserFromDB(partnerPsid);
           if (!partner || partnerPsid === psid) {
             Object.assign(user, originalUser);
+            user.pendingMatchPsid = null;
             if (partner) {
               partner.state = "IDLE";
               partner.activeMatchPsid = null;
