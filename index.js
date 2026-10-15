@@ -63,7 +63,7 @@ if (MONGODB_URI) {
       console.log("✅ MongoDB Connected Successfully");
       try {
         const jackpotDoc = await JackpotModel.findOne({ id: "global" });
-        if (jackpotDoc && jackpotDoc.amount) {
+        if (jackpotDoc && Number.isFinite(jackpotDoc.amount)) {
           db.jackpotPool = jackpotDoc.amount;
           console.log("🏆 Jackpot Pool loaded from DB:", db.jackpotPool);
         }
@@ -160,9 +160,10 @@ function sanitizeInput(text) {
 }
 
 async function createPaymongoLink(amount, coins, psid) {
+  if (!PAYMONGO_SECRET || !PAYMONGO_WEBHOOK_SECRET) return null;
   try {
     const res = await axios.post('https://api.paymongo.com/v1/links', {
-      data: { attributes: { amount: amount * 100, description: `${coins} Coins JojoWorld V25`, remarks: psid.toString() } }
+      data: { attributes: { amount: amount * 100, description: `${coins} Coins JojoWorld V26`, remarks: psid.toString() } }
     }, {
       headers: { Authorization: `Basic ${Buffer.from(PAYMONGO_SECRET + ':').toString('base64')}`, 'Content-Type': 'application/json' }
     });
@@ -873,7 +874,11 @@ ${renderGiftCatalog()}
               { content_type: "text", title: "↩️ Menu", payload: "MENU" }
             ]);
           } else {
-            send(psid, `❌ Gateway error. Direct manual GCash transfer to admin: ${GCASH_NUM}`);
+            if (GCASH_NUM) {
+              send(psid, `❌ Payment gateway is not configured or unavailable. If manual GCash payments are enabled, contact admin: ${GCASH_NUM}`);
+            } else {
+              send(psid, `❌ Payment gateway is not configured or is temporarily unavailable. Please try again later.`);
+            }
           }
           continue;
         }
