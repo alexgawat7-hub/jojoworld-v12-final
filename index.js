@@ -1164,7 +1164,7 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw.startsWith("TOP UP ")) {
-          const amountMatch = /^TOP UP\\s+(\\d+)$/.exec(upperRaw);
+          const amountMatch = /^TOP UP\s+(\d+)$/.exec(upperRaw);
           const amt = amountMatch ? Number(amountMatch[1]) : NaN;
           let coins = TOPUP_RATES[amt];
           if (!coins) {
