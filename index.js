@@ -796,71 +796,93 @@ ${renderGiftCatalog()}
           continue;
         }
 
-        // UNLOCK CHAT & PAIR REAL USERS (ATOMIC MONGODB MATCHMAKING)
+        // UNLOCK CHAT & PAIR REAL USERS
         if (upperRaw === "UNLOCK_CHAT" || cleanText === "unlock_chat") {
-          if (user.coins < 20) {
-            send(psid, `❌ Unlocking chat costs 20 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
+          if (user.state === "CHATTING" && user.activeMatchPsid) {
+            send(psid, "ℹ️ You are already connected to a match.", [
+              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+            ]);
+            continue;
+          }
+          if (!Number.isFinite(user.coins) || user.coins < 20) {
+            send(psid, "❌ Unlocking chat costs 20 coins.", [
+              { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
+            ]);
             continue;
           }
 
+          const originalUser = JSON.parse(JSON.stringify(user));
           user.coins -= 20;
           user.state = "CHATTING";
+          user.activeMatchPsid = null;
 
           let partnerPsid = null;
-
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
             try {
+              // Atomically reserve an idle partner so two users cannot select the same row.
               const matchDoc = await UserModel.findOneAndUpdate(
-                {
-                  psid: { $ne: psid },
-                  "data.state": "IDLE"
-                },
-                {
-                  $set: { "data.state": "CHATTING" }
-                },
+                { psid: { $ne: psid }, "data.state": "IDLE" },
+                { $set: { "data.state": "CHATTING", "data.activeMatchPsid": psid } },
                 { new: true }
               );
-              if (matchDoc) {
-                partnerPsid = matchDoc.psid;
-              }
+              if (matchDoc) partnerPsid = matchDoc.psid;
             } catch (e) {
-              console.log("Matchmaking query error:", e.message);
+              console.error("Matchmaking query error:", e.message);
             }
+          } else if (!MONGODB_URI) {
+            partnerPsid = Object.keys(db.users).find(pId =>
+              pId !== psid && db.users[pId]?.state === "IDLE"
+            ) || null;
           }
 
           if (!partnerPsid) {
-            partnerPsid = Object.keys(db.users).find(pId => 
-              pId !== psid && db.users[pId]?.state === "IDLE"
-            );
+            Object.assign(user, originalUser);
+            await saveUserToDB(psid);
+            send(psid, "😕 Wala pang available na totoong match ngayon. Walang coins na ikakaltas. Subukan ulit mamaya.", [
+              { content_type: "text", title: "🔎 Find Match", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+            continue;
           }
 
-          if (partnerPsid) {
-            let partner = await loadUserFromDB(partnerPsid);
-            user.activeMatchPsid = partnerPsid;
-            partner.activeMatchPsid = psid;
-            partner.state = "CHATTING";
-            if (partner) partner.state = "CHATTING";
-
+          const partner = await loadUserFromDB(partnerPsid);
+          if (!partner || partnerPsid === psid) {
+            Object.assign(user, originalUser);
+            if (partner) {
+              partner.state = "IDLE";
+              partner.activeMatchPsid = null;
+              await saveUserToDB(partnerPsid);
+            }
             await saveUserToDB(psid);
+            send(psid, "⚠️ Hindi ma-confirm ang match. Walang coins na ikakaltas; subukan ulit mamaya.");
+            continue;
+          }
+
+          user.activeMatchPsid = partnerPsid;
+          partner.activeMatchPsid = psid;
+          partner.state = "CHATTING";
+
+          const userSaved = await saveUserToDB(psid);
+          const partnerSaved = await saveUserToDB(partnerPsid);
+          if (!userSaved || !partnerSaved) {
+            Object.assign(user, originalUser);
+            partner.state = "IDLE";
+            partner.activeMatchPsid = null;
             await saveUserToDB(partnerPsid);
-
-            send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name}**!\n\n💬 Type your message below to start chatting:`, [
-              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-            ]);
-
-            send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name}** has unlocked a chat session with you!\n\n💬 Type your message below to reply:`, [
-              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-            ]);
-          } else {
-            user.activeMatchPsid = null;
             await saveUserToDB(psid);
-            send(psid, `🔓 CHAT UNLOCKED! Searching for online match... (Simulated connection active)\n\n💬 Type your message below:`, [
-              { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
-              { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
-            ]);
+            send(psid, "⚠️ Hindi ma-save ang chat connection. Walang coins na ikakaltas; subukan ulit mamaya.");
+            continue;
           }
+
+          send(psid, `🔓 CHAT UNLOCKED! You are now connected with **${partner.name || "your match"}**!\\n\\n💬 Type your message below to start chatting:`, [
+            { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+            { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+          ]);
+          send(partnerPsid, `🎉 MATCH CONNECTED! **${user.name || "Your match"}** has unlocked a chat session with you!\\n\\n💬 Type your message below to reply:`, [
+            { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+            { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+          ]);
           continue;
         }
 
