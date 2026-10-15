@@ -363,7 +363,7 @@ app.post('/webhook', async (req, res) => {
         }
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
-        if (user.state === "CHATTING") {
+        if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
           if (upperRaw === "END_CHAT" || cleanText === "end chat") {
             let partnerPsid = user.activeMatchPsid;
             user.state = "IDLE";
