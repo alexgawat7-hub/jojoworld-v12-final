@@ -32,10 +32,10 @@ const MONGODB_URI = process.env.MONGODB_URI;
 // PAGE NAME FOR MESSENGER LINK
 const PAGE_USERNAME = process.env.PAGE_USERNAME || "Princelucky";
 
-const UserSchema = new mongoose.Schema({ psid: String, data: Object }, { strict: false });
+const UserSchema = new mongoose.Schema({ psid: { type: String, required: true, unique: true }, data: Object }, { strict: false });
 const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
 
-const JackpotSchema = new mongoose.Schema({ id: String, amount: Number }, { strict: false });
+const JackpotSchema = new mongoose.Schema({ id: { type: String, required: true, unique: true }, amount: Number }, { strict: false });
 const JackpotModel = mongoose.models.JJackpot || mongoose.model('JJackpot', JackpotSchema);
 
 // Unique event IDs prevent the same paid webhook from crediting coins repeatedly.
@@ -57,6 +57,9 @@ const ProcessedMessengerMessageSchema = new mongoose.Schema({
 const ProcessedMessengerMessageModel = mongoose.models.JProcessedMessengerMessage ||
   mongoose.model('JProcessedMessengerMessage', ProcessedMessengerMessageSchema);
 const processedMessengerMessages = new Set();
+
+// Serialize Messenger webhook handling in this process to reduce concurrent wallet races.
+let messengerWebhookQueue = Promise.resolve();
 
 let db = { users: {}, jackpotPool: 1500 };
 
@@ -389,6 +392,11 @@ app.post('/webhook', async (req, res) => {
     console.warn('Messenger webhook deferred: MongoDB is configured but not connected.');
     return res.sendStatus(503);
   }
+
+  let releaseWebhookQueue;
+  const previousWebhook = messengerWebhookQueue;
+  messengerWebhookQueue = new Promise(resolve => { releaseWebhookQueue = resolve; });
+  await previousWebhook;
 
   try {
     const body = req.body;
@@ -1172,7 +1180,9 @@ ${renderGiftCatalog()}
       }
     }
   } catch (e) {
-    console.log("Webhook error:", e.message);
+    console.error("Messenger webhook processing error:", e.message);
+  } finally {
+    releaseWebhookQueue();
   }
   res.sendStatus(200);
 });
