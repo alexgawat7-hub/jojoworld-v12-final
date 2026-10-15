@@ -688,25 +688,64 @@ Choose an action below:`, [
           continue;
         }
 
-        // FIND MATCH
+        // FIND MATCH: only show a real, recently active account.
         if (cleanText === "find match" || upperRaw === "FIND MATCH") {
-          if (user.coins < 10) {
-            send(psid, `❌ Insufficient coins! Searching costs 10 coins.`, [{ content_type: "text", title: "💰 Top Up", payload: "TOP UP" }]);
+          const searchCutoff = Date.now() - 15 * 60 * 1000;
+          let candidate = null;
+          if (MONGODB_URI && mongoose.connection.readyState === 1) {
+            try {
+              candidate = await UserModel.findOne({
+                psid: { $ne: psid },
+                "data.state": "IDLE",
+                "data.lastActive": { $gte: searchCutoff }
+              }).select("psid data").lean();
+            } catch (error) {
+              console.error("Match search failed:", error.message);
+            }
+          } else if (!MONGODB_URI) {
+            const candidatePsid = Object.keys(db.users).find(candidateId =>
+              candidateId !== psid &&
+              db.users[candidateId]?.state === "IDLE" &&
+              Number(db.users[candidateId]?.lastActive || 0) >= searchCutoff
+            );
+            if (candidatePsid) candidate = { psid: candidatePsid, data: db.users[candidatePsid] };
+          }
+
+          if (!candidate || !candidate.data) {
+            send(psid, "😕 Wala pang available na active match ngayon. Walang coins na ikakaltas. Subukan ulit mamaya.", [
+              { content_type: "text", title: "🔎 Search Again", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
             continue;
           }
-          user.coins -= 10;
-          await saveUserToDB(psid);
+          if (!Number.isFinite(user.coins) || user.coins < 10) {
+            send(psid, "❌ Match search costs 10 coins. Kulang ang coins mo.", [
+              { content_type: "text", title: "💰 Top Up", payload: "TOP UP" }
+            ]);
+            continue;
+          }
 
-          send(psid, `💘 DISCOVER MATCH NEARBY (-10 coins)
-━━━━━━━━━━━━━━━━━━━━
-👩 Princess, 21 • 0.5km away (🟢 Online)
-📍 Manila • ♈ Zodiac: ♎ Libra
-🎯 Goal: ☕ Coffee Dates
-💬 "Looking for meaningful conversations and good coffee!"`, [
-            { content_type: "text", title: "❤️ Like", payload: "LIKE" },
-            { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+          const previousCoins = user.coins;
+          const previousPending = user.pendingMatchPsid || null;
+          user.coins -= 10;
+          user.pendingMatchPsid = candidate.psid;
+          const saved = await saveUserToDB(psid);
+          if (!saved) {
+            user.coins = previousCoins;
+            user.pendingMatchPsid = previousPending;
+            send(psid, "⚠️ Hindi na-save ang match search. Walang coins na ikakaltas; subukan ulit mamaya.");
+            continue;
+          }
+
+          const match = candidate.data;
+          const candidateName = String(match.name || "Jojo Member").slice(0, 40);
+          const candidateAge = Number.isFinite(Number(match.age)) ? Number(match.age) : "—";
+          const candidateLocation = String(match.location || "Not set").slice(0, 50);
+          const candidateBio = String(match.bio || "No bio yet.").slice(0, 180);
+          send(psid, `💘 REAL MATCH FOUND (-10 coins)\\n━━━━━━━━━━━━━━━━━━━━\\n👤 ${candidateName}, ${candidateAge}\\n📍 ${candidateLocation}\\n💬 ${candidateBio}\\n\\nUnlock chat for 20 coins to connect.`, [
             { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
-            { content_type: "text", title: "⏭️ Next Match (10c)", payload: "FIND MATCH" }
+            { content_type: "text", title: "⏭️ Next Match (10c)", payload: "FIND MATCH" },
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
           ]);
           continue;
         }
@@ -821,8 +860,13 @@ ${renderGiftCatalog()}
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
             try {
               // Atomically reserve an idle partner so two users cannot select the same row.
+              const candidateFilter = {
+                psid: user.pendingMatchPsid ? user.pendingMatchPsid : { $ne: psid },
+                "data.state": "IDLE"
+              };
+              if (!user.pendingMatchPsid) candidateFilter.psid = { $ne: psid };
               const matchDoc = await UserModel.findOneAndUpdate(
-                { psid: { $ne: psid }, "data.state": "IDLE" },
+                candidateFilter,
                 { $set: { "data.state": "CHATTING", "data.activeMatchPsid": psid } },
                 { new: true }
               );
@@ -831,9 +875,13 @@ ${renderGiftCatalog()}
               console.error("Matchmaking query error:", e.message);
             }
           } else if (!MONGODB_URI) {
-            partnerPsid = Object.keys(db.users).find(pId =>
-              pId !== psid && db.users[pId]?.state === "IDLE"
-            ) || null;
+            partnerPsid = user.pendingMatchPsid
+              ? (db.users[user.pendingMatchPsid]?.state === "IDLE" ? user.pendingMatchPsid : null)
+              : (Object.keys(db.users).find(pId =>
+                  pId !== psid &&
+                  db.users[pId]?.state === "IDLE" &&
+                  Number(db.users[pId]?.lastActive || 0) >= Date.now() - 15 * 60 * 1000
+                ) || null);
           }
 
           if (!partnerPsid) {
@@ -860,7 +908,9 @@ ${renderGiftCatalog()}
           }
 
           user.activeMatchPsid = partnerPsid;
+          user.pendingMatchPsid = null;
           partner.activeMatchPsid = psid;
+          partner.pendingMatchPsid = null;
           partner.state = "CHATTING";
 
           const userSaved = await saveUserToDB(psid);
