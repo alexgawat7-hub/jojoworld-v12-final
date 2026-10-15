@@ -7,7 +7,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const mongoose = require('mongoose');
 const axios = require('axios');
-const crypto = require('crypto'); // Para sa PayMongo Webhook Verification
+const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { GIFT_CATALOG, GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
 const app = express();
@@ -19,12 +19,12 @@ app.use(bodyParser.json({
   }
 }));
 
-const ADMIN_ID = process.env.ADMIN_ID || "100064525073153";
-const GCASH_NUM = process.env.GCASH_NUM || "09517080795";
+const ADMIN_ID = process.env.ADMIN_ID;
+const GCASH_NUM = process.env.GCASH_NUM;
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET;
 const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET;
 const PAGE_TOKEN = process.env.PAGE_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "jojoworld_v25";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 // PAGE NAME FOR MESSENGER LINK
@@ -35,6 +35,16 @@ const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
 
 const JackpotSchema = new mongoose.Schema({ id: String, amount: Number }, { strict: false });
 const JackpotModel = mongoose.models.JJackpot || mongoose.model('JJackpot', JackpotSchema);
+
+// Unique event IDs prevent the same paid webhook from crediting coins repeatedly.
+const PaymentEventSchema = new mongoose.Schema({
+  eventId: { type: String, required: true, unique: true },
+  status: { type: String, enum: ['processing', 'processed'], default: 'processing' },
+  psid: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const PaymentEventModel = mongoose.models.JPaymentEvent || mongoose.model('JPaymentEvent', PaymentEventSchema);
+const processedPaymentEvents = new Set();
 
 let db = { users: {}, jackpotPool: 1500 };
 
@@ -222,55 +232,78 @@ app.get('/webhook', (req, res) => {
   res.sendStatus(403);
 });
 
-// SECURED PAYMONGO WEBHOOK
+// SECURED, IDEMPOTENT PAYMONGO WEBHOOK
 app.post('/paymongo-webhook', async (req, res) => {
-  try {
-    if (PAYMONGO_WEBHOOK_SECRET) {
-      const signatureHeader = req.headers['paymongo-signature'];
-      if (!signatureHeader) return res.sendStatus(400);
-
-      const parts = signatureHeader.split(',');
-      let t, te, li;
-      parts.forEach(part => {
-        const [key, val] = part.split('=');
-        if (key === 't') t = val;
-        if (key === 'te') te = val;
-        if (key === 'li') li = val;
-      });
-
-      const computedSignature = crypto
-        .createHmac('sha256', PAYMONGO_WEBHOOK_SECRET)
-        .update(`${t}.${req.rawBody}`)
-        .digest('hex');
-
-      if (computedSignature !== te && computedSignature !== li) {
-        console.log("❌ Fake/Invalid PayMongo Signature detected!");
-        return res.sendStatus(401);
-      }
-    }
-
-    const ev = req.body.data;
-    if (!ev) return res.sendStatus(200);
-    const attr = ev.attributes?.data?.attributes || ev.attributes;
-
-    if (attr.status === 'paid' && attr.remarks) {
-      let amt = Math.round(attr.amount / 100);
-      let coins = TOPUP_RATES[amt] || 0;
-      let psid = attr.remarks;
-
-      let user = await loadUserFromDB(psid);
-      if (coins > 0 && user) {
-        user.coins = (user.coins || 0) + coins;
-        await saveUserToDB(psid);
-        await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld V25! 🚀`);
-      }
-    }
-  } catch (e) {
-    console.log("PayMongo Webhook error:", e.message);
+  // Fail closed: never accept payment events if webhook verification is not configured.
+  if (!PAYMONGO_WEBHOOK_SECRET) {
+    console.error('PayMongo webhook rejected: PAYMONGO_WEBHOOK_SECRET is not configured.');
+    return res.sendStatus(503);
   }
-  res.sendStatus(200);
-});
+  if (!verifyPayMongoSignature(req.rawBody, req.headers['paymongo-signature'], PAYMONGO_WEBHOOK_SECRET)) {
+    console.warn('PayMongo webhook rejected: missing, stale, or invalid signature.');
+    return res.sendStatus(401);
+  }
 
+  try {
+    const ev = req.body?.data;
+    if (!ev || !ev.id) return res.sendStatus(400);
+    const eventAttributes = ev.attributes || {};
+    const eventType = eventAttributes.type;
+    const paymentAttributes = eventAttributes.data?.attributes || eventAttributes;
+    if (eventType && !['link.payment.paid', 'payment.paid'].includes(eventType)) {
+      return res.sendStatus(200);
+    }
+    if (paymentAttributes.status !== 'paid') return res.sendStatus(200);
+
+    const amountInPesos = Number(paymentAttributes.amount) / 100;
+    if (!Number.isFinite(amountInPesos) || !Number.isInteger(amountInPesos)) {
+      console.warn('PayMongo webhook ignored: invalid payment amount.');
+      return res.sendStatus(400);
+    }
+    const coins = TOPUP_RATES[amountInPesos] || 0;
+    const psid = String(paymentAttributes.remarks || '').trim();
+    if (!coins || !/^\d{5,32}$/.test(psid)) {
+      console.warn('PayMongo webhook ignored: unrecognized amount package or recipient.');
+      return res.sendStatus(400);
+    }
+
+    // Reserve the event before applying credit. The unique MongoDB index blocks
+    // concurrent duplicate deliveries; the in-memory set is only a local fallback.
+    if (MONGODB_URI && mongoose.connection.readyState === 1) {
+      try {
+        await PaymentEventModel.create({ eventId: ev.id, status: 'processing', psid });
+      } catch (error) {
+        if (error.code === 11000) return res.sendStatus(200);
+        throw error;
+      }
+    } else {
+      if (processedPaymentEvents.has(ev.id)) return res.sendStatus(200);
+      processedPaymentEvents.add(ev.id);
+    }
+
+    const user = await loadUserFromDB(psid);
+    if (!user) {
+      if (!MONGODB_URI || mongoose.connection.readyState !== 1) processedPaymentEvents.delete(ev.id);
+      else await PaymentEventModel.deleteOne({ eventId: ev.id, status: 'processing' });
+      return res.sendStatus(404);
+    }
+
+    user.coins = Number.isFinite(user.coins) && user.coins >= 0 ? user.coins + coins : coins;
+    await saveUserToDB(psid);
+    if (MONGODB_URI && mongoose.connection.readyState === 1) {
+      await PaymentEventModel.updateOne({ eventId: ev.id }, { $set: { status: 'processed' } });
+    }
+    try {
+      await send(psid, `✅ PAYMENT SUCCESSFUL!\\n💰 +${coins} Coins added to your account!\\n💎 New Balance: ${user.coins} coins\\n\\nEnjoy JojoWorld V26! 🚀`);
+    } catch (notifyError) {
+      console.error('Payment credited but Messenger notification failed:', notifyError.message);
+    }
+    return res.sendStatus(200);
+  } catch (e) {
+    console.error('PayMongo webhook processing error:', e.message);
+    return res.sendStatus(500);
+  }
+});
 app.post('/webhook', async (req, res) => {
   try {
     const body = req.body;
@@ -942,7 +975,7 @@ app.get('/health', (req, res) => res.status(200).json({
 app.get('/ready', (req, res) => {
   const checks = {
     pageToken: Boolean(PAGE_TOKEN),
-    verifyToken: Boolean(process.env.VERIFY_TOKEN),
+    verifyToken: Boolean(VERIFY_TOKEN),
     mongodb: Boolean(MONGODB_URI),
     paymongoSecret: Boolean(PAYMONGO_SECRET),
     paymongoWebhookSecret: Boolean(PAYMONGO_WEBHOOK_SECRET)
