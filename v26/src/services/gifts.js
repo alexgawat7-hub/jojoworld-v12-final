@@ -4,11 +4,11 @@
 // This module validates and applies an in-memory gift transfer. The caller must
 // persist BOTH users before reporting success to Messenger.
 const GIFT_CATALOG = Object.freeze({
-  ROSE: Object.freeze({ key: 'ROSE', name: '🌹 Red Rose', cost: 10, bonus: 5 }),
-  COFFEE: Object.freeze({ key: 'COFFEE', name: '☕ Coffee Cup', cost: 25, bonus: 12 }),
-  BEAR: Object.freeze({ key: 'BEAR', name: '🧸 Teddy Bear', cost: 50, bonus: 25 }),
-  RING: Object.freeze({ key: 'RING', name: '💍 Diamond Ring', cost: 100, bonus: 50 }),
-  CAR: Object.freeze({ key: 'CAR', name: '🏎️ Sports Car', cost: 300, bonus: 150 })
+  ROSE: Object.freeze({ key: 'ROSE', name: '🌹 Red Rose', cost: 25, bonus: 5 }),
+  COFFEE: Object.freeze({ key: 'COFFEE', name: '☕ Coffee Cup', cost: 60, bonus: 12 }),
+  BEAR: Object.freeze({ key: 'BEAR', name: '🧸 Teddy Bear', cost: 120, bonus: 25 }),
+  RING: Object.freeze({ key: 'RING', name: '💍 Diamond Ring', cost: 250, bonus: 50 }),
+  CAR: Object.freeze({ key: 'CAR', name: '🏎️ Sports Car', cost: 750, bonus: 150 })
 });
 
 class GiftHubError extends Error {
@@ -68,7 +68,7 @@ function sendGift({ senderPsid, recipientPsid, sender, recipient, giftKey }) {
 function renderGiftCatalog() {
   return Object.values(GIFT_CATALOG)
     .map((gift) => `${gift.name} — ${gift.cost} coins (receiver bonus +${gift.bonus})`)
-    .join('\\n');
+    .join('\n');
 }
 
 module.exports = { GIFT_CATALOG, GiftHubError, sendGift, renderGiftCatalog };
