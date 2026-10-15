@@ -169,7 +169,7 @@ async function saveUserToDB(psid, { saveJackpot = true } = {}) {
   return true;
 }
 
-// Persist both sides of a gift transfer together to prevent one-sided wallet updates.
+// Persist paired account changes together to prevent one-sided chat or wallet state.
 async function saveUserPair(senderPsid, recipientPsid) {
   if (MONGODB_URI) {
     if (mongoose.connection.readyState !== 1) return false;
@@ -568,24 +568,42 @@ A new user joined using your link! 🎁
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
           if (upperRaw === "END_CHAT" || cleanText === "end chat") {
-            let partnerPsid = user.activeMatchPsid;
-            user.state = "IDLE";
-            user.activeMatchPsid = null;
-            await saveUserToDB(psid);
+            const partnerPsid = user.activeMatchPsid;
+            const userSnapshot = JSON.parse(JSON.stringify(user));
+            let partner = partnerPsid ? await loadUserFromDB(partnerPsid) : null;
 
-            if (partnerPsid) {
-              let partner = await loadUserFromDB(partnerPsid);
-              if (partner) {
-                partner.state = "IDLE";
-                partner.activeMatchPsid = null;
-                await saveUserToDB(partnerPsid);
-                send(partnerPsid, `🔴 The active chat session has been ended by your match.`, [
-                  { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
-                  { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-                ]);
+            if (partner) {
+              const partnerSnapshot = JSON.parse(JSON.stringify(partner));
+              user.state = "IDLE";
+              user.activeMatchPsid = null;
+              user.pendingMatchPsid = null;
+              partner.state = "IDLE";
+              partner.activeMatchPsid = null;
+              partner.pendingMatchPsid = null;
+              if (!await saveUserPair(psid, partnerPsid)) {
+                db.users[psid] = userSnapshot;
+                db.users[partnerPsid] = partnerSnapshot;
+                user = db.users[psid];
+                send(psid, "⚠️ Hindi ma-save ang pag-end ng chat. Subukan ulit mamaya.");
+                continue;
+              }
+              send(partnerPsid, "🔴 The active chat session has been ended by your match.", [
+                { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+              ]);
+            } else {
+              user.state = "IDLE";
+              user.activeMatchPsid = null;
+              user.pendingMatchPsid = null;
+              if (!await saveUserToDB(psid, { saveJackpot: false })) {
+                db.users[psid] = userSnapshot;
+                user = db.users[psid];
+                send(psid, "⚠️ Hindi ma-save ang pag-end ng chat. Subukan ulit mamaya.");
+                continue;
               }
             }
-            send(psid, `🔴 Chat ended successfully.`, [
+
+            send(psid, "🔴 Chat ended successfully.", [
               { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
               { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
             ]);
