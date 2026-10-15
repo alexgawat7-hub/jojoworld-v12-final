@@ -1,6 +1,7 @@
 // ============================================================================
-// JOJOWORLD V25 ULTIMATE - PRODUCTION READY & FIXED 1-ON-1 CHAT
+// JOJOWORLD V26 ULTIMATE EVOLUTION - MESSENGER BOT
 // ============================================================================
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -923,5 +924,38 @@ ${renderGiftCatalog()}
   res.sendStatus(200);
 });
 
-app.get('/', (req, res) => res.send('JojoWorld V25 ULTIMATE Running - All Systems Operational!'));
-app.listen(process.env.PORT || 10000, () => console.log("V25 Ultimate Server Running"));
+app.get('/', (req, res) => res.status(200).json({
+  service: 'JojoWorld V26 Ultimate Evolution',
+  status: 'running',
+  health: '/health',
+  readiness: '/ready'
+}));
+
+// Liveness probe: confirms the Node.js process and HTTP server are responding.
+app.get('/health', (req, res) => res.status(200).json({
+  status: 'ok',
+  service: 'JojoWorld V26 Ultimate Evolution',
+  uptimeSeconds: Math.floor(process.uptime())
+}));
+
+// Readiness probe: distinguishes a live process from a configured Messenger bot.
+app.get('/ready', (req, res) => {
+  const checks = {
+    pageToken: Boolean(PAGE_TOKEN),
+    verifyToken: Boolean(process.env.VERIFY_TOKEN),
+    mongodb: Boolean(MONGODB_URI),
+    paymongoSecret: Boolean(PAYMONGO_SECRET),
+    paymongoWebhookSecret: Boolean(PAYMONGO_WEBHOOK_SECRET)
+  };
+  const messengerReady = checks.pageToken && checks.verifyToken;
+  const paymentsReady = checks.paymongoSecret && checks.paymongoWebhookSecret;
+  res.status(messengerReady ? 200 : 503).json({
+    status: messengerReady ? 'ready' : 'needs_configuration',
+    messengerReady,
+    paymentsReady,
+    persistentStorageConfigured: checks.mongodb,
+    checks
+  });
+});
+
+app.listen(process.env.PORT || 10000, () => console.log("JojoWorld V26 Ultimate Evolution server listening on port " + (process.env.PORT || 10000)));
