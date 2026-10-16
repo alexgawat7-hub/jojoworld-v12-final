@@ -1164,6 +1164,18 @@ A new user joined using your link! 🎁
         if (houseTaxNotice) send(psid, houseTaxNotice);
         if (!activitySaved) {
           console.error("Could not persist activity timestamp; command processing stopped for user:", psid);
+          // [FIXED] Release the message-id reservation when no command was processed, so Meta's retry can recover it.
+          if (messageId) {
+            if (MONGODB_URI && mongoose.connection.readyState === 1) {
+              try {
+                await ProcessedMessengerMessageModel.deleteOne({ messageId });
+              } catch (releaseError) {
+                console.error("[FIXED] Could not release failed Messenger message reservation:", releaseError.message);
+              }
+            } else {
+              processedMessengerMessages.delete(messageId);
+            }
+          }
           send(psid, "⚠️ Hindi available ang database ngayon. Walang command na pinroseso; subukan ulit mamaya.");
           continue;
         }
