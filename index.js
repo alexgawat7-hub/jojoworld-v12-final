@@ -610,8 +610,10 @@ async function getLeaderboardUsers() {
 
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
-  const W = 800, H = 1200;
-  const canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  // [UPGRADED V28] Higher-resolution leaderboard image for clearer photos, names, and flex stats in Messenger.
+  const W = 800, H = 1200, RENDER_SCALE = 1.25;
+  const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
+  ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#060513'); bg.addColorStop(0.42, '#10102f'); bg.addColorStop(1, '#020b19');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -688,26 +690,28 @@ async function generateLeaderboardCanvas(users) {
     ctx.strokeRect(x, y, w, h); ctx.restore();
     ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
     ctx.font = 'bold ' + (featured ? 24 : 20) + 'px Sans'; ctx.fillText(rank === 1 ? '♛ #1 CHAMPION' : '#' + rank, x + w / 2, y + 29); ctx.shadowBlur = 0;
-    drawMedal(x + w / 2, y + 62, rank, color, featured ? 25 : 20);
+    // [FIXED] Keep the rank medal above the avatar so they never collide.
+    drawMedal(x + w / 2, y + 57, rank, color, featured ? 20 : 18);
     if (!item) {
       ctx.fillStyle = '#9eb5cc'; ctx.font = 'bold 16px Sans'; ctx.fillText('OPEN RANK', x + w / 2, y + 105);
       ctx.fillStyle = '#6e849b'; ctx.font = '11px Sans'; ctx.fillText('Play to claim this spot', x + w / 2, y + 126);
       return;
     }
     // [FIXED] Podium content uses separate vertical zones: medal, avatar, name, and stats never overlap.
-    await drawLeaderboardAvatar(item, x + w / 2, y + 105, featured ? 29 : 26);
+    // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
+    await drawLeaderboardAvatar(item, x + w / 2, y + 108, featured ? 27 : 25);
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
-    ctx.font = 'bold ' + (featured ? 16 : 14) + 'px Sans';
+    ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
     let podiumName = name;
     while (ctx.measureText(podiumName).width > w - 24 && podiumName.length > 5) podiumName = podiumName.slice(0, -2) + '…';
     ctx.fillText(podiumName, x + w / 2, y + 151);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 16 : 14) + 'px Sans';
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 176);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '11px Sans';
     ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 197);
     ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 215);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 11px Sans';
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans';
     ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 235);
     ctx.fillStyle = color; ctx.font = 'bold 10px Sans';
     ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
@@ -742,19 +746,20 @@ async function generateLeaderboardCanvas(users) {
     }
     const name = getName(item), coins = Math.max(0, Number(item.user.coins) || 0);
     // [FIXED] Stable leaderboard grid: avatar, player/coins, house, and net worth have separate columns.
-    await drawLeaderboardAvatar(item, 92, y + 33, 23);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 15px Sans';
+    // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
+    await drawLeaderboardAvatar(item, 122, y + 33, 25);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans';
     let rowName = name;
-    while (ctx.measureText(rowName).width > 185 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
-    ctx.fillText(rowName, 130, y + 25);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 13px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 130, y + 48);
-    ctx.fillStyle = '#a8eefa'; ctx.font = '11px Sans';
+    while (ctx.measureText(rowName).width > 190 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
+    ctx.fillText(rowName, 158, y + 25);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 14px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 158, y + 49);
+    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 12px Sans';
     let houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
-    while (ctx.measureText(houseText).width > 175 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
-    ctx.fillText(houseText, 340, y + 39);
+    while (ctx.measureText(houseText).width > 170 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
+    ctx.fillText(houseText, 380, y + 39);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 11px Sans';
     ctx.fillText('NET WORTH', 744, y + 22);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 13px Sans';
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
     ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 45);
     ctx.fillStyle = color; ctx.font = 'bold 10px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
