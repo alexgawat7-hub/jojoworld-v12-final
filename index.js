@@ -586,9 +586,17 @@ async function generateShopProductPreview(product, user) {
   const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
+// [ADDED] [UPGRADED V28] Brief leaderboard data cache avoids a full MongoDB scan on rapid repeat taps.
+let leaderboardUsersCache = { users: null, createdAt: 0 };
+let leaderboardImageCache = { file: null, createdAt: 0 };
+const LEADERBOARD_CACHE_MS = 3000;
+
 // [UPGRADED] Merge saved MongoDB players with the local cache so a valid player
 // is not dropped from the leaderboard when this process has only a partial cache.
 async function getLeaderboardUsers() {
+  if (leaderboardUsersCache.users && Date.now() - leaderboardUsersCache.createdAt < LEADERBOARD_CACHE_MS) {
+    return leaderboardUsersCache.users;
+  }
   const combined = { ...(db.users || {}) };
   if (MONGODB_URI && mongoose.connection.readyState === 1) {
     try {
@@ -605,13 +613,20 @@ async function getLeaderboardUsers() {
       console.error("[UPGRADED] Could not fully load leaderboard from MongoDB; using merged cache:", error.message);
     }
   }
+  leaderboardUsersCache = { users: combined, createdAt: Date.now() };
   return combined;
 }
 
 async function generateLeaderboardCanvas(users) {
+  // [ADDED] [UPGRADED V28] Reuse the last rendered image for rapid repeat requests.
+  // The short cache reduces repeat rendering cost while allowing rankings to refresh frequently.
+  if (leaderboardImageCache.file && Date.now() - leaderboardImageCache.createdAt < LEADERBOARD_CACHE_MS &&
+      fs.existsSync(leaderboardImageCache.file)) {
+    return leaderboardImageCache.file;
+  }
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
-  // [UPGRADED V28] Taller leaderboard canvas for larger, more readable Top 10 cards on mobile.
-  const W = 800, H = 1500, RENDER_SCALE = 1.5; // [UPGRADED V28] Preserve sharp output while enlarging actual leaderboard content.
+  // [UPGRADED V28] Canvas height trimmed to remove unused bottom space; content uses nearly the full image.
+  const W = 800, H = 1320, RENDER_SCALE = 1.5; // [UPGRADED V28] Sharp output with less empty canvas and a smaller upload.
   const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -769,7 +784,7 @@ async function generateLeaderboardCanvas(users) {
   }
 
   // [UPGRADED V28] Bright season footer and climb-to-the-top callout.
-  const footerY = 1370;
+  const footerY = 1242; // [UPGRADED V28] Footer follows the last Top 10 card; removes unused vertical space.
   ctx.fillStyle = '#090d28'; ctx.fillRect(38, footerY, 724, 62);
   ctx.strokeStyle = divider; ctx.lineWidth = 2; ctx.strokeRect(38, footerY, 724, 62);
   ctx.textAlign = 'center'; ctx.shadowColor = '#34efff'; ctx.shadowBlur = 12;
@@ -779,6 +794,7 @@ async function generateLeaderboardCanvas(users) {
   ctx.shadowBlur = 0; ctx.fillStyle = '#9cb6d2'; ctx.font = '11px Sans'; ctx.fillText('JOJOWORLD • YOUR NEXT LEVEL STARTS HERE', 400, footerY + 47);
   const file = path.join(cacheDir, 'lb.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png'));
+  leaderboardImageCache = { file, createdAt: Date.now() }; // [ADDED] Cache completed leaderboard render for rapid repeat requests.
   return file;
 }
 // [ADDED] Messenger attachment upload for generated canvas images.
