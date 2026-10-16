@@ -404,87 +404,97 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   }
 
   const palettes = {
-    neon: ['#ffffff','#baffff','#00ffff','#63f7ff'],
-    fire: ['#fffbd1','#fff000','#ff9b16','#ff3100','#9e0800'],
-    gold: ['#fffbd0','#ffe15a','#ffb000','#9b4d00'],
-    demon: ['#ffb0b0','#ff2424','#a50000','#210000'],
-    ice: ['#ffffff','#eafaff','#9beaff','#329cff'],
-    rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
-    sparkle: ['#ffffff','#fff2a8','#e6b7ff','#ffffff','#8feaff'],
-    heart: ['#fff0fa','#ff62b5','#ff9bd6'],
-    blossom: ['#fff0f8','#ff9cdb','#ff70a6'],
-    dark: ['#f2eaff','#b29aff','#5c4b8a','#211533'],
-    red: ['#ffd0d0','#ff5252','#a90000'],
-    blue: ['#ffffff','#a6d8ff','#54a8ff','#2457d6'],
-    green: ['#f0fff6','#c2ffd9','#64f59b','#168b57'],
-    yellow: ['#fffde0','#fff4b0','#ffe65b','#ffae18']
+    neon:['#ffffff','#baffff','#00ffff','#63f7ff'],
+    fire:['#fffbd1','#fff000','#ff9b16','#ff3100','#9e0800'],
+    gold:['#fffbd0','#ffe15a','#ffb000','#9b4d00'],
+    demon:['#ffb0b0','#ff2424','#a50000','#210000'],
+    ice:['#ffffff','#eafaff','#9beaff','#329cff'],
+    rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
+    sparkle:['#ffffff','#fff2a8','#e6b7ff','#ffffff','#8feaff'],
+    heart:['#fff0fa','#ff62b5','#ff9bd6'],
+    blossom:['#fff0f8','#ff9cdb','#ff70a6'],
+    dark:['#f2eaff','#b29aff','#5c4b8a','#211533'],
+    red:['#ffd0d0','#ff5252','#a90000'],
+    blue:['#ffffff','#a6d8ff','#54a8ff','#2457d6'],
+    green:['#f0fff6','#c2ffd9','#64f59b','#168b57'],
+    yellow:['#fffde0','#fff4b0','#ffe65b','#ffae18']
   };
-  const palette = palettes[effect] || ['#ffffff', '#dbeafe'];
+  const palette = palettes[effect] || ['#ffffff','#dbeafe'];
   const textWidth = Math.min(maxWidth, ctx.measureText(n).width);
   const textLeft = align === 'center' ? x - textWidth / 2 : align === 'right' ? x - textWidth : x;
-  const gradientStartX = textLeft;
-  const gradientEndX = textLeft + Math.max(1, textWidth);
-  const gradient = ctx.createLinearGradient(gradientStartX, y - fontSize, gradientEndX, y + 2);
-  palette.forEach((color, index) => gradient.addColorStop(index / Math.max(1, palette.length - 1), color));
+  const gradient = ctx.createLinearGradient(textLeft, y - fontSize, textLeft + Math.max(1, textWidth), y + 2);
+  palette.forEach((color, i) => gradient.addColorStop(i / Math.max(1, palette.length - 1), color));
 
-  const glowColors = {
+  const glow = {
     neon:'#00ffff', fire:'#ff4a00', gold:'#ffbf22', demon:'#ff0000', ice:'#42baff',
     rainbow:'#ff70dd', sparkle:'#d7a4ff', heart:'#ff62b5', blossom:'#ff70a6',
     dark:'#9b7cff', red:'#ff5252', blue:'#54a8ff', green:'#64f59b', yellow:'#ffe65b'
-  };
-  // Layered bloom + bright face + crisp outline gives the name depth without drawing any box or plate.
-  ctx.shadowColor = glowColors[effect] || palette[0];
-  ctx.shadowBlur = effect === 'demon' || effect === 'neon' || effect === 'fire' ? 25 : 18;
+  }[effect] || palette[0];
+
+  // Shared text renderer means every user's equipped effect looks identical in profile, leaderboard and shop preview.
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = ['demon','neon','fire'].includes(effect) ? 24 : 16;
   ctx.fillStyle = gradient;
   ctx.fillText(n, x, y);
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 7;
   ctx.fillText(n, x, y);
   ctx.shadowBlur = 0;
-  ctx.lineWidth = effect === 'demon' || effect === 'fire' ? 3.5 : 1.8;
-  ctx.strokeStyle = effect === 'demon' ? '#210000' :
-    effect === 'ice' ? '#168bff' :
-    effect === 'gold' ? '#9b4d00' :
-    effect === 'fire' ? '#a91d00' :
-    effect === 'neon' ? '#ffffff' : (glowColors[effect] || palette[0]);
+  ctx.lineWidth = ['demon','fire'].includes(effect) ? 3.2 : 1.8;
+  ctx.strokeStyle = effect === 'demon' ? '#210000' : effect === 'ice' ? '#168bff' :
+    effect === 'gold' ? '#9b4d00' : effect === 'fire' ? '#a91d00' :
+    effect === 'neon' ? '#ffffff' : glow;
   ctx.strokeText(n, x, y);
   ctx.fillStyle = gradient;
   ctx.fillText(n, x, y);
 
-  // Small effect-specific light particles sit outside the letters; no rectangles or background shapes.
-  const particleColor = glowColors[effect] || palette[0];
-  const points = [
-    { x: textLeft + textWidth * 0.12, y: y - fontSize * 0.83 },
-    { x: textLeft + textWidth * 0.36, y: y - fontSize * 1.02 },
-    { x: textLeft + textWidth * 0.68, y: y - fontSize * 0.92 },
-    { x: textLeft + textWidth * 0.9, y: y - fontSize * 0.78 }
-  ];
-  if (['sparkle','rainbow','neon','ice','gold','fire','demon','heart','blossom'].includes(effect)) {
-    ctx.save();
-    ctx.globalAlpha = 0.9;
-    points.forEach((p, i) => {
-      const radius = i % 2 === 0 ? 2.4 : 1.5;
-      ctx.fillStyle = effect === 'ice' ? '#dffaff' :
-        effect === 'fire' || effect === 'demon' ? (i % 2 ? '#ffcf39' : '#ff4a16') :
-        effect === 'gold' ? '#fff1a6' :
-        effect === 'heart' ? '#ffb7df' :
-        effect === 'blossom' ? '#ffd6ed' : particleColor;
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = effect === 'neon' || effect === 'sparkle' ? 10 : 5;
-      ctx.beginPath();
-      if (effect === 'sparkle' || effect === 'rainbow' || effect === 'gold') {
-        ctx.moveTo(p.x, p.y - radius * 2);
-        ctx.lineTo(p.x + radius * 0.65, p.y);
-        ctx.lineTo(p.x, p.y + radius * 2);
-        ctx.lineTo(p.x - radius * 0.65, p.y);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
+  // Effect-specific ornaments: all are drawn around the letters, never behind them in a box.
+  const left = textLeft, right = textLeft + textWidth;
+  const top = y - fontSize * 0.95;
+  const mid = y - fontSize * 0.58;
+  const sparkle = (px, py, size, color) => {
+    ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 7;
+    ctx.beginPath(); ctx.moveTo(px,py-size); ctx.lineTo(px+size*.32,py-size*.25);
+    ctx.lineTo(px+size,py); ctx.lineTo(px+size*.32,py+size*.25);
+    ctx.lineTo(px,py+size); ctx.lineTo(px-size*.32,py+size*.25);
+    ctx.lineTo(px-size,py); ctx.lineTo(px-size*.32,py-size*.25); ctx.closePath(); ctx.fill();
+  };
+  const dot = (px,py,r,color) => { ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill(); };
+  const heart = (px,py,size,color) => {
+    ctx.save();ctx.translate(px,py);ctx.scale(size/16,size/16);ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=5;
+    ctx.beginPath();ctx.moveTo(0,6);ctx.bezierCurveTo(-17,-4,-9,-13,0,-6);ctx.bezierCurveTo(9,-13,17,-4,0,6);ctx.fill();ctx.restore();
+  };
+  const snowflake = (px,py,size,color) => {
+    ctx.save();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.shadowColor=color;ctx.shadowBlur=5;
+    for(let a=0;a<3;a++){ctx.save();ctx.translate(px,py);ctx.rotate(a*Math.PI/3);ctx.beginPath();ctx.moveTo(-size,0);ctx.lineTo(size,0);ctx.moveTo(size*.45,0);ctx.lineTo(size*.2,-size*.25);ctx.moveTo(size*.45,0);ctx.lineTo(size*.2,size*.25);ctx.stroke();ctx.restore();}
     ctx.restore();
+  };
+  const positions = [left + textWidth*.08, left + textWidth*.3, left + textWidth*.72, right - textWidth*.06];
+  ctx.save();ctx.globalAlpha=.96;
+  if(effect==='sparkle'){
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*5,3.5+i%2,['#fff2a8','#e6b7ff','#ffffff','#8feaff'][i]));
+  } else if(effect==='heart'){
+    heart(left+textWidth*.12,top,8,'#ff9bd6');heart(right-textWidth*.12,top-4,7,'#ffd5ed');
+    dot(left+textWidth*.82,mid,1.8,'#ff62b5');
+  } else if(effect==='fire'||effect==='demon'){
+    positions.forEach((px,i)=>{ctx.fillStyle=i%2?'#ffcf39':'#ff4a16';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=7;ctx.beginPath();ctx.moveTo(px,y-fontSize*.12);ctx.quadraticCurveTo(px-4,y-fontSize*.42,px+1,y-fontSize*.58);ctx.quadraticCurveTo(px+7,y-fontSize*.34,px,y-fontSize*.12);ctx.fill();});
+  } else if(effect==='ice'){
+    positions.forEach((px,i)=>snowflake(px,top-(i%2)*4,3.5,'#dffaff'));
+  } else if(effect==='neon'){
+    [left+textWidth*.12,right-textWidth*.12].forEach((px,i)=>{ctx.strokeStyle=i?'#ff70dd':'#00ffff';ctx.lineWidth=2;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(px-4,top+4);ctx.lineTo(px,top-2);ctx.lineTo(px+3,top+2);ctx.lineTo(px+7,top-5);ctx.stroke();});
+  } else if(effect==='blossom'){
+    positions.forEach((px,i)=>{for(let p=0;p<5;p++){const a=p*Math.PI*2/5;dot(px+Math.cos(a)*2.6,top+Math.sin(a)*2.6,1.8,p%2?'#ffd6ed':'#ff9cdb');}dot(px,top,1.4,'#fff2a8');});
+  } else if(effect==='rainbow'){
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*4,2.8,['#ff5353','#fff05c','#4bff91','#a57aff'][i]));
+  } else if(effect==='gold'){
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*3,2.8,'#fff1a6'));
+  } else if(effect==='dark'){
+    positions.forEach((px,i)=>{dot(px,top-(i%2)*4,1.8,'#b29aff');dot(px+4,top+5,1,'#5c4b8a');});
+  } else {
+    const color=glow;
+    dot(left+textWidth*.08,top,2,color);dot(right-textWidth*.08,top,2,color);
+    dot(left+textWidth*.9,mid,1.4,palette[0]);
   }
+  ctx.restore();
   ctx.restore();
   return true;
 }
@@ -868,7 +878,7 @@ async function generateShopProductPreview(product, user) {
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  const isNameEffectPreview = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key);
+  const isNameEffectPreview = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(key);
   // Name-effect previews intentionally have no surrounding box: only the name receives the cosmetic.
   const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
   const borderGlow = ctx.createLinearGradient(18, 18, W-18, H-18); borderGlow.addColorStop(0, item.color); borderGlow.addColorStop(0.48, '#7b5cff'); borderGlow.addColorStop(1, '#ff4fd8');
