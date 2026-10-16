@@ -1196,6 +1196,12 @@ A new user joined using your link! 🎁
               ]);
             }
           } catch (photoUploadError) {
+            // [FIXED] Roll back in-memory photo changes if download, conversion, or persistence throws.
+            if (previousProfilePhotoData) user.profilePhotoData = previousProfilePhotoData;
+            else delete user.profilePhotoData;
+            if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
+            else delete user.profilePhotoUrl;
+            if (wasAwaitingProfilePhoto) user.awaitingProfilePhoto = true;
             console.error('[PROFILE PHOTO] Upload failed:', photoUploadError.message);
             send(psid, '⚠️ Hindi ma-save ang picture. Subukan ang ibang larawan na mas maliit o ibang format.');
           }
