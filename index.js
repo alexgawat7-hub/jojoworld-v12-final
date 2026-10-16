@@ -1900,14 +1900,11 @@ A new user joined using your link! 🎁
         // EDIT PROFILE SUB-MENU
         if (upperRaw === "EDIT_PROFILE_MENU") {
           let editCostText = (user.profileEdits || 0) === 0 ? "FREE (1st Edit)" : "Costs 20 Coins";
-          send(psid, `✏️ EDIT PROFILE MENU (${editCostText})\n━━━━━━━━━━━━━━━━━━━━\nSelect what you'd like to update:`, [
+          send(psid, `✏️ EDIT PROFILE MENU (${editCostText})\n━━━━━━━━━━━━━━━━━━━━\nChoose what you want to edit:`, [
             { content_type: "text", title: "✏️ Name & Age", payload: "REQ_EDIT_NAME_AGE" },
             { content_type: "text", title: "📍 Location", payload: "REQ_EDIT_LOCATION" },
             { content_type: "text", title: "💬 Bio", payload: "REQ_EDIT_BIO" },
-            { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
-            { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
-            { content_type: "text", title: "📸 Change Photo", payload: "SET_PROFILE_PHOTO" },
-            { content_type: "text", title: "↩️ Profile", payload: "PROFILE" }
+            { content_type: "text", title: "↩️ Back to Profile", payload: "PROFILE" }
           ]);
           continue;
         }
