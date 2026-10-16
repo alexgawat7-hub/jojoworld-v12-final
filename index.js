@@ -1588,6 +1588,140 @@ A new user joined using your link! 🎁
           continue;
         }
 
+        // [ADDED] [UPGRADED V28] Secure Messenger admin panel and tools; every route is gated by ADMIN_ID.
+        if (psid === ADMIN_ID && ['ADMIN', 'ADMIN PANEL', 'ADMIN_PANEL'].includes(upperRaw.trim())) {
+          send(psid, '👑 JOJOWORLD ADMIN PANEL\\n━━━━━━━━━━━━━━━━━━━━\\nPiliin ang admin tool. Lahat ng admin action ay para lamang sa naka-configure na ADMIN_ID.', [
+            { content_type: 'text', title: '📊 User Stats', payload: 'ADMIN_STATS' },
+            { content_type: 'text', title: '💰 Add Coins Help', payload: 'ADMIN_ADDCOINS_HELP' },
+            { content_type: 'text', title: '🔎 Find User Help', payload: 'ADMIN_USER_HELP' },
+            { content_type: 'text', title: '🏠 House Help', payload: 'ADMIN_HOUSE_HELP' },
+            { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+          ]);
+          continue;
+        }
+
+        // [ADDED] [UPGRADED V28] Admin dashboard statistics from the current merged database.
+        if (psid === ADMIN_ID && upperRaw.trim() === 'ADMIN_STATS') {
+          const allAdminUsers = await getLeaderboardUsers();
+          const adminUserEntries = Object.entries(allAdminUsers || {});
+          const adminNow = Date.now();
+          const adminTotalCoins = adminUserEntries.reduce((sum, [, item]) => {
+            const coins = Number(item && item.coins);
+            return sum + (Number.isFinite(coins) && coins > 0 ? coins : 0);
+          }, 0);
+          const adminActiveUsers = adminUserEntries.filter(([, item]) =>
+            Number(item && item.lastActive) >= adminNow - 5 * 60 * 1000
+          ).length;
+          const adminChattingUsers = adminUserEntries.filter(([, item]) => item && item.state === 'CHATTING').length;
+          send(psid, '📊 JOJOWORLD ADMIN STATS\\n━━━━━━━━━━━━━━━━━━━━\\n👥 Registered users: ' + adminUserEntries.length +
+            '\\n🟢 Active in last 5 min: ' + adminActiveUsers +
+            '\\n💬 Users marked chatting: ' + adminChattingUsers +
+            '\\n💰 Total wallet coins: ' + Math.floor(adminTotalCoins).toLocaleString('en-US') + 'c' +
+            '\\n🗄️ Database: ' + (MONGODB_URI ? (mongoose.connection.readyState === 1 ? 'Connected' : 'Configured, not connected') : 'Local mode'), [
+              { content_type: 'text', title: '↻ Refresh Stats', payload: 'ADMIN_STATS' },
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+          continue;
+        }
+
+        // [ADDED] [UPGRADED V28] Admin help buttons explain the exact working commands.
+        if (psid === ADMIN_ID && upperRaw.trim() === 'ADMIN_ADDCOINS_HELP') {
+          send(psid, '💰 ADD COINS\\nI-type ang command na ito:\\nADMIN ADDCOINS PSID AMOUNT\\nHalimbawa: ADMIN ADDCOINS 123456789012345 500\\nLimit: 1 hanggang 1,000,000 coins bawat request.', [
+            { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+            { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+          ]);
+          continue;
+        }
+
+        if (psid === ADMIN_ID && upperRaw.trim() === 'ADMIN_USER_HELP') {
+          send(psid, '🔎 FIND USER\\nI-type: ADMIN USER PSID\\nHalimbawa: ADMIN USER 123456789012345\\nIpinapakita nito ang pangalan, coins, house, net worth, at account state.', [
+            { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+            { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+          ]);
+          continue;
+        }
+
+        if (psid === ADMIN_ID && upperRaw.trim() === 'ADMIN_HOUSE_HELP') {
+          send(psid, '🏠 HOUSE MANAGEMENT\\nAng house purchases ay nananatiling naka-order at sumusunod sa existing requirements. Para makita ang property ng user, gamitin: ADMIN USER PSID. Walang coins na mababago sa help screen.', [
+            { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+            { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+          ]);
+          continue;
+        }
+
+        // [ADDED] [UPGRADED V28] Admin user lookup; validates PSID and does not expose other users to non-admins.
+        if (psid === ADMIN_ID && upperRaw.trim().startsWith('ADMIN USER ')) {
+          const targetAdminPsid = upperRaw.trim().split(/\\s+/)[2] || '';
+          if (!/^\\d{5,32}$/.test(targetAdminPsid)) {
+            send(psid, '❌ Invalid PSID. Gamitin: ADMIN USER PSID', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+            continue;
+          }
+          const foundAdminUser = await loadUserFromDB(targetAdminPsid);
+          if (!foundAdminUser) {
+            send(psid, '❌ Walang user na nakita para sa PSID na iyon.', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+            continue;
+          }
+          send(psid, '🔎 USER DETAILS\\n━━━━━━━━━━━━━━━━━━━━\\n👤 Name: ' + String(getDisplayName(foundAdminUser)).slice(0, 80) +
+            '\\n🆔 PSID: ' + targetAdminPsid +
+            '\\n💰 Coins: ' + (Number(foundAdminUser.coins) || 0).toLocaleString('en-US') + 'c' +
+            '\\n🏠 House: ' + (String(foundAdminUser.house || 'none')) +
+            '\\n💎 Net worth: ' + getNetWorth(foundAdminUser).toLocaleString('en-US') + 'c' +
+            '\\n📍 State: ' + String(foundAdminUser.state || 'IDLE').slice(0, 30), [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+          continue;
+        }
+
+        // [ADDED] [UPGRADED V28] Admin coin credit with save/rollback protection.
+        if (psid === ADMIN_ID && upperRaw.trim().startsWith('ADMIN ADDCOINS ')) {
+          const adminCoinParts = upperRaw.trim().split(/\\s+/);
+          const targetAdminPsid = adminCoinParts[2] || '';
+          const adminAddAmount = Number(adminCoinParts[3]);
+          if (!/^\\d{5,32}$/.test(targetAdminPsid) || !Number.isSafeInteger(adminAddAmount) || adminAddAmount < 1 || adminAddAmount > 1000000) {
+            send(psid, '❌ Invalid format. Gamitin: ADMIN ADDCOINS PSID AMOUNT (1–1,000,000).', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+            continue;
+          }
+          const targetAdminUser = await loadUserFromDB(targetAdminPsid);
+          if (!targetAdminUser) {
+            send(psid, '❌ Hindi makita ang target user. Walang coins na nadagdag.', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+            continue;
+          }
+          const oldAdminCoinsRaw = Number(targetAdminUser.coins);
+          const oldAdminCoins = Number.isFinite(oldAdminCoinsRaw) && oldAdminCoinsRaw >= 0 ? oldAdminCoinsRaw : 0;
+          targetAdminUser.coins = oldAdminCoins + adminAddAmount;
+          if (!await saveUserToDB(targetAdminPsid, { saveJackpot: false })) {
+            targetAdminUser.coins = oldAdminCoins;
+            send(psid, '⚠️ Hindi na-save ang coins. Ibinalik ang dating balance; walang na-credit na coins.', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+            continue;
+          }
+          send(psid, '✅ COINS ADDED\\nUser: ' + String(getDisplayName(targetAdminUser)).slice(0, 80) +
+            '\\nPSID: ' + targetAdminPsid +
+            '\\nAdded: +' + adminAddAmount.toLocaleString('en-US') + 'c' +
+            '\\nNew balance: ' + targetAdminUser.coins.toLocaleString('en-US') + 'c', [
+              { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
+              { content_type: 'text', title: '🔎 Find User Help', payload: 'ADMIN_USER_HELP' },
+              { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
+            ]);
+          continue;
+        }
+
         // [FIXED] Reuse the daily house tax check performed earlier in this message handler.
 
         // [ADDED] [FIXED] V28 registration/name validation: "register Your Name".
