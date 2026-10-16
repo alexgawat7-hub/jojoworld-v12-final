@@ -300,14 +300,20 @@ async function generateProfileCanvas(user) {
   const ax=400,ay=260;
   ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=24;ctx.fillStyle='#0b142b';ctx.beginPath();ctx.arc(ax,ay,86,0,Math.PI*2);ctx.fill();ctx.restore();
   let photoShown=false;
-  if(user.profilePhotoUrl){
-    try{
-      const photo=await loadImage(user.profilePhotoUrl);
+  try{
+    let photo=null;
+    // [UPGRADED V28] Prefer compressed photo bytes stored in the user's MongoDB record, not expiring Messenger URLs.
+    if(user.profilePhotoData){
+      photo=await loadImage(Buffer.from(user.profilePhotoData,'base64'));
+    }else if(user.profilePhotoUrl){
+      photo=await loadImage(user.profilePhotoUrl);
+    }
+    if(photo){
       ctx.save();ctx.beginPath();ctx.arc(ax,ay,78,0,Math.PI*2);ctx.clip();
       const scale=Math.max(156/photo.width,156/photo.height),pw=photo.width*scale,ph=photo.height*scale;
       ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;
-    }catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
-  }
+    }
+  }catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
   if(!photoShown){
     ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();
     ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.fillText('PROFILE',ax,ay+7);
@@ -1168,17 +1174,39 @@ A new user joined using your link! 🎁
           ? ev.message.attachments.find(item => item && item.type === 'image' && item.payload && item.payload.url)
           : null;
         if (incomingImage) {
+          const previousProfilePhotoData = user.profilePhotoData;
           const previousProfilePhotoUrl = user.profilePhotoUrl;
-          user.profilePhotoUrl = incomingImage.payload.url;
-          if (!await saveUserToDB(psid, { saveJackpot: false })) {
-            if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
-            else delete user.profilePhotoUrl;
-            send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
-          } else {
-            send(psid, '📸 Profile photo saved! Ipapakita ito sa Visual Profile kasama ang frame na naka-equip mula sa Shop.', [
-              { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
-              { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
-            ]);
+          try {
+            // [UPGRADED V28] Download the Messenger attachment and store a resized JPEG in MongoDB for persistence.
+            const photoResponse = await axios.get(incomingImage.payload.url, {
+              responseType: 'arraybuffer', timeout: 12000, maxContentLength: 8 * 1024 * 1024,
+              maxBodyLength: 8 * 1024 * 1024
+            });
+            const sourcePhoto = await loadImage(Buffer.from(photoResponse.data));
+            const photoCanvas = createCanvas(512, 512);
+            const photoCtx = photoCanvas.getContext('2d');
+            photoCtx.fillStyle = '#080d1c'; photoCtx.fillRect(0, 0, 512, 512);
+            const scale = Math.max(512 / sourcePhoto.width, 512 / sourcePhoto.height);
+            const pw = sourcePhoto.width * scale, ph = sourcePhoto.height * scale;
+            photoCtx.drawImage(sourcePhoto, (512 - pw) / 2, (512 - ph) / 2, pw, ph);
+            const compressedPhoto = photoCanvas.toBuffer('image/jpeg', { quality: 0.78 });
+            if (compressedPhoto.length > 2 * 1024 * 1024) throw new Error('Compressed profile photo exceeds 2 MB');
+            user.profilePhotoData = compressedPhoto.toString('base64');
+            delete user.profilePhotoUrl;
+            if (!await saveUserToDB(psid, { saveJackpot: false })) {
+              if (previousProfilePhotoData) user.profilePhotoData = previousProfilePhotoData;
+              else delete user.profilePhotoData;
+              if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
+              send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
+            } else {
+              send(psid, '📸 Profile photo saved permanently to your JojoWorld account database! Ipapakita ito sa Visual Profile kasama ang frame na naka-equip mula sa Shop.', [
+                { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
+                { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
+              ]);
+            }
+          } catch (photoUploadError) {
+            console.error('[PROFILE PHOTO] Upload failed:', photoUploadError.message);
+            send(psid, '⚠️ Hindi ma-save ang picture. Subukan ang ibang larawan na mas maliit o ibang format.');
           }
           continue;
         }
