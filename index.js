@@ -166,7 +166,7 @@ async function loadUserFromDB(psid) {
   return db.users[psid] || null;
 }
 
-async function saveUserToDB(psid, { saveJackpot = true } = {}) {
+async function saveUserToDB(psid, { saveJackpot = false } = {}) {
   if (MONGODB_URI) {
     if (mongoose.connection.readyState !== 1) {
       console.error("Database save skipped: MongoDB is configured but not connected.");
@@ -2427,7 +2427,7 @@ ${renderGiftCatalog()}
             user.coins += db.jackpotPool;
             let wonJackpot = db.jackpotPool;
             db.jackpotPool = 1500;
-            if (!await saveUserToDB(psid)) {
+            if (!await saveUserToDB(psid, { saveJackpot: true })) {
               user.coins = spinSnapshot.coins;
               db.jackpotPool = spinSnapshot.jackpotPool;
               send(psid, "⚠️ Hindi na-save ang spin. Walang coins na ikakaltas; subukan ulit mamaya.");
@@ -2440,7 +2440,7 @@ ${renderGiftCatalog()}
             ]);
           } else {
             user.coins += result.win;
-            if (!await saveUserToDB(psid)) {
+            if (!await saveUserToDB(psid, { saveJackpot: true })) {
               user.coins = spinSnapshot.coins;
               db.jackpotPool = spinSnapshot.jackpotPool;
               send(psid, "⚠️ Hindi na-save ang spin. Walang coins na ikakaltas; subukan ulit mamaya.");
