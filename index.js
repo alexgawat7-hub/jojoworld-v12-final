@@ -684,7 +684,7 @@ A new user joined using your link! 🎁
 
         // [ADDED] [FIXED] V28 registration/name validation: "register Your Name".
         if (upperRaw.startsWith('REGISTER ')) {
-          const cleanName = rawText.slice(9).replace(/[^\\w\\s]/gi, '').trim();
+          const cleanName = rawText.slice(9).replace(/[^\w\s]/gi, '').trim();
           if (cleanName.length < 3) { send(psid, '❌ Bawal emoji/symbols boss! Min 3 letters!'); continue; }
           if (user.registered === true) { send(psid, "❌ Registered ka na boss! Type 'profile'"); continue; }
           const old = { name: user.name, registered: user.registered };
