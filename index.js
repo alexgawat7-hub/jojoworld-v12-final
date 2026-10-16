@@ -1302,7 +1302,7 @@ A new user joined using your link! 🎁
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
-          if (upperRaw === "END_CHAT" || cleanText === "end chat") {
+          if (upperRaw === "END_CHAT" || cleanText === "end chat" || upperRaw === "MENU" || cleanText === "menu") {
             const partnerPsid = user.activeMatchPsid;
             const userSnapshot = JSON.parse(JSON.stringify(user));
             let partner = partnerPsid ? await loadUserFromDB(partnerPsid) : null;
@@ -1338,10 +1338,16 @@ A new user joined using your link! 🎁
               }
             }
 
-            send(psid, "🔴 Chat ended successfully.", [
-              { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
-              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-            ]);
+            if (upperRaw === "MENU" || cleanText === "menu") {
+              user.currentPage = "MENU";
+              await saveUserToDB(psid, { saveJackpot: false });
+              sendMenu(psid);
+            } else {
+              send(psid, "🔴 Chat ended successfully.", [
+                { content_type: "text", title: "💘 Find New Match", payload: "FIND MATCH" },
+                { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+              ]);
+            }
             continue;
           }
 
@@ -1559,14 +1565,7 @@ A new user joined using your link! 🎁
           continue;
         }
 
-        // [FIXED] Restore a clear profile-photo action; users upload by sending an image in this Messenger chat.
-        if (upperRaw === "SET_PROFILE_PHOTO") {
-          send(psid, "📸 Send a photo here to update your profile picture!", [
-            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
-            { content_type: "text", title: "↩️ Back to Edit", payload: "EDIT_PROFILE_MENU" }
-          ]);
-          continue;
-        }
+        // [FIXED] Duplicate SET_PROFILE_PHOTO handler removed; the explicit upload-arming handler above is authoritative.
 
         // ZODIAC SELECTOR
         if (upperRaw === "SET_ZODIAC_MENU") {
