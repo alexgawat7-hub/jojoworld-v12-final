@@ -432,20 +432,24 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   }[effect] || palette[0];
 
   // Shared text renderer means every user's equipped effect looks identical in profile, leaderboard and shop preview.
+  // Heavy shadow extrusion gives the letters a bold, game-logo depth instead of plain colored text.
   ctx.shadowColor = glow;
-  ctx.shadowBlur = ['demon','neon','fire'].includes(effect) ? 24 : 16;
+  ctx.shadowBlur = ['demon','neon','fire'].includes(effect) ? 30 : 22;
+  ctx.fillStyle = glow;
+  ctx.fillText(n, x + 2, y + 4);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = effect === 'demon' ? '#260000' : effect === 'fire' ? '#6d1300' : effect === 'ice' ? '#174b9c' : effect === 'gold' ? '#6d3900' : '#10162d';
+  ctx.fillText(n, x + 1.5, y + 2.5);
+  ctx.lineWidth = ['demon','fire','neon'].includes(effect) ? 4 : 3;
+  ctx.strokeStyle = effect === 'demon' ? '#210000' : effect === 'ice' ? '#168bff' : effect === 'gold' ? '#9b4d00' : effect === 'fire' ? '#a91d00' : effect === 'neon' ? '#ffffff' : '#080d20';
+  ctx.strokeText(n, x, y);
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = ['demon','neon','fire'].includes(effect) ? 24 : 17;
   ctx.fillStyle = gradient;
-  ctx.fillText(n, x, y);
-  ctx.shadowBlur = 7;
   ctx.fillText(n, x, y);
   ctx.shadowBlur = 0;
-  ctx.lineWidth = ['demon','fire'].includes(effect) ? 3.2 : 1.8;
-  ctx.strokeStyle = effect === 'demon' ? '#210000' : effect === 'ice' ? '#168bff' :
-    effect === 'gold' ? '#9b4d00' : effect === 'fire' ? '#a91d00' :
-    effect === 'neon' ? '#ffffff' : glow;
-  ctx.strokeText(n, x, y);
-  ctx.fillStyle = gradient;
-  ctx.fillText(n, x, y);
+  // Fine top highlight creates a polished, beveled finish.
+  ctx.save(); ctx.globalAlpha = .48; ctx.lineWidth = 1; ctx.strokeStyle = '#ffffff'; ctx.strokeText(n, x, y - 1); ctx.restore();
 
   // Effect-specific ornaments: all are drawn around the letters, never behind them in a box.
   const left = textLeft, right = textLeft + textWidth;
@@ -471,29 +475,38 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   const positions = [left + textWidth*.08, left + textWidth*.3, left + textWidth*.72, right - textWidth*.06];
   ctx.save();ctx.globalAlpha=.96;
   if(effect==='sparkle'){
-    positions.forEach((px,i)=>sparkle(px,top-(i%2)*5,3.5+i%2,['#fff2a8','#e6b7ff','#ffffff','#8feaff'][i]));
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*7,Math.max(5,fontSize*.12)+i%2,['#fff2a8','#e6b7ff','#ffffff','#8feaff'][i]));
   } else if(effect==='heart'){
-    heart(left+textWidth*.12,top,8,'#ff9bd6');heart(right-textWidth*.12,top-4,7,'#ffd5ed');
-    dot(left+textWidth*.82,mid,1.8,'#ff62b5');
+    heart(left+textWidth*.10,top,Math.max(13,fontSize*.30),'#ff62b5');heart(right-textWidth*.10,top-5,Math.max(11,fontSize*.25),'#ffd5ed');
+    heart(left+textWidth*.83,mid,Math.max(8,fontSize*.18),'#ff9bd6');
   } else if(effect==='fire'||effect==='demon'){
-    positions.forEach((px,i)=>{ctx.fillStyle=i%2?'#ffcf39':'#ff4a16';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=7;ctx.beginPath();ctx.moveTo(px,y-fontSize*.12);ctx.quadraticCurveTo(px-4,y-fontSize*.42,px+1,y-fontSize*.58);ctx.quadraticCurveTo(px+7,y-fontSize*.34,px,y-fontSize*.12);ctx.fill();});
+    positions.forEach((px,i)=>{const h=fontSize*.42;ctx.fillStyle=i%2?'#ffcf39':'#ff4a16';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;ctx.beginPath();ctx.moveTo(px,y-fontSize*.08);ctx.quadraticCurveTo(px-h*.8,y-fontSize*.42,px,y-fontSize*.68);ctx.quadraticCurveTo(px+h*.85,y-fontSize*.40,px+h*.25,y-fontSize*.12);ctx.closePath();ctx.fill();if(effect==='demon'){ctx.fillStyle='#fff0f0';ctx.beginPath();ctx.arc(px,y-fontSize*.35,2.2,0,Math.PI*2);ctx.fill();}});
   } else if(effect==='ice'){
-    positions.forEach((px,i)=>snowflake(px,top-(i%2)*4,3.5,'#dffaff'));
+    positions.forEach((px,i)=>snowflake(px,top-(i%2)*5,Math.max(6,fontSize*.15),'#dffaff'));
   } else if(effect==='neon'){
-    [left+textWidth*.12,right-textWidth*.12].forEach((px,i)=>{ctx.strokeStyle=i?'#ff70dd':'#00ffff';ctx.lineWidth=2;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(px-4,top+4);ctx.lineTo(px,top-2);ctx.lineTo(px+3,top+2);ctx.lineTo(px+7,top-5);ctx.stroke();});
+    [left+textWidth*.10,right-textWidth*.10].forEach((px,i)=>{ctx.strokeStyle=i?'#ff70dd':'#00ffff';ctx.lineWidth=3;ctx.shadowColor=ctx.strokeStyle;ctx.shadowBlur=16;ctx.beginPath();ctx.moveTo(px-8,top+8);ctx.lineTo(px-1,top-5);ctx.lineTo(px+5,top+4);ctx.lineTo(px+12,top-10);ctx.stroke();});
   } else if(effect==='blossom'){
-    positions.forEach((px,i)=>{for(let p=0;p<5;p++){const a=p*Math.PI*2/5;dot(px+Math.cos(a)*2.6,top+Math.sin(a)*2.6,1.8,p%2?'#ffd6ed':'#ff9cdb');}dot(px,top,1.4,'#fff2a8');});
+    positions.forEach((px,i)=>{for(let p=0;p<5;p++){const a=p*Math.PI*2/5;dot(px+Math.cos(a)*fontSize*.10,top+Math.sin(a)*fontSize*.10,Math.max(2,fontSize*.045),p%2?'#ffd6ed':'#ff9cdb');}dot(px,top,Math.max(2,fontSize*.04),'#fff2a8');});
   } else if(effect==='rainbow'){
-    positions.forEach((px,i)=>sparkle(px,top-(i%2)*4,2.8,['#ff5353','#fff05c','#4bff91','#a57aff'][i]));
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*6,Math.max(4,fontSize*.10),['#ff5353','#fff05c','#4bff91','#a57aff'][i]));
   } else if(effect==='gold'){
-    positions.forEach((px,i)=>sparkle(px,top-(i%2)*3,2.8,'#fff1a6'));
+    positions.forEach((px,i)=>sparkle(px,top-(i%2)*5,Math.max(4,fontSize*.10),'#fff1a6'));
   } else if(effect==='dark'){
-    positions.forEach((px,i)=>{dot(px,top-(i%2)*4,1.8,'#b29aff');dot(px+4,top+5,1,'#5c4b8a');});
+    positions.forEach((px,i)=>{dot(px,top-(i%2)*5,Math.max(2,fontSize*.055),'#b29aff');dot(px+6,top+7,Math.max(1.5,fontSize*.035),'#5c4b8a');});
   } else {
     const color=glow;
-    dot(left+textWidth*.08,top,2,color);dot(right-textWidth*.08,top,2,color);
-    dot(left+textWidth*.9,mid,1.4,palette[0]);
+    dot(left+textWidth*.08,top,Math.max(3,fontSize*.075),color);dot(right-textWidth*.08,top,Math.max(3,fontSize*.075),color);
+    dot(left+textWidth*.9,mid,Math.max(2,fontSize*.05),palette[0]);
   }
+  // A sharp signature underline is part of the name treatment (not a background plate).
+  const underlineY = y + Math.max(7, fontSize*.16);
+  ctx.save(); ctx.lineCap='round'; ctx.lineWidth=Math.max(2,fontSize*.045); ctx.shadowColor=glow; ctx.shadowBlur=10;
+  if(effect==='neon') { ctx.strokeStyle='#00ffff'; ctx.beginPath();ctx.moveTo(left,underlineY);ctx.lineTo(right,underlineY);ctx.stroke();ctx.strokeStyle='#ff70dd';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(left+textWidth*.18,underlineY+4);ctx.lineTo(right-textWidth*.12,underlineY+4);ctx.stroke(); }
+  else if(effect==='fire'||effect==='demon') { ctx.strokeStyle=effect==='demon'?'#ff2424':'#ff9b16';ctx.beginPath();ctx.moveTo(left,underlineY);ctx.lineTo(right,underlineY);ctx.stroke();for(let i=0;i<3;i++){const px=left+textWidth*(.2+i*.3);ctx.beginPath();ctx.moveTo(px,underlineY);ctx.lineTo(px+3,underlineY-5-i%2*3);ctx.stroke();} }
+  else if(effect==='ice') { ctx.strokeStyle='#dffaff';ctx.beginPath();ctx.moveTo(left,underlineY);ctx.lineTo(right,underlineY);ctx.stroke(); }
+  else if(effect==='dark') { ctx.strokeStyle='#9b7cff';ctx.setLineDash([fontSize*.18,fontSize*.09]);ctx.beginPath();ctx.moveTo(left,underlineY);ctx.lineTo(right,underlineY);ctx.stroke();ctx.setLineDash([]); }
+  else { ctx.strokeStyle=gradient;ctx.beginPath();ctx.moveTo(left,underlineY);ctx.lineTo(right,underlineY);ctx.stroke(); }
+  ctx.restore();
   ctx.restore();
   ctx.restore();
   return true;
