@@ -724,7 +724,7 @@ async function generateShopProductPreview(product, user) {
 // [ADDED] [UPGRADED V28] Brief leaderboard data cache avoids a full MongoDB scan on rapid repeat taps.
 let leaderboardUsersCache = { users: null, createdAt: 0 };
 let leaderboardImageCache = { file: null, createdAt: 0 };
-const LEADERBOARD_CACHE_MS = 3000;
+const LEADERBOARD_CACHE_MS = 30000; // Cache leaderboard data/image for 30 seconds to avoid repeated DB scans and canvas renders.
 
 // [UPGRADED] Merge saved MongoDB players with the local cache so a valid player
 // is not dropped from the leaderboard when this process has only a partial cache.
