@@ -349,12 +349,13 @@ function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
   for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
   if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
 }
-// [ADDED V33] Premium plain-text name effects. Canvas paths/text only; no emoji, icon, or box glyphs.
-// [FIXED V33] Keep the premium effect inside its allotted name area to avoid overlapping profile badges/cards.
+// [UPGRADED V34] Render every shop name effect as plain uppercase text only.
+// No decorative glyphs, emoji, Unicode symbols, or text-background boxes are added to the name.
 function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'left') {
   const n = String(name || '').toUpperCase();
   const effect = String(effectKey || '').toLowerCase();
-  if (!['neon', 'fire', 'gold', 'demon', 'ice'].includes(effect) || !n) return false;
+  const supported = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
+  if (!supported.includes(effect) || !n) return false;
 
   ctx.save();
   ctx.textAlign = align;
@@ -367,44 +368,47 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
     ctx.font = 'bold ' + fontSize + 'px Arial Black';
   }
 
-  let fill = '#ffffff';
-  let stroke = '#ffffff';
-  let glow = '#00ffff';
-  if (effect === 'neon') { fill = '#aaffff'; stroke = '#ffffff'; glow = '#00ffff'; }
-  if (effect === 'fire') { fill = '#ff3b12'; stroke = '#8b0000'; glow = '#ff2200'; }
-  if (effect === 'gold') { fill = '#ffd700'; stroke = '#d96b00'; glow = '#ff9900'; }
-  if (effect === 'demon') { fill = '#e60000'; stroke = '#080000'; glow = '#ff0000'; }
-  if (effect === 'ice') { fill = '#ffffff'; stroke = '#168bff'; glow = '#008cff'; }
+  const palettes = {
+    neon: ['#eaffff','#00ffff','#8afcff'],
+    fire: ['#fff700','#ff9900','#ff1a00'],
+    gold: ['#fff8b0','#ffd700','#ffb000','#8c4a00'],
+    demon: ['#ff4a4a','#e60000','#8b0000'],
+    ice: ['#ffffff','#eaf8ff','#78caff'],
+    rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
+    sparkle: ['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'],
+    heart: ['#ffd5ed','#ff62b5','#ff9bd6'],
+    blossom: ['#ff9cdb','#ffd4ed','#ff70a6'],
+    dark: ['#e5dcff','#9b7cff','#5c4b8a'],
+    red: ['#ff9b9b','#ff5252'],
+    blue: ['#a6d8ff','#54a8ff'],
+    green: ['#c2ffd9','#64f59b'],
+    yellow: ['#fff4b0','#ffe65b']
+  };
+  const palette = palettes[effect] || ['#ffffff', '#dbeafe'];
+  const gradient = ctx.createLinearGradient(x, y - fontSize, x + Math.max(1, maxWidth), y + 2);
+  palette.forEach((color, index) => gradient.addColorStop(index / Math.max(1, palette.length - 1), color));
 
-  ctx.shadowColor = glow;
-  ctx.shadowBlur = effect === 'demon' ? 25 : 20;
-  ctx.fillStyle = fill;
+  const glowColors = {
+    neon:'#00ffff', fire:'#ff2200', gold:'#ff9900', demon:'#ff0000', ice:'#008cff',
+    rainbow:'#ff70dd', sparkle:'#d7a4ff', heart:'#ff62b5', blossom:'#ff70a6',
+    dark:'#9b7cff', red:'#ff5252', blue:'#54a8ff', green:'#64f59b', yellow:'#ffe65b'
+  };
+  ctx.shadowColor = glowColors[effect] || palette[0];
+  ctx.shadowBlur = effect === 'demon' ? 22 : 16;
+  ctx.fillStyle = gradient;
   ctx.fillText(n, x, y);
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = 9;
   ctx.fillText(n, x, y);
   ctx.shadowBlur = 0;
-  ctx.lineWidth = effect === 'demon' ? 5 : 3;
-  ctx.strokeStyle = stroke;
+  ctx.lineWidth = effect === 'demon' ? 4 : 2.5;
+  ctx.strokeStyle = effect === 'demon' ? '#080000' :
+    effect === 'ice' ? '#168bff' :
+    effect === 'gold' ? '#d96b00' :
+    effect === 'fire' ? '#8b0000' :
+    effect === 'neon' ? '#ffffff' : (glowColors[effect] || palette[0]);
   ctx.strokeText(n, x, y);
-
-  if (effect === 'fire' || effect === 'gold') {
-    const gradient = ctx.createLinearGradient(x, y - fontSize, x, y + 3);
-    if (effect === 'fire') {
-      gradient.addColorStop(0, '#fff700');
-      gradient.addColorStop(0.45, '#ff9900');
-      gradient.addColorStop(1, '#ff1a00');
-    } else {
-      gradient.addColorStop(0, '#fff8b0');
-      gradient.addColorStop(0.35, '#ffd700');
-      gradient.addColorStop(0.7, '#ffb000');
-      gradient.addColorStop(1, '#8c4a00');
-    }
-    ctx.fillStyle = gradient;
-    ctx.fillText(n, x, y);
-  } else {
-    ctx.fillStyle = effect === 'ice' ? '#eaf8ff' : (effect === 'demon' ? '#e60000' : '#bfffff');
-    ctx.fillText(n, x, y);
-  }
+  ctx.fillStyle = gradient;
+  ctx.fillText(n, x, y);
   ctx.restore();
   return true;
 }
@@ -456,28 +460,7 @@ async function generateProfileCanvas(user) {
   if (!drawPremiumNameEffect(ctx, displayName, 270, 183, vip ? 405 : 450, effect, 'left')) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
   }
-  // [ADDED V32] Effect-specific ornaments are drawn into the actual generated profile, not just the shop preview.
-  const effectEnd=Math.min(270+nameWidth,675);
-  if(effect==='sparkle'){
-    const glint=(gx,gy,r)=>{ctx.save();ctx.translate(gx,gy);ctx.shadowColor='#fff4b0';ctx.shadowBlur=14;ctx.fillStyle='#fffbe9';ctx.beginPath();ctx.moveTo(0,-r);ctx.quadraticCurveTo(r*.18,-r*.18,r,0);ctx.quadraticCurveTo(r*.18,r*.18,0,r);ctx.quadraticCurveTo(-r*.18,r*.18,-r,0);ctx.quadraticCurveTo(-r*.18,-r*.18,0,-r);ctx.fill();ctx.restore();};
-    glint(270+Math.min(nameWidth,65),163,5);glint(310+Math.min(nameWidth,90),191,3.5);glint(270+Math.min(nameWidth,150),159,3);glint(Math.max(280,effectEnd-8),169,4.5);
-    ctx.save();ctx.globalAlpha=.8;ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(278,195);ctx.quadraticCurveTo(390,202,effectEnd,194);ctx.stroke();ctx.restore();
-  } else if(effect==='heart'){
-    ctx.save();ctx.fillStyle='#ff80c7';ctx.shadowColor='#ff62b5';ctx.shadowBlur=12;ctx.font='bold 15px Sans';ctx.fillText('♥',Math.max(278,effectEnd-5),164);ctx.fillText('♥',Math.min(286+nameWidth,650),193);ctx.restore();
-  } else if(effect==='fire'){
-    ctx.save();ctx.strokeStyle='#ff8a3d';ctx.shadowColor='#ff4d22';ctx.shadowBlur=12;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(274,195);ctx.quadraticCurveTo(360,204,Math.min(effectEnd,665),195);ctx.stroke();ctx.fillStyle='#ffe36a';for(let j=0;j<3;j++){const fx=285+j*Math.max(18,Math.min(nameWidth,260)/3);ctx.beginPath();ctx.moveTo(fx,159);ctx.lineTo(fx+4,151-(j%2)*4);ctx.lineTo(fx+8,160);ctx.fill();}ctx.restore();
-  } else if(effect==='ice'){
-    ctx.save();ctx.strokeStyle='#d8fbff';ctx.shadowColor='#78eaff';ctx.shadowBlur=10;ctx.lineWidth=1.5;for(let j=0;j<3;j++){const ix=Math.min(280+j*Math.max(20,Math.min(nameWidth,260)/3),effectEnd);ctx.beginPath();ctx.moveTo(ix-4,159);ctx.lineTo(ix+4,167);ctx.moveTo(ix+4,159);ctx.lineTo(ix-4,167);ctx.stroke();}ctx.restore();
-  } else if(effect==='neon'){
-    ctx.save();ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=17;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(272,196);ctx.lineTo(effectEnd,196);ctx.stroke();ctx.restore();
-  } else if(effect==='blossom'){
-    ctx.save();ctx.fillStyle='#ff9cdb';ctx.shadowColor='#ff70a6';ctx.shadowBlur=10;for(let j=0;j<3;j++){const bx=Math.min(280+j*Math.max(20,Math.min(nameWidth,260)/3),effectEnd);for(let p=0;p<5;p++){const a=p*Math.PI*2/5;ctx.beginPath();ctx.ellipse(bx+Math.cos(a)*4,161+Math.sin(a)*4,2.5,4,a,0,Math.PI*2);ctx.fill();}}ctx.restore();
-  } else if(effect==='dark'){
-    ctx.save();ctx.globalAlpha=.7;ctx.strokeStyle='#bd9bff';ctx.shadowColor='#5c4b8a';ctx.shadowBlur=12;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(274,197);ctx.quadraticCurveTo(420,211,effectEnd,196);ctx.stroke();ctx.restore();
-  } else if(effect!=='none'){
-    ctx.save();ctx.globalAlpha=.9;ctx.strokeStyle=effectGlow[effect]||colors[0];ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=12;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(274,196);ctx.lineTo(effectEnd,196);ctx.stroke();ctx.restore();
-  }
-  // [UPGRADED V31] Large fixed-position verified shield on the RIGHT side of the profile identity card.
+  // [UPGRADED V34] Name effects are text-only; no extra glyphs or ornaments are placed beside the name.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
   if(vip){
     ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
@@ -964,19 +947,9 @@ async function generateLeaderboardCanvas(users) {
       ctx.shadowBlur = 0;
     }
     ctx.fillText(text, x, y);
-    // [ADDED V32] Small effect-specific marks make equipped effects recognizable on leaderboard names too.
-    const normalizedEffect=String(effectKey||'').toLowerCase(), endX=Math.min(x+Math.min(ctx.measureText(text).width,maxWidth),x+maxWidth);
-    if(normalizedEffect==='sparkle'){
-      ctx.fillStyle='#fff4b0';ctx.shadowColor='#d7a4ff';ctx.shadowBlur=10;
-      for(let j=0;j<2;j++){const sx=Math.min(endX-3,x+18+j*36);ctx.beginPath();ctx.moveTo(sx,y-fontSize*.85);ctx.lineTo(sx+2,y-fontSize*.55);ctx.lineTo(sx+5,y-fontSize*.85);ctx.lineTo(sx+2,y-fontSize*1.05);ctx.closePath();ctx.fill();}
-    } else if(normalizedEffect==='heart'){
-      ctx.fillStyle='#ff80c7';ctx.font='bold '+Math.max(9,fontSize-4)+'px Sans';ctx.fillText('♥',endX+2,y);
-    } else if(normalizedEffect==='fire'||normalizedEffect==='ice'||normalizedEffect==='blossom'){
-      ctx.strokeStyle=normalizedEffect==='fire'?'#ff8a3d':(normalizedEffect==='ice'?'#d8fbff':'#ff9cdb');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y+3);ctx.lineTo(endX,y+3);ctx.stroke();
-    } else if(normalizedEffect==='neon'){
-      ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=8;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y+4);ctx.lineTo(endX,y+4);ctx.stroke();
-    }
+    // [UPGRADED V34] Name effects use text styling only; no extra glyphs or ornaments.
     ctx.restore();
+
   };
   const getHouse = item => {
     const key = String(item.user.house || 'none').toLowerCase();
