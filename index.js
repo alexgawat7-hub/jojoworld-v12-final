@@ -13,7 +13,7 @@ const mongoose = require('mongoose');
 const axios = require('axios');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
-const { GIFT_CATALOG, GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
+const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
 // [ADDED] V28 cache directory for generated profile and leaderboard images.
 const cacheDir = path.join(__dirname, 'cache');
@@ -73,7 +73,6 @@ const TopupOrderSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const TopupOrderModel = mongoose.models.JTopupOrder || mongoose.model('JTopupOrder', TopupOrderSchema);
-const processedPaymentEvents = new Set();
 
 // Messenger may retry delivery of the same message. Keep a unique message ID
 // record so a wallet-changing command is not applied twice.
@@ -226,7 +225,6 @@ async function saveUserPair(senderPsid, recipientPsid) {
 const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 };
 
 // Shared V26 Gift Hub catalog keeps Messenger prices in sync with tests.
-const GIFTS = GIFT_CATALOG;
 
 // [ADDED] [UPGRADED V28] House tiers, values, flex labels, tax, and canvas helpers.
 const HOUSE_CONFIG = {
@@ -317,14 +315,6 @@ function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
   const words = String(text ?? '').split(/\s+/); let line = ''; let lines = 0;
   for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
   if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
-}
-function drawV28Canvas(title, width, height) {
-  const canvas = createCanvas(width, height); const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 6; ctx.strokeRect(12, 12, width - 24, height - 24);
-  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 34px Sans'; ctx.fillText(title, 36, 62);
-  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(36, 82); ctx.lineTo(width - 36, 82); ctx.stroke();
-  return { canvas, ctx };
 }
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
