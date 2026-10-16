@@ -611,7 +611,7 @@ async function getLeaderboardUsers() {
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   // [UPGRADED V28] Taller leaderboard canvas for larger, more readable Top 10 cards on mobile.
-  const W = 800, H = 1500, RENDER_SCALE = 1.5; // [FIXED] Higher output resolution for sharper mobile display.
+  const W = 800, H = 1500, RENDER_SCALE = 1.5; // [UPGRADED V28] Preserve sharp output while enlarging actual leaderboard content.
   const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -689,47 +689,47 @@ async function generateLeaderboardCanvas(users) {
     ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = featured ? 24 : 13; ctx.strokeStyle = color; ctx.lineWidth = featured ? 3 : 2;
     ctx.strokeRect(x, y, w, h); ctx.restore();
     ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
-    ctx.font = 'bold ' + (featured ? 24 : 20) + 'px Sans'; ctx.fillText(rank === 1 ? '♛ #1 CHAMPION' : '#' + rank, x + w / 2, y + 29); ctx.shadowBlur = 0;
+    ctx.font = 'bold ' + (featured ? 26 : 23) + 'px Sans'; ctx.fillText(rank === 1 ? '♛ #1 CHAMPION' : '#' + rank, x + w / 2, y + 32); // [UPGRADED V28] Larger podium rank labels. ctx.shadowBlur = 0;
     // [FIXED] Keep the rank medal above the avatar so they never collide.
-    drawMedal(x + w / 2, y + 57, rank, color, featured ? 20 : 18);
+    drawMedal(x + w / 2, y + 63, rank, color, featured ? 22 : 20); // [UPGRADED V28] Larger rank medals.
     if (!item) {
-      ctx.fillStyle = '#9eb5cc'; ctx.font = 'bold 16px Sans'; ctx.fillText('OPEN RANK', x + w / 2, y + 105);
-      ctx.fillStyle = '#6e849b'; ctx.font = '11px Sans'; ctx.fillText('Play to claim this spot', x + w / 2, y + 126);
+      ctx.fillStyle = '#9eb5cc'; ctx.font = 'bold 18px Sans'; ctx.fillText('OPEN RANK', x + w / 2, y + 112);
+      ctx.fillStyle = '#6e849b'; ctx.font = '13px Sans'; ctx.fillText('Play to claim this spot', x + w / 2, y + 137);
       return;
     }
     // [FIXED] Podium content uses separate vertical zones: medal, avatar, name, and stats never overlap.
     // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
-    await drawLeaderboardAvatar(item, x + w / 2, y + 108, featured ? 36 : 32); // [UPGRADED V28] Larger podium profile photos.
+    await drawLeaderboardAvatar(item, x + w / 2, y + 126, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
-    ctx.font = 'bold ' + (featured ? 21 : 19) + 'px Sans';
+    ctx.font = 'bold ' + (featured ? 26 : 23) + 'px Sans'; // [UPGRADED V28] Larger podium player names.
     let podiumName = name;
     while (ctx.measureText(podiumName).width > w - 24 && podiumName.length > 5) podiumName = podiumName.slice(0, -2) + '…';
-    ctx.fillText(podiumName, x + w / 2, y + 151);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 20 : 18) + 'px Sans';
-    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 176);
-    ctx.fillStyle = '#d4f6ff'; ctx.font = '14px Sans';
-    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 197);
-    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 215);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
-    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 235);
-    ctx.fillStyle = color; ctx.font = 'bold 13px Sans';
+    ctx.fillText(podiumName, x + w / 2, y + 184);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
+    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 213);
+    ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
+    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 240);
+    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 263);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 18px Sans'; // [UPGRADED V28] Larger net-worth flex stat.
+    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 286);
+    ctx.fillStyle = color; ctx.font = 'bold 14px Sans';
     ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
   };
 
   // [UPGRADED V28] A real podium layout for the top three, with the champion centered.
-  await drawPodium(top[1], 2, 38, 218, 222, 282, '#b8d8ff', false);
-  await drawPodium(top[0], 1, 270, 201, 260, 299, '#ffd34f', true);
-  await drawPodium(top[2], 3, 540, 218, 222, 282, '#ff83e9', false);
+  await drawPodium(top[1], 2, 38, 205, 222, 330, '#b8d8ff', false); // [UPGRADED V28] Taller podium for larger profile and stats.
+  await drawPodium(top[0], 1, 270, 190, 260, 345, '#ffd34f', true); // [UPGRADED V28] Larger champion card.
+  await drawPodium(top[2], 3, 540, 205, 222, 330, '#ff83e9', false); // [UPGRADED V28] Taller podium for larger profile and stats.
 
   // [UPGRADED V28] Compact, readable neon cards for ranks 4–10.
   for (let rank = 4; rank <= 10; rank++) {
     // [UPGRADED V28] Taller leaderboard cards for readable photos, names, and flex stats.
-    const i = rank - 1, item = top[i], y = 535 + (rank - 4) * 91, color = accents[i];
-    const grad = ctx.createLinearGradient(38, y, 762, y + 80);
+    const i = rank - 1, item = top[i], y = 555 + (rank - 4) * 98, color = accents[i]; // [UPGRADED V28] More room per player row.
+    const grad = ctx.createLinearGradient(38, y, 762, y + 88);
     grad.addColorStop(0, rank % 2 === 0 ? '#092843' : '#21113c'); grad.addColorStop(1, '#080f24');
-    ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 80);
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 80); ctx.restore();
+    ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 88);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 88); ctx.restore();
     // [ADDED] Faceted-style rank badge.
     ctx.fillStyle = color; ctx.beginPath();
     for (let p = 0; p < 10; p++) {
@@ -749,23 +749,23 @@ async function generateLeaderboardCanvas(users) {
     // [FIXED] Stable leaderboard grid: avatar, player/coins, house, and net worth have separate columns.
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
-    await drawLeaderboardAvatar(item, 122, y + 40, 34); // [UPGRADED V28] Bigger Top 4–10 profile photos.
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 23px Sans';
+    await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 27px Sans'; // [UPGRADED V28] Bigger Top 4–10 names.
     let rowName = name;
-    while (ctx.measureText(rowName).width > 195 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
-    ctx.fillText(rowName, 160, y + 30);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 19px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 160, y + 58);
-    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
+    while (ctx.measureText(rowName).width > 215 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
+    ctx.fillText(rowName, 172, y + 34);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 22px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 172, y + 70); // [UPGRADED V28] Bigger coin stats.
+    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 17px Sans'; // [UPGRADED V28] Bigger house stats.
     let houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
-    while (ctx.measureText(houseText).width > 165 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
-    ctx.fillText(houseText, 380, y + 48);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
-    ctx.fillText('NET WORTH', 744, y + 27);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 19px Sans';
-    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 52);
-    ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
+    while (ctx.measureText(houseText).width > 170 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
+    ctx.fillText(houseText, 395, y + 52);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 17px Sans';
+    ctx.fillText('NET WORTH', 744, y + 30);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 22px Sans';
+    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 58);
+    ctx.fillStyle = color; ctx.font = 'bold 13px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
-    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 72);
+    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 80);
   }
 
   // [UPGRADED V28] Bright season footer and climb-to-the-top callout.
