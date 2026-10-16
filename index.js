@@ -1512,10 +1512,16 @@ A new user joined using your link! 🎁
 
         // MAIN MENU ROUTING
         if (cleanText === "menu" || upperRaw === "MENU") {
+          const previousMenuState = { currentPage: user.currentPage, state: user.state, activeMatchPsid: user.activeMatchPsid };
           user.currentPage = "MENU";
           user.state = "IDLE";
           user.activeMatchPsid = null;
-          await saveUserToDB(psid);
+          // [FIXED] Do not report/menu-route successfully if the state change was not persisted.
+          if (!await saveUserToDB(psid)) {
+            Object.assign(user, previousMenuState);
+            send(psid, "⚠️ Hindi ma-save ang pagbalik sa menu. Subukan ulit mamaya.");
+            continue;
+          }
           sendMenu(psid);
           continue;
         }
@@ -1671,8 +1677,14 @@ A new user joined using your link! 🎁
 
         // [FIXED] FIND MATCH opens its own page first; it never pairs users by itself.
         if (cleanText === "find match" || upperRaw === "FIND MATCH") {
+          const previousPage = user.currentPage;
           user.currentPage = "FIND_MATCH";
-          await saveUserToDB(psid);
+          // [FIXED] Search Match depends on this page state, so stop if it cannot be persisted.
+          if (!await saveUserToDB(psid)) {
+            user.currentPage = previousPage;
+            send(psid, "⚠️ Hindi mabuksan ang Find Match ngayon. Subukan ulit mamaya.");
+            continue;
+          }
           const matchCountCutoff = Date.now() - 15 * 60 * 1000;
           let availableMatchCount = 0;
           try {
@@ -2165,8 +2177,14 @@ ${renderGiftCatalog()}
         }
 
         if (cleanText === "shop" || upperRaw === "SHOP") {
+          const previousPage = user.currentPage;
           user.currentPage = "SHOP";
-          await saveUserToDB(psid);
+          // [FIXED] Do not open the Shop if its page state cannot be persisted.
+          if (!await saveUserToDB(psid)) {
+            user.currentPage = previousPage;
+            send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya.");
+            continue;
+          }
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
