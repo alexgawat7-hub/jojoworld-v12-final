@@ -549,10 +549,31 @@ async function generateShopCanvas() {
     text('PREVIEW / BUY', x + w / 2, by + bh * 0.69, Math.min(10, w * 0.078), '#042719');
   };
 
-  text('♛ JOJOWORLD ♛', 400, 66, 22, '#ffdb70');
-  text('SHOP', 400, 105, 47, '#65ffff');
-  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; text('UPGRADE YOUR PROFILE • SHOW YOUR STYLE', 400, 137, 16, '#ff8ff1'); ctx.shadowBlur = 0;
-  text('✦ PREMIUM ITEMS  •  PREVIEW BEFORE YOU BUY ✦', 400, 161, 13, '#d8e9ff');
+  // [UPGRADED V29] Royal luxury header to match the premium JojoWorld shop caption.
+  const headerGlow = ctx.createLinearGradient(70, 30, 730, 174);
+  headerGlow.addColorStop(0, '#17112c'); headerGlow.addColorStop(0.5, '#252044'); headerGlow.addColorStop(1, '#10152b');
+  ctx.save();
+  ctx.shadowColor = '#ffd66b'; ctx.shadowBlur = 18;
+  ctx.fillStyle = headerGlow; ctx.fillRect(42, 34, 716, 132);
+  ctx.shadowBlur = 0; ctx.strokeStyle = '#f7d778'; ctx.lineWidth = 2; ctx.strokeRect(42, 34, 716, 132);
+  ctx.strokeStyle = 'rgba(255,215,112,0.48)'; ctx.lineWidth = 1; ctx.strokeRect(49, 41, 702, 118);
+  // Crown emblem drawn with Canvas paths so it renders consistently on the server.
+  const drawRoyalCrown = (cx, cy, scale) => {
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+    ctx.shadowColor = '#ffd66b'; ctx.shadowBlur = 10; ctx.fillStyle = '#ffd66b';
+    ctx.beginPath(); ctx.moveTo(-18, -8); ctx.lineTo(-12, 7); ctx.lineTo(0, -1); ctx.lineTo(12, 7); ctx.lineTo(18, -8); ctx.lineTo(14, 12); ctx.lineTo(-14, 12); ctx.closePath(); ctx.fill();
+    ctx.fillRect(-14, 14, 28, 3);
+    ctx.restore();
+  };
+  drawRoyalCrown(400, 52, 0.72);
+  const royalTitle = ctx.createLinearGradient(205, 0, 595, 0);
+  royalTitle.addColorStop(0, '#fff0ad'); royalTitle.addColorStop(0.5, '#ffd45d'); royalTitle.addColorStop(1, '#fff0ad');
+  ctx.shadowColor = '#ffc94f'; ctx.shadowBlur = 14;
+  text('JOJOWORLD SHOP', 400, 91, 35, royalTitle);
+  ctx.shadowBlur = 0;
+  text('NAME EFFECTS  •  PROFILE UPGRADES  •  HOUSE COLLECTION', 400, 117, 12, '#e9e5ff');
+  text('✦  PREVIEW  •  CHOOSE  •  FLEX YOUR STYLE  ✦', 400, 145, 14, '#ff8ff1');
+  ctx.restore();
 
   panel(35, 182, 730, 184, '#ffd34f', '👑 VIP & PROFILE FRAMES');
   card(52, 223, 345, 128, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
