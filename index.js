@@ -1522,8 +1522,14 @@ A new user joined using your link! 🎁
 
         // [UPGRADED V28] Visual-only profile: show equipped/purchased shop items on the profile image, not the legacy text wall.
         if (["profile", "me", "my"].includes(cleanText) || ["PROFILE", "ME", "MY"].includes(upperRaw)) {
-          user.views = (user.views || 0) + 1;
-          await saveUserToDB(psid, { saveJackpot: false });
+          const previousViews = user.views || 0;
+          user.views = previousViews + 1;
+          // [FIXED] Do not proceed as if the view counter was saved when persistence fails.
+          if (!await saveUserToDB(psid, { saveJackpot: false })) {
+            user.views = previousViews;
+            send(psid, "⚠️ Hindi ma-update ang profile ngayon. Subukan ulit mamaya.");
+            continue;
+          }
           try {
             const profileImage = await generateProfileCanvas({ ...user, id: psid });
             await sendImage(psid, profileImage, `✨ JOJOWORLD VISUAL PROFILE • ${getDisplayName(user)} ✨\nYour equipped shop items are displayed on your profile.\nUse the quick buttons below to edit your Zodiac, Relationship Goal, or profile photo.`, [
@@ -1543,8 +1549,15 @@ A new user joined using your link! 🎁
 
         // [ADDED] Explicitly arm photo upload only from the profile's Change Photo button.
         if (upperRaw === "SET_PROFILE_PHOTO") {
+          const wasAwaitingProfilePhoto = user.awaitingProfilePhoto;
           user.awaitingProfilePhoto = true;
-          await saveUserToDB(psid, { saveJackpot: false });
+          // [FIXED] Only confirm photo-upload mode if the flag was persisted.
+          if (!await saveUserToDB(psid, { saveJackpot: false })) {
+            if (wasAwaitingProfilePhoto === undefined) delete user.awaitingProfilePhoto;
+            else user.awaitingProfilePhoto = wasAwaitingProfilePhoto;
+            send(psid, "⚠️ Hindi ma-activate ang photo upload ngayon. Subukan ulit mamaya.");
+            continue;
+          }
           send(psid, "📸 Send a photo here to update your profile picture!", [
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
           ]);
@@ -1608,8 +1621,14 @@ A new user joined using your link! 🎁
         }
 
         if (upperRaw.startsWith("ZODIAC_")) {
+          const previousZodiac = user.zodiac;
           user.zodiac = rawText.replace("ZODIAC_", "");
-          await saveUserToDB(psid);
+          // [FIXED] Roll back and report a failure instead of falsely confirming an unsaved zodiac.
+          if (!await saveUserToDB(psid)) {
+            user.zodiac = previousZodiac;
+            send(psid, "⚠️ Hindi na-save ang zodiac. Subukan ulit mamaya.");
+            continue;
+          }
           send(psid, `✨ Zodiac set to **${user.zodiac}**!`, [{ content_type: "text", title: "👤 View Profile", payload: "PROFILE" }]);
           continue;
         }
@@ -1638,8 +1657,14 @@ A new user joined using your link! 🎁
         }
 
         if (upperRaw.startsWith("GOAL_")) {
+          const previousGoal = user.relationshipGoal;
           user.relationshipGoal = rawText.replace("GOAL_", "");
-          await saveUserToDB(psid);
+          // [FIXED] Roll back and report a failure instead of falsely confirming an unsaved goal.
+          if (!await saveUserToDB(psid)) {
+            user.relationshipGoal = previousGoal;
+            send(psid, "⚠️ Hindi na-save ang relationship goal. Subukan ulit mamaya.");
+            continue;
+          }
           send(psid, `🎯 Relationship goal updated to **${user.relationshipGoal}**!`, [{ content_type: "text", title: "👤 View Profile", payload: "PROFILE" }]);
           continue;
         }
@@ -2102,7 +2127,10 @@ ${renderGiftCatalog()}
         // [UPGRADED V28] Messenger shop with category buttons and direct purchase quick replies.
         // Messenger quick replies support up to 13 items, so the catalog is split into categories.
         if (upperRaw === 'SHOP_EFFECTS') {
-          user.currentPage = "SHOP"; await saveUserToDB(psid);
+          const previousPage = user.currentPage;
+          user.currentPage = "SHOP";
+          // [FIXED] Do not show the category when the page state cannot be saved.
+          if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
           send(psid, "💎 JOJOWORLD SHOP\n✨ NAME EFFECTS — VERIFIED STYLE\n━━━━━━━━━━━━━━━━━━━━\n🌈 RAINBOW [RARE] — 5,000c\n✨ SPARKLE [MYTHIC] — 10,000c\n💖 HEART [LOVE] — 2,500c\n🔥 FIRE [HOT] — 2,500c\n❄️ ICE [COLD] — 2,500c\n⚡ NEON [NEON] — 3,000c\n🌸 BLOSSOM [CUTE] — 2,000c\n🖤 DARK [DARK] — 2,500c\n🔴 RED • 🔵 BLUE • 🟢 GREEN • 🟡 YELLOW — 1,000c each\n\nTap an item below to buy it. One name effect can be active at a time; use UNEQUIP before buying another.", [
             { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
             { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
@@ -2122,7 +2150,10 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === 'SHOP_HOUSES') {
-          user.currentPage = "SHOP"; await saveUserToDB(psid);
+          const previousPage = user.currentPage;
+          user.currentPage = "SHOP";
+          // [FIXED] Do not show the category when the page state cannot be saved.
+          if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
           send(psid, "🏠 JOJOWORLD HOUSE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[13] 🛖 Kubo — 1,500c\n[14] 🏡 Bahay — 5,000c (requires Kubo)\n[15] 🏰 Mansion — 15,000c (requires Bahay)\n[16] 🏢 Building — 40,000c (requires Mansion)\n\nHouse upgrades must be purchased in order. Tap the house you want below; your balance and requirements will be checked before any coins are deducted.", [
             { content_type: "text", title: "🛖 Kubo 1,500c", payload: "PREVIEW_HOUSE_KUBO" },
             { content_type: "text", title: "🏡 Bahay 5,000c", payload: "PREVIEW_HOUSE_BAHAY" },
