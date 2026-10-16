@@ -1142,13 +1142,12 @@ A new user joined using your link! 🎁
         let upperRaw = rawText.toUpperCase();
 
         // [ADDED V28] Allow users to upload a Messenger photo by sending an image directly in chat.
-        // [FIXED] Only treat a genuine user-sent photo as a profile-photo upload.
-        // Messenger Like/sticker attachments must never overwrite the saved profile picture.
-        const isStickerOrLike = Boolean(ev.message && (
-          ev.message.sticker_id || ev.message.is_animated || ev.message.is_echo ||
-          ev.message.quick_reply || (ev.message.text && String(ev.message.text).trim())
-        ));
-        const incomingImage = ev.message && !isStickerOrLike && Array.isArray(ev.message.attachments)
+        // [FIXED] Profile photos are changed ONLY after the user explicitly taps "Change Photo".
+        // A Messenger Like/sticker or an ordinary image can never silently overwrite the saved avatar.
+        const isStickerOrLike = Boolean(ev.message && (ev.message.sticker_id || ev.message.is_animated));
+        const incomingImage = ev.message && user.awaitingProfilePhoto === true && !isStickerOrLike &&
+          !ev.message.quick_reply && !(ev.message.text && String(ev.message.text).trim()) &&
+          Array.isArray(ev.message.attachments)
           ? ev.message.attachments.find(item => item && item.type === 'image' && item.payload && item.payload.url && !item.payload.sticker_id)
           : null;
         if (incomingImage) {
@@ -1177,6 +1176,8 @@ A new user joined using your link! 🎁
               if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
               send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
             } else {
+              delete user.awaitingProfilePhoto;
+              await saveUserToDB(psid, { saveJackpot: false });
               send(psid, '📸 Profile photo saved! Check your Visual Profile to see it with your equipped frame.', [
                 { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
                 { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
@@ -1185,6 +1186,15 @@ A new user joined using your link! 🎁
           } catch (photoUploadError) {
             console.error('[PROFILE PHOTO] Upload failed:', photoUploadError.message);
             send(psid, '⚠️ Hindi ma-save ang picture. Subukan ang ibang larawan na mas maliit o ibang format.');
+          }
+          continue;
+        }
+        // [ADDED] Explicit opt-in flow: ignore Like/sticker attachments unless photo upload was requested.
+        if (ev.message && Array.isArray(ev.message.attachments) &&
+            ev.message.attachments.some(item => item && item.type === 'image') &&
+            user.awaitingProfilePhoto !== true) {
+          if (!isStickerOrLike && !ev.message.sticker_id) {
+            send(psid, '📸 Para palitan ang profile picture, buksan ang Profile at pindutin ang Change Photo.');
           }
           continue;
         }
@@ -1499,6 +1509,16 @@ A new user joined using your link! 🎁
             console.error("Visual profile generation failed:", canvasError.message);
             send(psid, "⚠️ Your visual profile could not be generated. Please try again.");
           }
+          continue;
+        }
+
+        // [ADDED] Explicitly arm photo upload only from the profile's Change Photo button.
+        if (upperRaw === "SET_PROFILE_PHOTO") {
+          user.awaitingProfilePhoto = true;
+          await saveUserToDB(psid, { saveJackpot: false });
+          send(psid, "📸 Send a photo here to update your profile picture!", [
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+          ]);
           continue;
         }
 
