@@ -465,7 +465,7 @@ async function generateProfileCanvas(user) {
   const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 21px Sans';ctx.fillText(value,x,y);};
   const displayName = getPlainDisplayName(user).slice(0, 26);
   ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 31px Sans';ctx.fillText('JOJOWORLD',W/2,62);
-  ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE  •  YOUR WORLD, YOUR STYLE',W/2,91);
+  ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE - YOUR WORLD, YOUR STYLE',W/2,91);
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
   panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
   const ax=150, ay=257;
@@ -500,7 +500,7 @@ async function generateProfileCanvas(user) {
     // [FIXED V31] Prominent, readable ownership label below the name.
     const badgeGrad=ctx.createLinearGradient(270,200,520,245);badgeGrad.addColorStop(0,'#fff1a1');badgeGrad.addColorStop(.48,'#ffc72f');badgeGrad.addColorStop(1,'#b96c08');
     ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;ctx.fillStyle=badgeGrad;rr(270,200,258,46,14);ctx.fill();ctx.strokeStyle='#fff0a0';ctx.lineWidth=2;rr(270,200,258,46,14);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('✓  VERIFIED VIP ELITE',285,229);ctx.restore();
+    ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('VERIFIED VIP ELITE',285,229);ctx.restore();
   }
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
@@ -515,7 +515,7 @@ async function generateProfileCanvas(user) {
     ['BADGE',cleanText(user.badge||(vip?'VIP Elite':'Newbie'))],
     ['EQUIPPED FRAME',frameName]
   ];
-  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle=r[0]==='EQUIPPED FRAME'&&frameName!=='None'?frameColor:'#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
+  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle=r[0]==='EQUIPPED FRAME'&&frameName!=='None'?frameColor:'#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'...';ctx.fillText(val,746,yy);});
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
   panel(28,850,744,145,hc?hc.color:'#344777');heading('MY HOUSE',52,885);
@@ -526,9 +526,9 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=houseGlow;ctx.fillRect(260,885,190,100);
     drawHouseArt(ctx,house,292,895,118,88);
     ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=12;ctx.strokeStyle=hc.color;ctx.lineWidth=1.5;ctx.strokeRect(280,887,142,100);ctx.restore();
-    label(hc.label+' • TIER '+getHouseTier(house),445,940,18,hc.color);
-    label('✓ OWNED • PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
-  }else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
+    label(hc.label+' - TIER '+getHouseTier(house),445,940,18,hc.color);
+    label('OWNED - PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
+  }else{label('No house purchased yet - visit the Shop!',52,940,17,'#b7c8e6');}
   panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,cleanText(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
   panel(404,1015,368,220,'#d6a84b');heading('GIFTS SHOWCASE',426,1053);
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
@@ -548,13 +548,13 @@ async function generateProfileCanvas(user) {
       ctx.fillStyle=index%2===0?'#20264b':'#171d3a';
       rr(420,yy-16,326,20,7);ctx.fill();
       label(cleanText(gift.name),430,yy,13,'#f4f7ff');
-      ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 13px Sans';ctx.fillText('× '+Number(count),735,yy);
+      ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 13px Sans';ctx.fillText('x '+Number(count),735,yy);
     });
   }else{
     const showcase=String(user.giftsShowcase||'None yet');
     label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD  •  PROFILE & STATS',400,1280);
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1280);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
