@@ -1128,19 +1128,31 @@ A new user joined using your link! 🎁
           if (!await saveUserToDB(psid)) { Object.assign(user,old); sendShopResult(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
           sendShopResult(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
         }
-        // [ADDED] [UPGRADED V28] Visual item previews with an explicit confirm-to-buy button.
+        // [UPGRADED V28] First confirm intent, then show the applied-look preview; no coins are charged here.
         if (upperRaw.startsWith('PREVIEW_')) {
           const key = upperRaw.slice('PREVIEW_'.length).toLowerCase();
           const product = key.startsWith('house_') ? key.slice(6) : key;
-          const image = await generateShopProductPreview(product, user);
-          let purchasePayload = '';
-          if (product === 'vip') purchasePayload = 'BUY_VIP';
-          else if (product === 'frame') purchasePayload = 'BUY_FRAME';
-          else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(product)) purchasePayload = 'EFFECT ' + product;
-          else if (['kubo','bahay','mansion','building'].includes(product)) purchasePayload = 'BUY ' + product.toUpperCase();
           const priceLabels = {vip:'1,000c',frame:'150c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
-          await sendImage(psid, image, '👀 ITEM PREVIEW\\nReview the appearance and price before buying. Your current balance: ' + user.coins + 'c.', [
-            { content_type: 'text', title: '✅ Buy ' + (priceLabels[product] || 'item'), payload: purchasePayload },
+          if (!priceLabels[product]) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
+          await send(psid, '🛍️ BUY CONFIRMATION\n━━━━━━━━━━━━━━━━━━━━\nItem: ' + product.toUpperCase() + '\nPrice: ' + priceLabels[product] + '\nYour balance: ' + (Number(user.coins)||0) + 'c\n\nPindutin ang Confirm Buy para makita muna ang itsura nito kapag na-apply sa profile. Hindi pa mababawasan ang coins sa hakbang na ito.', [
+            { content_type: 'text', title: '✅ Confirm Buy', payload: 'SHOW_PREVIEW_' + product.toUpperCase() },
+            { content_type: 'text', title: '🛍️ Back to Shop', payload: 'SHOP' }
+          ]);
+          continue;
+        }
+
+        // [ADDED] Show the applied-look image only after the user taps Confirm Buy.
+        if (upperRaw.startsWith('SHOW_PREVIEW_')) {
+          const product = upperRaw.slice('SHOW_PREVIEW_'.length).toLowerCase();
+          const image = await generateShopProductPreview(product, user);
+          const purchasePayload = product === 'vip' ? 'BUY_VIP'
+            : product === 'frame' ? 'BUY_FRAME'
+            : ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(product) ? 'EFFECT ' + product
+            : ['kubo','bahay','mansion','building'].includes(product) ? 'BUY ' + product.toUpperCase() : '';
+          const priceLabels = {vip:'1,000c',frame:'150c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
+          if (!purchasePayload) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
+          await sendImage(psid, image, '👀 APPLIED-LOOK PREVIEW\nItem: ' + product.toUpperCase() + ' • ' + priceLabels[product] + '\nCurrent balance: ' + (Number(user.coins)||0) + 'c\n\nPreview lang ito. Walang coins na ibabawas hangga’t hindi mo pinipindot ang Confirm Purchase.', [
+            { content_type: 'text', title: '💳 Confirm Purchase', payload: purchasePayload },
             { content_type: 'text', title: '🛍️ Back to Shop', payload: 'SHOP' }
           ]);
           continue;
