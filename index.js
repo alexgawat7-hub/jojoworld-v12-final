@@ -879,7 +879,13 @@ async function generateShopProductPreview(product, user) {
     }
     ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
     if (key === 'vip') {
-      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
+      // Match the actual verified shield drawn on the purchased user's Visual Profile.
+      ctx.save(); ctx.translate(400, 545); ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 22;
+      const shield = () => { ctx.beginPath(); ctx.moveTo(0,-30); ctx.lineTo(25,-19); ctx.lineTo(23,8); ctx.quadraticCurveTo(14,25,0,33); ctx.quadraticCurveTo(-14,25,-23,8); ctx.lineTo(-25,-19); ctx.closePath(); };
+      const gold = ctx.createLinearGradient(-25,-30,25,33); gold.addColorStop(0,'#fffbd0'); gold.addColorStop(.38,'#ffd447'); gold.addColorStop(.72,'#f4a900'); gold.addColorStop(1,'#a95b05');
+      ctx.fillStyle = gold; shield(); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = '#fff8cf'; ctx.lineWidth = 2.5; shield(); ctx.stroke();
+      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-11,1); ctx.lineTo(-3,10); ctx.lineTo(13,-10); ctx.stroke(); ctx.restore();
+      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('VERIFIED VIP ELITE', 400, 600);
     } else {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
     }
