@@ -1194,11 +1194,18 @@ A new user joined using your link! 🎁
           }
           continue;
         }
-        // [ADDED] Explicit opt-in flow: ignore Like/sticker attachments unless photo upload was requested.
+        // [UPGRADED V28] If an image arrives outside the explicit Change Photo flow, never change the saved avatar.
+        // [FIXED] Do not claim the user is on Profile/Leaderboard; provide only a neutral Exit action.
         if (ev.message && Array.isArray(ev.message.attachments) &&
             ev.message.attachments.some(item => item && item.type === 'image') &&
             user.awaitingProfilePhoto !== true) {
-          // [FIXED] Ignore unrelated image/Like attachments; do not show a misleading profile-photo or leaderboard message.
+          const isImageReaction = Boolean(ev.message.sticker_id || ev.message.is_animated ||
+            ev.message.attachments.some(item => item && item.type === 'image' && item.payload && item.payload.sticker_id));
+          if (!isImageReaction) {
+            send(psid, '↩️', [
+              { content_type: 'text', title: '🚪 Exit', payload: 'MENU' }
+            ]);
+          }
           continue;
         }
         // [ADDED] [UPGRADED V28] V28 text commands. Existing command routing remains below.
