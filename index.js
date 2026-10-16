@@ -336,6 +336,86 @@ async function generateShopCanvas() {
   ctx.fillStyle = '#aebed9'; ctx.font = '13px Sans'; ctx.fillText('Coins are checked • purchases save to your profile', 400, 1050);
   const file = path.join(cacheDir, 'shop.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
+async function generateShopProductPreview(product, user) {
+  // [ADDED] [UPGRADED V28] Show a visual product preview before charging coins.
+  const W = 800, H = 900, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  const cfg = {
+    vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
+    frame: { title: 'GOLD PROFILE FRAME', price: '150 COINS', color: '#ffd34f', emoji: '💎', subtitle: 'PREMIUM GOLD PROFILE BORDER' },
+    rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
+    sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
+    heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
+    fire: { title: 'FIRE NAME EFFECT', price: '2,500 COINS', color: '#ff8a3d', emoji: '🔥', subtitle: 'HOT • FLAME STYLE' },
+    ice: { title: 'ICE NAME EFFECT', price: '2,500 COINS', color: '#78eaff', emoji: '❄️', subtitle: 'COLD • FROST STYLE' },
+    neon: { title: 'NEON NAME EFFECT', price: '3,000 COINS', color: '#45ffff', emoji: '⚡', subtitle: 'NEON • ELECTRIC GLOW' },
+    blossom: { title: 'BLOSSOM NAME EFFECT', price: '2,000 COINS', color: '#ff9cdb', emoji: '🌸', subtitle: 'CUTE • FLOWER STYLE' },
+    dark: { title: 'DARK NAME EFFECT', price: '2,500 COINS', color: '#bd9bff', emoji: '🖤', subtitle: 'DARK • SHADOW STYLE' },
+    red: { title: 'RED NAME EFFECT', price: '1,000 COINS', color: '#ff5252', emoji: '🔴', subtitle: 'SOLID RED STYLE' },
+    blue: { title: 'BLUE NAME EFFECT', price: '1,000 COINS', color: '#54a8ff', emoji: '🔵', subtitle: 'SOLID BLUE STYLE' },
+    green: { title: 'GREEN NAME EFFECT', price: '1,000 COINS', color: '#64f59b', emoji: '🟢', subtitle: 'SOLID GREEN STYLE' },
+    yellow: { title: 'YELLOW NAME EFFECT', price: '1,000 COINS', color: '#ffe65b', emoji: '🟡', subtitle: 'SOLID YELLOW STYLE' },
+    kubo: { title: 'KUBO HOUSE', price: '1,500 COINS', color: '#e4c18a', emoji: '🛖', subtitle: 'STARTER HOUSE • TIER 1' },
+    bahay: { title: 'BAHAY HOUSE', price: '5,000 COINS', color: '#8fe5ff', emoji: '🏡', subtitle: 'UPGRADE • REQUIRES KUBO' },
+    mansion: { title: 'MANSION HOUSE', price: '15,000 COINS', color: '#d9a5ff', emoji: '🏰', subtitle: 'PREMIUM • REQUIRES BAHAY' },
+    building: { title: 'BUILDING HOUSE', price: '40,000 COINS', color: '#ffd34f', emoji: '🏢', subtitle: 'ELITE • REQUIRES MANSION' }
+  };
+  const item = cfg[String(product || '').toLowerCase()] || cfg.vip;
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#050510'); bg.addColorStop(0.5, '#11102b'); bg.addColorStop(1, '#030a17');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 95; i++) {
+    ctx.globalAlpha = 0.15 + (i % 4) * 0.08; ctx.fillStyle = [item.color, '#ff49e9', '#4af5ff'][i % 3];
+    ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1; ctx.shadowColor = item.color; ctx.shadowBlur = 24; ctx.strokeStyle = item.color; ctx.lineWidth = 4; ctx.strokeRect(18, 18, W - 36, H - 36);
+  ctx.shadowColor = '#f54de8'; ctx.strokeStyle = '#f54de8'; ctx.lineWidth = 1.5; ctx.strokeRect(29, 29, W - 58, H - 58); ctx.shadowBlur = 0;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('JOJOWORLD • ITEM PREVIEW', 400, 78);
+  ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15; ctx.font = 'bold 32px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
+  // [ADDED] Product card mockup: the player can inspect the look before purchase.
+  const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(1, '#080d1c');
+  ctx.fillStyle = gx; ctx.fillRect(105, 195, 590, 440); ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.strokeStyle = item.color; ctx.lineWidth = 3; ctx.strokeRect(105, 195, 590, 440); ctx.restore();
+  ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY PREVIEW', 400, 240);
+  if (['kubo','bahay','mansion','building'].includes(String(product).toLowerCase())) {
+    // Stylized house/building illustration, deliberately drawn as preview art.
+    ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15;
+    if (product === 'kubo') {
+      ctx.beginPath(); ctx.moveTo(260, 405); ctx.lineTo(400, 300); ctx.lineTo(540, 405); ctx.closePath(); ctx.fill();
+      ctx.fillRect(285, 405, 230, 125); ctx.fillStyle = '#39251b'; ctx.fillRect(375, 445, 55, 85); ctx.fillStyle = '#9af7ff'; ctx.fillRect(315, 435, 38, 35); ctx.fillRect(447, 435, 38, 35);
+    } else if (product === 'bahay') {
+      ctx.beginPath(); ctx.moveTo(250, 405); ctx.lineTo(400, 290); ctx.lineTo(550, 405); ctx.closePath(); ctx.fill();
+      ctx.fillRect(275, 405, 250, 140); ctx.fillStyle = '#302044'; ctx.fillRect(375, 465, 55, 80); ctx.fillStyle = '#8cf7ff'; ctx.fillRect(305, 435, 45, 45); ctx.fillRect(450, 435, 45, 45);
+    } else if (product === 'mansion') {
+      ctx.fillRect(240, 365, 320, 180); ctx.fillRect(280, 305, 75, 60); ctx.fillRect(445, 305, 75, 60); ctx.beginPath(); ctx.moveTo(265, 305); ctx.lineTo(317, 255); ctx.lineTo(370, 305); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(430, 305); ctx.lineTo(482, 255); ctx.lineTo(535, 305); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#25203b'; ctx.fillRect(370, 445, 60, 100);
+    } else {
+      ctx.fillRect(270, 270, 260, 275); ctx.fillStyle = '#25203b';
+      for (let yy = 300; yy < 480; yy += 55) for (let xx = 295; xx < 500; xx += 55) ctx.fillRect(xx, yy, 28, 30);
+      ctx.fillStyle = item.color; ctx.fillRect(370, 485, 60, 60);
+    }
+    ctx.shadowBlur = 0;
+  } else {
+    const name = String(getDisplayName(user) || user.name || 'Jojo Member').slice(0, 24);
+    // Effect appearance preview on a sample profile name; actual Messenger text styling may vary.
+    if (product === 'rainbow') {
+      const g = ctx.createLinearGradient(170, 0, 630, 0); ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'].forEach((c,i)=>g.addColorStop(i/6,c)); ctx.fillStyle = g;
+    } else ctx.fillStyle = item.color;
+    ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 42px Sans'; ctx.fillText(name, 400, 390); ctx.shadowBlur = 0;
+    ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 490);
+    if (product === 'vip') {
+      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
+    } else if (product === 'frame') {
+      ctx.strokeStyle = '#ffd34f'; ctx.lineWidth = 5; ctx.strokeRect(155, 270, 490, 270);
+      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('GOLD FRAME • PROFILE BORDER', 400, 585);
+    } else {
+      ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
+    }
+  }
+  ctx.fillStyle = item.color; ctx.font = 'bold 24px Sans'; ctx.fillText(item.price, 400, 710);
+  ctx.fillStyle = '#d9e8fa'; ctx.font = '17px Sans'; ctx.fillText(item.subtitle, 400, 752);
+  ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans'; ctx.fillText('PREVIEW FIRST • BUY ONLY WHEN READY', 400, 815);
+  ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('This is a visual sample of the item appearance', 400, 842);
+  const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
+  await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+}
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   const W = 800, H = 1200;
@@ -889,6 +969,24 @@ A new user joined using your link! 🎁
           if (!await saveUserToDB(psid)) { Object.assign(user,old); send(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
           send(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
         }
+        // [ADDED] [UPGRADED V28] Visual item previews with an explicit confirm-to-buy button.
+        if (upperRaw.startsWith('PREVIEW_')) {
+          const key = upperRaw.slice('PREVIEW_'.length).toLowerCase();
+          const product = key.startsWith('house_') ? key.slice(6) : key;
+          const image = await generateShopProductPreview(product, user);
+          let purchasePayload = '';
+          if (product === 'vip') purchasePayload = 'BUY_VIP';
+          else if (product === 'frame') purchasePayload = 'BUY_FRAME';
+          else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(product)) purchasePayload = 'EFFECT ' + product;
+          else if (['kubo','bahay','mansion','building'].includes(product)) purchasePayload = 'BUY ' + product.toUpperCase();
+          const priceLabels = {vip:'1,000c',frame:'150c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
+          await sendImage(psid, image, '👀 ITEM PREVIEW\\nReview the appearance and price before buying. Your current balance: ' + user.coins + 'c.', [
+            { content_type: 'text', title: '✅ Buy ' + (priceLabels[product] || 'item'), payload: purchasePayload },
+            { content_type: 'text', title: '🛍️ Back to Shop', payload: 'SHOP' }
+          ]);
+          continue;
+        }
+
         // [ADDED] V28 flex effect purchase command, one active effect at a time.
         if (upperRaw.trim().startsWith('EFFECT ')) {
           const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
@@ -1594,18 +1692,18 @@ ${renderGiftCatalog()}
         // Messenger quick replies support up to 13 items, so the catalog is split into categories.
         if (upperRaw === 'SHOP_EFFECTS') {
           send(psid, "💎 JOJOWORLD SHOP\n✨ NAME EFFECTS — VERIFIED STYLE\n━━━━━━━━━━━━━━━━━━━━\n🌈 RAINBOW [RARE] — 5,000c\n✨ SPARKLE [MYTHIC] — 10,000c\n💖 HEART [LOVE] — 2,500c\n🔥 FIRE [HOT] — 2,500c\n❄️ ICE [COLD] — 2,500c\n⚡ NEON [NEON] — 3,000c\n🌸 BLOSSOM [CUTE] — 2,000c\n🖤 DARK [DARK] — 2,500c\n🔴 RED • 🔵 BLUE • 🟢 GREEN • 🟡 YELLOW — 1,000c each\n\nTap an item below to buy it. One name effect can be active at a time; use UNEQUIP before buying another.", [
-            { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "EFFECT rainbow" },
-            { content_type: "text", title: "✨ Sparkle 10,000c", payload: "EFFECT sparkle" },
-            { content_type: "text", title: "💖 Heart 2,500c", payload: "EFFECT heart" },
-            { content_type: "text", title: "🔥 Fire 2,500c", payload: "EFFECT fire" },
-            { content_type: "text", title: "❄️ Ice 2,500c", payload: "EFFECT ice" },
-            { content_type: "text", title: "⚡ Neon 3,000c", payload: "EFFECT neon" },
-            { content_type: "text", title: "🌸 Blossom 2,000c", payload: "EFFECT blossom" },
-            { content_type: "text", title: "🖤 Dark 2,500c", payload: "EFFECT dark" },
-            { content_type: "text", title: "🔴 Red 1,000c", payload: "EFFECT red" },
-            { content_type: "text", title: "🔵 Blue 1,000c", payload: "EFFECT blue" },
-            { content_type: "text", title: "🟢 Green 1,000c", payload: "EFFECT green" },
-            { content_type: "text", title: "🟡 Yellow 1,000c", payload: "EFFECT yellow" },
+            { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
+            { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
+            { content_type: "text", title: "💖 Heart 2,500c", payload: "PREVIEW_heart" },
+            { content_type: "text", title: "🔥 Fire 2,500c", payload: "PREVIEW_fire" },
+            { content_type: "text", title: "❄️ Ice 2,500c", payload: "PREVIEW_ice" },
+            { content_type: "text", title: "⚡ Neon 3,000c", payload: "PREVIEW_neon" },
+            { content_type: "text", title: "🌸 Blossom 2,000c", payload: "PREVIEW_blossom" },
+            { content_type: "text", title: "🖤 Dark 2,500c", payload: "PREVIEW_dark" },
+            { content_type: "text", title: "🔴 Red 1,000c", payload: "PREVIEW_red" },
+            { content_type: "text", title: "🔵 Blue 1,000c", payload: "PREVIEW_blue" },
+            { content_type: "text", title: "🟢 Green 1,000c", payload: "PREVIEW_green" },
+            { content_type: "text", title: "🟡 Yellow 1,000c", payload: "PREVIEW_yellow" },
             { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
           ]);
           continue;
@@ -1613,10 +1711,10 @@ ${renderGiftCatalog()}
 
         if (upperRaw === 'SHOP_HOUSES') {
           send(psid, "🏠 JOJOWORLD HOUSE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[13] 🛖 Kubo — 1,500c\n[14] 🏡 Bahay — 5,000c (requires Kubo)\n[15] 🏰 Mansion — 15,000c (requires Bahay)\n[16] 🏢 Building — 40,000c (requires Mansion)\n\nHouse upgrades must be purchased in order. Tap the house you want below; your balance and requirements will be checked before any coins are deducted.", [
-            { content_type: "text", title: "🛖 Kubo 1,500c", payload: "BUY KUBO" },
-            { content_type: "text", title: "🏡 Bahay 5,000c", payload: "BUY BAHAY" },
-            { content_type: "text", title: "🏰 Mansion 15k", payload: "BUY MANSION" },
-            { content_type: "text", title: "🏢 Building 40k", payload: "BUY BUILDING" },
+            { content_type: "text", title: "🛖 Kubo 1,500c", payload: "PREVIEW_HOUSE_KUBO" },
+            { content_type: "text", title: "🏡 Bahay 5,000c", payload: "PREVIEW_HOUSE_BAHAY" },
+            { content_type: "text", title: "🏰 Mansion 15k", payload: "PREVIEW_HOUSE_MANSION" },
+            { content_type: "text", title: "🏢 Building 40k", payload: "PREVIEW_HOUSE_BUILDING" },
             { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
           ]);
           continue;
@@ -1626,8 +1724,8 @@ ${renderGiftCatalog()}
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
-            { content_type: "text", title: "👑 VIP Badge 1,000c", payload: "BUY_VIP" },
-            { content_type: "text", title: "✨ Gold Frame 150c", payload: "BUY_FRAME" },
+            { content_type: "text", title: "👑 VIP Badge 1,000c", payload: "PREVIEW_VIP" },
+            { content_type: "text", title: "✨ Gold Frame 150c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
