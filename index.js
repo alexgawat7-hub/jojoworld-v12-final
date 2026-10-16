@@ -241,6 +241,52 @@ const HOUSE_REQUIREMENTS = { kubo: 'none', bahay: 'kubo', mansion: 'bahay', buil
 const FLEX_BADGES = { rainbow: '🌈 [RARE]', sparkle: '✨ [MYTHIC]', heart: '💖 [LOVE]', fire: '🔥 [HOT]', ice: '❄️ [COLD]', neon: '⚡ [NEON]', blossom: '🌸 [CUTE]', dark: '🖤 [DARK]', red: '🔴', blue: '🔵', green: '🟢', yellow: '🟡' };
 function getHouseTier(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.tier ?? 0; }
 function getHouseValue(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.value ?? 0; }
+
+function drawHouseArt(ctx, house, x, y, w, h) {
+  const key = String(house || 'none').toLowerCase();
+  const palette = {
+    kubo: { main: '#c99a5d', dark: '#74482b', roof: '#e5bd79', glow: '#ffe0a0' },
+    bahay: { main: '#e9d4a8', dark: '#80563c', roof: '#52bfff', glow: '#72eaff' },
+    mansion: { main: '#d8c3ff', dark: '#604a88', roof: '#a879ff', glow: '#e2baff' },
+    building: { main: '#6fe8ff', dark: '#183b65', roof: '#ffd34f', glow: '#5df6ff' }
+  }[key];
+  if (!palette) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.shadowColor = palette.glow;
+  ctx.shadowBlur = Math.max(3, Math.min(14, w * 0.09));
+  const baseY = h * 0.43;
+  if (key === 'kubo') {
+    ctx.fillStyle = palette.roof;
+    ctx.beginPath(); ctx.moveTo(w*.08,baseY); ctx.lineTo(w*.5,h*.05); ctx.lineTo(w*.92,baseY); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = palette.main; ctx.fillRect(w*.19,baseY,w*.62,h*.48);
+    ctx.fillStyle = palette.dark;
+    for(let i=0;i<4;i++){ctx.fillRect(w*(.23+i*.14),baseY+h*.05,w*.045,h*.42);}
+    ctx.fillRect(w*.44,baseY+h*.2,w*.13,h*.28);
+    ctx.strokeStyle = '#ffe3ac'; ctx.lineWidth = Math.max(1,w*.012);
+    ctx.beginPath();ctx.moveTo(w*.15,baseY+h*.04);ctx.lineTo(w*.85,baseY+h*.04);ctx.stroke();
+  } else if (key === 'bahay') {
+    ctx.fillStyle = palette.roof; ctx.beginPath();ctx.moveTo(w*.08,baseY);ctx.lineTo(w*.5,h*.06);ctx.lineTo(w*.92,baseY);ctx.closePath();ctx.fill();
+    ctx.fillStyle = palette.main;ctx.fillRect(w*.16,baseY,w*.68,h*.5);
+    ctx.fillStyle = palette.dark;ctx.fillRect(w*.43,baseY+h*.2,w*.14,h*.3);
+    ctx.fillStyle = '#73e9ff';ctx.fillRect(w*.23,baseY+h*.1,w*.15,h*.15);ctx.fillRect(w*.63,baseY+h*.1,w*.15,h*.15);
+    ctx.strokeStyle = '#fff0cf';ctx.lineWidth=Math.max(1,w*.012);ctx.strokeRect(w*.22,baseY+h*.09,w*.17,h*.17);ctx.strokeRect(w*.62,baseY+h*.09,w*.17,h*.17);
+  } else if (key === 'mansion') {
+    ctx.fillStyle = palette.main;ctx.fillRect(w*.12,h*.36,w*.76,h*.58);ctx.fillRect(w*.22,h*.17,w*.2,h*.28);ctx.fillRect(w*.58,h*.17,w*.2,h*.28);
+    ctx.fillStyle = palette.roof;
+    for(const cx of [.32,.68]){ctx.beginPath();ctx.moveTo(w*(cx-.14),h*.19);ctx.lineTo(w*cx,h*.02);ctx.lineTo(w*(cx+.14),h*.19);ctx.closePath();ctx.fill();}
+    ctx.fillStyle = palette.dark;ctx.fillRect(w*.44,h*.64,w*.13,h*.3);
+    ctx.fillStyle = '#fff0a8';for(let i=0;i<3;i++)ctx.fillRect(w*(.2+i*.25),h*.49,w*.09,h*.1);
+    ctx.strokeStyle = '#fff0a8';ctx.lineWidth=Math.max(1,w*.012);ctx.strokeRect(w*.12,h*.36,w*.76,h*.58);
+  } else {
+    ctx.fillStyle = palette.main;ctx.fillRect(w*.24,h*.04,w*.52,h*.9);
+    ctx.fillStyle = palette.dark;
+    for(let yy=h*.13;yy<h*.82;yy+=h*.2)for(let xx=w*.31;xx<w*.68;xx+=w*.18)ctx.fillRect(xx,yy,w*.1,h*.1);
+    ctx.fillStyle = '#fff0a8';ctx.fillRect(w*.46,h*.77,w*.1,h*.17);
+    ctx.strokeStyle = palette.glow;ctx.lineWidth=Math.max(1,w*.012);ctx.strokeRect(w*.24,h*.04,w*.52,h*.9);
+  }
+  ctx.restore();
+}
 function getNetWorth(user) { return Math.max(0, Number(user.coins) || 0) + getHouseValue(user.house); }
 function getDisplayName(user) {
   const badges = [];
@@ -346,7 +392,16 @@ async function generateProfileCanvas(user) {
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
   panel(28,850,744,145,hc?hc.color:'#344777');heading('MY HOUSE',52,885);
-  if(hc){ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=10;ctx.fillStyle=hc.color;if(house==='kubo'||house==='bahay'){ctx.beginPath();ctx.moveTo(300,955);ctx.lineTo(350,910);ctx.lineTo(400,955);ctx.closePath();ctx.fill();ctx.fillRect(313,955,74,25);ctx.fillStyle='#18223e';ctx.fillRect(344,962,15,18);}else if(house==='mansion'){ctx.fillRect(310,930,100,50);ctx.beginPath();ctx.moveTo(305,930);ctx.lineTo(330,905);ctx.lineTo(355,930);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(365,930);ctx.lineTo(390,905);ctx.lineTo(415,930);ctx.closePath();ctx.fill();ctx.fillStyle='#18223e';ctx.fillRect(350,952,20,28);}else{ctx.fillRect(325,905,70,75);ctx.fillStyle='#18223e';for(let yy=915;yy<960;yy+=20)for(let xx=337;xx<390;xx+=20)ctx.fillRect(xx,yy,11,11);}ctx.restore();label(hc.label+' • TIER '+getHouseTier(house),445,940,18,hc.color);label('Your owned house',445,968,14,'#b7c8e6');}else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
+  if(hc){
+    // Only the house saved on the user's account is rendered here as a flex asset.
+    const houseGlow=ctx.createRadialGradient(350,940,4,350,940,95);
+    houseGlow.addColorStop(0,hc.color+'55');houseGlow.addColorStop(1,'#07102000');
+    ctx.fillStyle=houseGlow;ctx.fillRect(260,885,190,100);
+    drawHouseArt(ctx,house,292,895,118,88);
+    ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=12;ctx.strokeStyle=hc.color;ctx.lineWidth=1.5;ctx.strokeRect(280,887,142,100);ctx.restore();
+    label(hc.label+' • TIER '+getHouseTier(house),445,940,18,hc.color);
+    label('✓ OWNED • PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
+  }else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
   panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
   panel(404,1015,368,220,'#7651a5');heading('GIFTS SHOWCASE',426,1053);
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{},giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count)),giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
@@ -495,23 +550,15 @@ async function generateShopCanvas() {
     const x = hx[i], y = 995, w = hw, ht = hh, color = h[3];
     const g = ctx.createLinearGradient(x, y, x + w, y + ht); g.addColorStop(0, '#1b1a32'); g.addColorStop(1, '#070d1b');
     ctx.fillStyle = g; ctx.fillRect(x, y, w, ht); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(x, y, w, ht); ctx.restore();
-    // [ADDED] Illustrated house thumbnails drawn directly on canvas, not generic placeholder panels.
+    // Premium layered house illustration with tier-specific glow and architectural details.
     ctx.fillStyle = '#050914'; ctx.fillRect(x + 7, y + 7, w - 14, 102);
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 13;
-    if (i === 0) {
-      ctx.fillStyle = '#b88b53'; ctx.beginPath(); ctx.moveTo(x+25,y+58); ctx.lineTo(x+w/2,y+20); ctx.lineTo(x+w-25,y+58); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#8e6038'; ctx.fillRect(x+34,y+58,w-68,43); ctx.fillStyle = '#3b2418'; ctx.fillRect(x+w/2-10,y+75,20,26);
-    } else if (i === 1) {
-      ctx.fillStyle = '#4aa8ff'; ctx.beginPath(); ctx.moveTo(x+24,y+59); ctx.lineTo(x+w/2,y+18); ctx.lineTo(x+w-24,y+59); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#e6c18b'; ctx.fillRect(x+31,y+59,w-62,42); ctx.fillStyle = '#3d2b28'; ctx.fillRect(x+w/2-10,y+76,20,25);
-    } else if (i === 2) {
-      ctx.fillStyle = '#d5a4ff'; ctx.fillRect(x+28,y+43,w-56,58); ctx.fillRect(x+39,y+25,26,18); ctx.fillRect(x+w-65,y+25,26,18);
-      ctx.fillStyle = '#61eaff'; for(let k=0;k<3;k++) ctx.fillRect(x+38+k*30,y+55,17,15);
-    } else {
-      ctx.fillStyle = '#42dfff'; ctx.fillRect(x+38,y+17,w-76,84); ctx.fillStyle = '#08162d';
-      for(let yy=y+27;yy<y+88;yy+=19) for(let xx=x+47;xx<x+w-48;xx+=21) ctx.fillRect(xx,yy,11,10);
-    }
-    ctx.restore();
+    const houseKey = ['kubo','bahay','mansion','building'][i];
+    const glow = ctx.createRadialGradient(x+w/2,y+58,3,x+w/2,y+58,78);
+    glow.addColorStop(0, color + '66'); glow.addColorStop(1, '#05091400');
+    ctx.fillStyle = glow; ctx.fillRect(x+7,y+7,w-14,102);
+    drawHouseArt(ctx, houseKey, x+25, y+17, w-50, 84);
+    ctx.save(); ctx.strokeStyle = color; ctx.globalAlpha=.65; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x+14,y+113);ctx.lineTo(x+w-14,y+113);ctx.stroke();ctx.restore();
     text(h[1], x + w/2, y + 132, 15, '#f4f7ff');
     text(h[2], x + w/2, y + 158, 17, '#ffe16b');
     ctx.fillStyle = '#16d98a'; ctx.fillRect(x + 12, y + 169, w - 24, 25); text('BUY / PREVIEW', x+w/2, y+186, 11, '#052b21');
@@ -897,7 +944,11 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
     ctx.fillText(coins.toLocaleString('en-US') + ' coins', 184, y + 70);
     ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
-    const houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
+    const ownedHouseKey = String(item.user.house || 'none').toLowerCase();
+    if (getHouseTier(ownedHouseKey) > 0) drawHouseArt(ctx, ownedHouseKey, 364, y + 49, 26, 22);
+    const houseText = getHouseTier(ownedHouseKey) > 0
+      ? getHouse(item) + ' • ' + getHouseWorth(item).toLocaleString('en-US') + 'c'
+      : 'No House';
     ctx.fillText(houseText, 395, y + 70);
     ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans';
     ctx.fillText('NET WORTH', 744, y + 49);
