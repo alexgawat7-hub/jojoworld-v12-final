@@ -735,7 +735,7 @@ async function generateLeaderboardCanvas(users) {
     // [FIXED] Show the full podium name by wrapping it inside the card instead of letting neighboring cards cover it.
     const podiumWords = name.split(/\s+/);
     let podiumLines = [], podiumLine = '';
-    let podiumFontSize = featured ? 22 : 19;
+    let podiumFontSize = featured ? 19 : 17;
     ctx.font = 'bold ' + podiumFontSize + 'px Sans';
     for (const word of podiumWords) {
       const candidate = podiumLine ? podiumLine + ' ' + word : word;
@@ -757,10 +757,10 @@ async function generateLeaderboardCanvas(users) {
       }
     }
     ctx.textAlign = 'center';
-    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 187);
-    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 205);
+    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 186);
+    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 203);
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
-    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 219);
+    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 222);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
     ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 245);
     ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 267);
