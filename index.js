@@ -1168,9 +1168,11 @@ A new user joined using your link! 🎁
           ? ev.message.attachments.find(item => item && item.type === 'image' && item.payload && item.payload.url)
           : null;
         if (incomingImage) {
+          const previousProfilePhotoUrl = user.profilePhotoUrl;
           user.profilePhotoUrl = incomingImage.payload.url;
           if (!await saveUserToDB(psid, { saveJackpot: false })) {
-            delete user.profilePhotoUrl;
+            if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
+            else delete user.profilePhotoUrl;
             send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
           } else {
             send(psid, '📸 Profile photo saved! Ipapakita ito sa Visual Profile kasama ang frame na naka-equip mula sa Shop.', [
