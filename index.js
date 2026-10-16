@@ -246,7 +246,8 @@ function getDisplayName(user) {
   const badges = [];
   if (HOUSE_CONFIG[user.house]?.badge) badges.push(HOUSE_CONFIG[user.house].badge);
   if (user.vip || user.badge === '👑 VIP Elite' || user.badge === 'VIP') badges.push('👑');
-  if (user.goldFrame || String(user.frame || '').toLowerCase().includes('gold')) badges.push('🖼️');
+  if (user.royalFrame || String(user.frame || '').toLowerCase().includes('royal')) badges.push('👑');
+  else if (user.goldFrame || String(user.frame || '').toLowerCase().includes('gold')) badges.push('🖼️');
   if (user.nameEffect && user.nameEffect !== 'none') badges.push(FLEX_BADGES[user.nameEffect] || '✨');
   return badges.length ? `${String(user.name || 'Jojo Member')} ${badges.join(' ')}` : String(user.name || 'Jojo Member');
 }
@@ -288,7 +289,9 @@ async function generateProfileCanvas(user) {
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'] };
   const colors = effectColors[effect] || ['#ffd34f','#ffec9e','#f59e0b'];
-  const goldFrame = !!user.goldFrame || String(user.frame || '').toLowerCase().includes('gold');
+  const frameKey = String(user.frame || '').toLowerCase();
+  const royalFrame = !!user.royalFrame || frameKey.includes('royal');
+  const goldFrame = royalFrame || !!user.goldFrame || frameKey.includes('gold');
   const vip = !!user.vip;
   const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
@@ -308,7 +311,9 @@ async function generateProfileCanvas(user) {
   let photoShown=false;
   try{let photo=null;if(user.profilePhotoData)photo=await loadImage(Buffer.from(user.profilePhotoData,'base64'));else if(user.profilePhotoUrl)photo=await loadImage(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
   if(!photoShown){ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.textAlign='center';ctx.fillText('PROFILE',ax,ay+8);}
-  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(String(user.frame||'').toLowerCase().includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}ctx.restore();
+  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(frameKey.includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
+  // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
+  if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
   ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,720,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
   ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.font='bold 29px Sans';ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
   if(vip){panel(270,200,180,36,'#b98b2f');ctx.fillStyle='#ffe7a1';ctx.font='bold 16px Sans';ctx.fillText('♛ VIP ELITE',286,224);}
@@ -316,11 +321,11 @@ async function generateProfileCanvas(user) {
   label('📍 '+String(user.location||'Location not set').slice(0,32),270,294,17,'#dce8ff');
   label('♈ '+String(user.zodiac||'Zodiac not set').slice(0,28),270,326,17,'#dce8ff');
   label('🎯 '+String(user.relationshipGoal||'Goal not set').slice(0,34),270,358,16,'#dce8ff');
-  label('🖼 Frame: '+String(goldFrame?'Gold Frame':(user.frame||'None')).slice(0,24),270,389,14,'#aebfe2');
+  label('🖼 Frame: '+String(royalFrame?'Royalty Frame':(goldFrame?'Gold Frame':(user.frame||'None'))).slice(0,24),270,389,14,'#aebfe2');
   const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
   stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
   panel(28,550,744,280,'#3c4d83');heading('PROFILE DETAILS',52,586);
-  const rows=[['NAME & AGE',displayName+(user.age?'  •  '+String(user.age):'')],['LOCATION',String(user.location||'Not set')],['ZODIAC',String(user.zodiac||'Not set 🌟')],['RELATIONSHIP GOAL',String(user.relationshipGoal||'Not set')],['BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))],['EQUIPPED FRAME',String(goldFrame?'💎 Gold Frame':(user.frame||'None'))]];
+  const rows=[['NAME & AGE',displayName+(user.age?'  •  '+String(user.age):'')],['LOCATION',String(user.location||'Not set')],['ZODIAC',String(user.zodiac||'Not set 🌟')],['RELATIONSHIP GOAL',String(user.relationshipGoal||'Not set')],['BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))],['EQUIPPED FRAME',String(royalFrame?'👑 Royalty Frame':(goldFrame?'💎 Gold Frame':(user.frame||'None')))]];
   rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle='#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
@@ -452,7 +457,7 @@ async function generateShopCanvas() {
 
   panel(35, 182, 730, 184, '#ffd34f', '👑 VIP & PROFILE FRAMES');
   card(52, 223, 345, 128, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
-  card(413, 223, 335, 128, '#ffb83f', '💎', 'GOLD PROFILE FRAME', '150 COINS', 'GOLD BORDER');
+  card(413, 223, 335, 128, '#ffb83f', '👑', 'ROYALTY PROFILE FRAME', '150 COINS', 'ROYAL CROWN • GOLD FILIGREE');
 
   panel(35, 384, 730, 550, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
   const effects = [
@@ -509,7 +514,7 @@ async function generateShopProductPreview(product, user) {
   const key = String(product || '').toLowerCase();
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
-    frame: { title: 'GOLD PROFILE FRAME', price: '150 COINS', color: '#ffd34f', emoji: '💎', subtitle: 'PREMIUM GOLD PROFILE BORDER' },
+    frame: { title: 'ROYALTY PROFILE FRAME', price: '150 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'ROYAL CROWN • GOLD FILIGREE' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -530,7 +535,7 @@ async function generateShopProductPreview(product, user) {
   const item = cfg[key] || cfg.vip;
   const previewUser = { ...user, coins: Number(user.coins) || 0, id: 'preview-' + String(user.id || user.psid || 'member') + '-' + key };
   if (key === 'vip') { previewUser.vip = true; previewUser.badge = '👑 VIP Elite'; }
-  else if (key === 'frame') { previewUser.goldFrame = true; previewUser.frame = '💎 Gold Frame'; }
+  else if (key === 'frame') { previewUser.goldFrame = true; previewUser.royalFrame = true; previewUser.frame = '👑 Royalty Frame'; }
   else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key)) previewUser.nameEffect = key;
   else if (['kubo','bahay','mansion','building'].includes(key)) previewUser.house = key;
 
@@ -588,7 +593,7 @@ async function generateShopProductPreview(product, user) {
     if (key === 'vip') {
       ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
     } else if (key === 'frame') {
-      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('GOLD FRAME • PROFILE BORDER', 400, 585);
+      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('ROYALTY FRAME • CROWN BORDER', 400, 585);
     } else {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
     }
@@ -2378,18 +2383,20 @@ ${renderGiftCatalog()}
 
         if (upperRaw === "BUY_FRAME") {
           // [FIXED] Duplicate gold-frame validation happens before deducting coins.
-          if (user.goldFrame || String(user.frame || "").toLowerCase().includes("gold")) { sendShopResult(psid, "❌ Meron ka na Gold Frame boss!"); continue; }
+          if (user.royalFrame || user.goldFrame || String(user.frame || "").toLowerCase().includes("royal") || String(user.frame || "").toLowerCase().includes("gold")) { sendShopResult(psid, "❌ Meron ka na Royalty Frame boss!"); continue; }
           if (user.coins < 150) {
             sendShopResult(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
           } else {
-            const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame };
+            const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame, royalFrame: user.royalFrame };
             user.coins -= 150;
             user.goldFrame = true;
-            user.frame = "💎 Gold Frame";
+            user.royalFrame = true;
+            user.frame = "👑 Royalty Frame";
             if (!await saveUserToDB(psid)) {
               user.coins = previousFrameState.coins;
               user.frame = previousFrameState.frame;
               user.goldFrame = previousFrameState.goldFrame;
+              user.royalFrame = previousFrameState.royalFrame;
               sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
               continue;
             }
