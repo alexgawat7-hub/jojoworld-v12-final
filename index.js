@@ -729,7 +729,7 @@ async function generateLeaderboardCanvas(users) {
     }
     // [FIXED] Podium content uses separate vertical zones: medal, avatar, name, and stats never overlap.
     // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
-    await drawLeaderboardAvatar(item, x + w / 2, y + 135, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
+    await drawLeaderboardAvatar(item, x + w / 2, y + 132, featured ? 42 : 38); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
     // [FIXED] Show the full podium name by wrapping it inside the card instead of letting neighboring cards cover it.
@@ -757,15 +757,15 @@ async function generateLeaderboardCanvas(users) {
       }
     }
     ctx.textAlign = 'center';
-    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 186);
-    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 203);
+    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 198);
+    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 216);
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
-    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 222);
+    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 239);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
-    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 245);
-    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 267);
+    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 261);
+    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 282);
     ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 18px Sans'; // [UPGRADED V28] Larger net-worth flex stat.
-    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 291);
+    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 304);
     ctx.fillStyle = color; ctx.font = 'bold 14px Sans';
     ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
   };
@@ -827,11 +827,11 @@ async function generateLeaderboardCanvas(users) {
         ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
       }
     }
-    ctx.fillText(rowNameLines[0] || name, 172, y + (rowNameLines[1] ? 25 : 32));
-    if (rowNameLines[1]) ctx.fillText(rowNameLines[1], 172, y + 47);
+    ctx.fillText(rowNameLines[0] || name, 184, y + (rowNameLines[1] ? 25 : 32));
+    if (rowNameLines[1]) ctx.fillText(rowNameLines[1], 184, y + 47);
     // [FIXED] Keep the lower stats aligned in fixed columns below the complete name.
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
-    ctx.fillText(coins.toLocaleString('en-US') + ' coins', 172, y + 70);
+    ctx.fillText(coins.toLocaleString('en-US') + ' coins', 184, y + 70);
     ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
     const houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
     ctx.fillText(houseText, 395, y + 70);
