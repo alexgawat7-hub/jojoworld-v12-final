@@ -1109,7 +1109,7 @@ A new user joined using your link! 🎁
           if (!Number.isInteger(bet) || bet < 50 || bet > 1000) { send(psid,'🎰 Use: scatter <50-1000> coins.'); continue; }
           const diff = Date.now() - (Number(user.lastScatter) || 0);
           if (diff < 120000) { send(psid, `⏳ Cooldown pa boss! ${Math.ceil((120000-diff)/1000)} secs pa!`); continue; }
-          if ((Number(user.coins)||0) < bet) { send(psid, `❌ Kulang coins! Need ${bet}c, meron ka lang ${user.coins}c.`); continue; }
+          if ((Number(user.coins)||0) < bet) { send(psid, `❌ Insufficient coins! You need ${bet} coins, but you only have ${user.coins} coins.`); continue; }
           const snapshot = { coins:user.coins, lastScatter:user.lastScatter, scatterWins:user.scatterWins };
           const isWin = Math.random() < 0.30; user.coins = isWin ? user.coins - bet + Math.floor(bet*1.8) : user.coins - bet;
           user.lastScatter = Date.now(); if (isWin) user.scatterWins = (user.scatterWins||0)+1;
@@ -1123,7 +1123,7 @@ A new user joined using your link! 🎁
           const required = HOUSE_REQUIREMENTS[house];
           if (String(user.house||'none').toLowerCase() === house) { sendShopResult(psid,'❌ Meron ka na nyan boss!'); continue; }
           if (getHouseTier(user.house) + 1 !== cfg.tier || String(user.house||'none').toLowerCase() !== required) { sendShopResult(psid,`❌ Requirement: ${required} muna bago ${house}.`); continue; }
-          if ((Number(user.coins)||0) < cfg.price) { sendShopResult(psid,`❌ Kulang coins! Need ${cfg.price}c, meron ka lang ${user.coins}c.`); continue; }
+          if ((Number(user.coins)||0) < cfg.price) { sendShopResult(psid,`❌ Insufficient coins! You need ${cfg.price} coins, but you only have ${user.coins} coins.`); continue; }
           const old = {coins:user.coins,house:user.house}; user.coins -= cfg.price; user.house=house;
           if (!await saveUserToDB(psid)) { Object.assign(user,old); sendShopResult(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
           sendShopResult(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
@@ -1152,7 +1152,7 @@ A new user joined using your link! 🎁
           const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
           if (!FLEX_BADGES[effect]) { sendShopResult(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
           if (user.nameEffect && user.nameEffect !== 'none') { sendShopResult(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
-          if (user.coins < prices[effect]) { sendShopResult(psid,`❌ Kulang coins! Need ${prices[effect]}c, meron ka lang ${user.coins}c.`); continue; }
+          if (user.coins < prices[effect]) { sendShopResult(psid,`❌ Insufficient coins! You need ${prices[effect]} coins, but you only have ${user.coins} coins.`); continue; }
           const old = {coins:user.coins,nameEffect:user.nameEffect}; user.coins -= prices[effect]; user.nameEffect=effect;
           if (!await saveUserToDB(psid)) { Object.assign(user,old); sendShopResult(psid,'⚠️ Hindi na-save ang effect.'); continue; }
           sendShopResult(psid,`✨ Equipped ${FLEX_BADGES[effect]}! ${getDisplayName(user)}`); continue;
