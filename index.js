@@ -443,9 +443,16 @@ async function generateProfileCanvas(user) {
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'] };
   const colors = effectColors[effect] || ['#ffd34f','#ffec9e','#f59e0b'];
-  const frameKey = String(user.frame || '').toLowerCase();
+  // [GLOBAL PROFILE FRAME EFFECTS] Read the actually equipped/owned frame; never grant a cosmetic by default.
+  const frameName = cleanText(user.equippedFrame || user.frame || (user.royalFrame ? 'Royalty Frame' : (user.goldFrame ? 'Gold Frame' : 'None'))) || 'None';
+  const frameKey = frameName.toLowerCase();
   const royalFrame = !!user.royalFrame || frameKey.includes('royal');
-  const goldFrame = royalFrame || !!user.goldFrame || frameKey.includes('gold');
+  const goldFrame = !royalFrame && (!!user.goldFrame || frameKey.includes('gold'));
+  const diamondFrame = frameKey.includes('diamond');
+  const neonFrame = frameKey.includes('neon');
+  const silverFrame = frameKey.includes('silver');
+  const frameColor = royalFrame || goldFrame ? '#ffd34f' : diamondFrame ? '#00ffff' : neonFrame ? '#ff00ff' : silverFrame ? '#dce8ff' : '#4656a0';
+  const frameGlow = royalFrame || goldFrame ? 'rgba(255,215,0,0.85)' : diamondFrame ? 'rgba(0,255,255,0.85)' : neonFrame ? 'rgba(255,0,255,0.85)' : silverFrame ? 'rgba(220,232,255,0.75)' : colors[0];
   // [FIXED V31] Show the purchased VIP badge even if an older saved account only has its badge label.
   const vip = !!user.vip || String(user.badge || '').toLowerCase().includes('vip');
   const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
@@ -462,11 +469,11 @@ async function generateProfileCanvas(user) {
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
   panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
   const ax=150, ay=257;
-  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=20;ctx.fillStyle='#091226';ctx.beginPath();ctx.arc(ax,ay,91,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.save();ctx.shadowColor=frameGlow;ctx.shadowBlur=frameName!=='None'?25:20;ctx.fillStyle='#091226';ctx.beginPath();ctx.arc(ax,ay,91,0,Math.PI*2);ctx.fill();ctx.restore();
   let photoShown=false;
   try{let photo=null;if(user.profilePhotoData)photo=await loadCachedProfilePhotoData(user.profilePhotoData);else if(user.profilePhotoUrl)photo=await loadCachedProfilePhotoUrl(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
   if(!photoShown){ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.textAlign='center';ctx.fillText('PROFILE',ax,ay+8);}
-  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(frameKey.includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
+  ctx.save();ctx.shadowColor=frameGlow;ctx.shadowBlur=frameName!=='None'?25:12;ctx.strokeStyle=frameName!=='None'?frameColor:colors[0];ctx.lineWidth=frameName!=='None'?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame||royalFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}if(diamondFrame||neonFrame){ctx.strokeStyle=frameColor;ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
   // [UPGRADED V32] Every purchased name effect gets a distinct gradient, glow and matching visual accent in the generated Visual Profile.
@@ -499,16 +506,16 @@ async function generateProfileCanvas(user) {
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
   stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
-  panel(28,550,744,280,'#3c4d83');heading('PROFILE DETAILS',52,586);
+  panel(28,550,744,280,frameName!=='None'?frameColor:'#3c4d83');heading('PROFILE DETAILS',52,586);
   const rows=[
     ['NAME & AGE',cleanName(displayName)+(user.age?'  '+cleanText(user.age):'')],
     ['LOCATION',cleanText(user.location||'Not set')],
     ['ZODIAC',cleanText(user.zodiac||'Not set')],
     ['RELATIONSHIP GOAL',cleanText(user.relationshipGoal||'Not set')],
     ['BADGE',cleanText(user.badge||(vip?'VIP Elite':'Newbie'))],
-    ['EQUIPPED FRAME',cleanText(royalFrame?'Royalty Frame':(goldFrame?'Gold Frame':(user.frame||'None')))]
+    ['EQUIPPED FRAME',frameName]
   ];
-  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle='#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
+  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle=r[0]==='EQUIPPED FRAME'&&frameName!=='None'?frameColor:'#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
   panel(28,850,744,145,hc?hc.color:'#344777');heading('MY HOUSE',52,885);
@@ -523,28 +530,29 @@ async function generateProfileCanvas(user) {
     label('✓ OWNED • PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
   }else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
   panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,cleanText(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
-  panel(404,1015,368,220,'#d6a84b');heading('🎁 GIFTS SHOWCASE',426,1053);
+  panel(404,1015,368,220,'#d6a84b');heading('GIFTS SHOWCASE',426,1053);
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
+  // Plain ASCII labels only in Gifts Showcase to prevent missing-glyph boxes on every device.
   const giftCatalogForProfile={
-    ROSE:{icon:'🌹',name:'Red Rose'},COFFEE:{icon:'☕',name:'Coffee Cup'},
-    BEAR:{icon:'🧸',name:'Teddy Bear'},RING:{icon:'💍',name:'Diamond Ring'},
-    CAR:{icon:'🏎️',name:'Sports Car'}
+    ROSE:{name:'Red Rose'},COFFEE:{name:'Coffee Cup'},
+    BEAR:{name:'Teddy Bear'},RING:{name:'Diamond Ring'},
+    CAR:{name:'Sports Car'}
   };
   const giftEntries=Object.entries(received).filter(([name,count])=>Number(count)>0);
   const giftTotal=Math.max(Number(user.giftsCount)||0,giftEntries.reduce((sum,[name,count])=>sum+(Number(count)||0),0));
-  label('🏆 TOTAL GIFTS RECEIVED: '+giftTotal,426,1086,14,'#ffe8a0');
+  label('TOTAL GIFTS RECEIVED: '+giftTotal,426,1086,14,'#ffe8a0');
   if(giftEntries.length){
     giftEntries.slice(0,5).forEach(([name,count],index)=>{
-      const gift=giftCatalogForProfile[String(name).toUpperCase()]||{icon:'🎁',name:String(name).replace(/_/g,' ')};
+      const gift=giftCatalogForProfile[String(name).toUpperCase()]||{name:String(name).replace(/_/g,' ')};
       const yy=1110+index*23;
       ctx.fillStyle=index%2===0?'#20264b':'#171d3a';
       rr(420,yy-16,326,20,7);ctx.fill();
-      label(gift.icon+' '+gift.name,430,yy,13,'#f4f7ff');
+      label(cleanText(gift.name),430,yy,13,'#f4f7ff');
       ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 13px Sans';ctx.fillText('× '+Number(count),735,yy);
     });
   }else{
     const showcase=String(user.giftsShowcase||'None yet');
-    label(showcase!=='None yet'?showcase:'No gifts yet — be the first! 🎁',426,1124,13,'#c6d5f0');
+    label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
   ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD  •  PROFILE & STATS',400,1280);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
