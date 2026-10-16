@@ -678,6 +678,41 @@ async function generateLeaderboardCanvas(users) {
   const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff'];
   // [FIXED] Preserve the complete displayed player name; sizing is handled per card so names are not cut at 19 characters.
   const getName = item => String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').trim();
+  // [UPGRADED V28] Render purchased name effects as real colors/glow in leaderboard text.
+  const effectPalette = {
+    rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
+    sparkle: ['#fff2a8','#d5a4ff','#ffffff','#ffe68a'],
+    heart: ['#ff62b5','#ff9bd6','#ffd5ed'],
+    fire: ['#ff4d22','#ff8a3d','#ffe36a'],
+    ice: ['#78eaff','#d8fbff','#5b9dff'],
+    neon: ['#45ffff','#a77bff','#ff4fe1'],
+    blossom: ['#ff9cdb','#ffd4ed','#ff70a6'],
+    dark: ['#bd9bff','#5c4b8a','#e5dcff'],
+    red: ['#ff5252','#ff9b9b'], blue: ['#54a8ff','#a6d8ff'],
+    green: ['#64f59b','#c2ffd9'], yellow: ['#ffe65b','#fff4b0']
+  };
+  const drawEffectNameLine = (text, x, y, fontSize, effectKey, maxWidth, baseColor = '#effaff') => {
+    const palette = effectPalette[String(effectKey || '').toLowerCase()];
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = 'bold ' + fontSize + 'px Sans';
+    if (palette && palette.length > 1) {
+      const gradient = ctx.createLinearGradient(x, 0, x + Math.max(80, maxWidth), 0);
+      palette.forEach((color, index) => gradient.addColorStop(index / (palette.length - 1), color));
+      ctx.fillStyle = gradient;
+      ctx.shadowColor = palette[Math.min(1, palette.length - 1)];
+      ctx.shadowBlur = effectKey === 'sparkle' || effectKey === 'neon' || effectKey === 'rainbow' ? 13 : 9;
+    } else if (palette && palette.length === 1) {
+      ctx.fillStyle = palette[0];
+      ctx.shadowColor = palette[0];
+      ctx.shadowBlur = 9;
+    } else {
+      ctx.fillStyle = baseColor;
+      ctx.shadowBlur = 0;
+    }
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  };
   const getHouse = item => {
     const key = String(item.user.house || 'none').toLowerCase();
     return houseNames[key] || String(item.user.house || 'No House');
@@ -731,7 +766,8 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
     await drawLeaderboardAvatar(item, x + w / 2, y + 132, featured ? 42 : 38); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
-    ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
+    const podiumEffect = String(item.user.nameEffect || '').toLowerCase();
+    // [UPGRADED V28] Apply the equipped effect's color and glow to Top 1–3 names.
     // [FIXED] Show the full podium name by wrapping it inside the card instead of letting neighboring cards cover it.
     const podiumWords = name.split(/\s+/);
     let podiumLines = [], podiumLine = '';
@@ -756,9 +792,8 @@ async function generateLeaderboardCanvas(users) {
         ctx.font = 'bold ' + podiumFontSize + 'px Sans';
       }
     }
-    ctx.textAlign = 'center';
-    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 198);
-    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 216);
+    drawEffectNameLine(podiumLines[0] || name, x + 9, y + 198, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff');
+    if (podiumLines[1]) drawEffectNameLine(podiumLines[1], x + 9, y + 216, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff');
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 239);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
@@ -804,6 +839,8 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
     await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
     // [FIXED] Wrap long full names into two lines; never cut the name to a single first word.
+    // [UPGRADED V28] Apply the purchased effect directly to Top 4–10 leaderboard names.
+    const rowEffect = String(item.user.nameEffect || '').toLowerCase();
     ctx.textAlign = 'left'; ctx.fillStyle = '#effaff';
     let rowNameFontSize = 22;
     ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
@@ -827,8 +864,8 @@ async function generateLeaderboardCanvas(users) {
         ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
       }
     }
-    ctx.fillText(rowNameLines[0] || name, 184, y + (rowNameLines[1] ? 25 : 32));
-    if (rowNameLines[1]) ctx.fillText(rowNameLines[1], 184, y + 47);
+    drawEffectNameLine(rowNameLines[0] || name, 184, y + (rowNameLines[1] ? 25 : 32), rowNameFontSize, rowEffect, 555);
+    if (rowNameLines[1]) drawEffectNameLine(rowNameLines[1], 184, y + 47, rowNameFontSize, rowEffect, 555);
     // [FIXED] Keep the lower stats aligned in fixed columns below the complete name.
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
     ctx.fillText(coins.toLocaleString('en-US') + ' coins', 184, y + 70);
