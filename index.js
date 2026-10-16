@@ -787,7 +787,10 @@ async function sendImage(id, imagePath, body, quickReplies) {
   try {
     const FormData = require('form-data'); const form = new FormData();
     form.append('recipient', JSON.stringify({ id }));
-    form.append('message', JSON.stringify({ attachment: { type: 'image', payload: { is_reusable: false } } }));
+    const imageMessage = { attachment: { type: 'image', payload: { is_reusable: false } } };
+    // [FIXED] When there is no caption but quick replies are requested, attach them directly to the image message.
+    if (!body && quickReplies) imageMessage.quick_replies = quickReplies;
+    form.append('message', JSON.stringify(imageMessage));
     form.append('filedata', fs.createReadStream(imagePath), { contentType: 'image/png', filename: path.basename(imagePath) });
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
     if (body) await send(id, body, quickReplies);
@@ -1310,7 +1313,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 image commands. Existing textual profile command remains supported below.
         if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
-        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img); continue; } // [FIXED] Image only: no extra caption, arrow, or unrelated exit prompt.
+        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img,null,[{content_type:'text',title:'🚪 Exit',payload:'MENU'}]); continue; } // [FIXED] Leaderboard image with only an Exit quick reply; no extra text or caption.
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
@@ -2184,8 +2187,8 @@ ${renderGiftCatalog()}
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
           try {
             const leaderboardImage = await generateLeaderboardCanvas(await getLeaderboardUsers());
-            // [FIXED] Send only the leaderboard image; no unrelated follow-up text or arrow quick-reply.
-            const sent = await sendImage(psid, leaderboardImage);
+            // [FIXED] Send leaderboard image with only the Exit quick reply attached; no separate text message.
+            const sent = await sendImage(psid, leaderboardImage, null, [{ content_type: 'text', title: '🚪 Exit', payload: 'MENU' }]);
             if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
           } catch (leaderboardError) {
             console.error('[FIXED] Leaderboard canvas failed:', leaderboardError.message);
