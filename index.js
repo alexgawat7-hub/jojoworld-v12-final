@@ -1325,7 +1325,7 @@ app.post('/webhook', async (req, res) => {
     for (const entry of body.entry) {
       for (const ev of (Array.isArray(entry.messaging) ? entry.messaging : [])) {
         activeWebhookMessageId = null;
-        if (!ev || !ev.sender || !ev.sender.id || (!ev.message && !ev.postback)) continue;
+        if (!ev || !ev.sender || !ev.sender.id || (!ev.message && !ev.postback && !ev.referral)) continue;
         const messageId = ev.message && ev.message.mid ? String(ev.message.mid) : null;
         activeWebhookMessageId = messageId;
         if (messageId) {
@@ -1356,7 +1356,9 @@ app.post('/webhook', async (req, res) => {
         try {
         // CHECK REFERRAL PARAMETER ON START
         let referralParam = null;
-        if (ev.postback && ev.postback.referral) {
+        if (ev.referral && ev.referral.ref) {
+          referralParam = ev.referral.ref;
+        } else if (ev.postback && ev.postback.referral && ev.postback.referral.ref) {
           referralParam = ev.postback.referral.ref;
         } else if (ev.message && ev.message.text && ev.message.text.includes("REF_")) {
           let parts = ev.message.text.split("REF_");
