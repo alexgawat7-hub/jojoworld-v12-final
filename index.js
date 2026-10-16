@@ -361,17 +361,36 @@ async function generateProfileCanvas(user) {
   ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(frameKey.includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
-  ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,650,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
-  // [UPGRADED SPARKLE] Give the MYTHIC effect a distinct pearl-white/lavender/gold shimmer and visible star glints.
+  // [UPGRADED V32] Every purchased name effect gets a distinct gradient, glow and matching visual accent in the generated Visual Profile.
+  ctx.textAlign='left';let nameFill=colors[0];
+  if(effect!=='none'&&colors.length>1){nameFill=ctx.createLinearGradient(270,0,Math.max(360,270+Math.min(nameWidth||360,390)),0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
+  if(effect==='rainbow'){nameFill=ctx.createLinearGradient(270,0,680,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
   if(effect==='sparkle'){nameFill=ctx.createLinearGradient(270,0,680,0);['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((col,i)=>nameFill.addColorStop(i/4,col));}
-  // [FIXED V31] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
+  // [FIXED V32] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
   let nameFontSize=29;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>405&&nameFontSize>17){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
   const nameWidth=ctx.measureText(displayName).width;
-  ctx.fillStyle=nameFill;ctx.shadowColor=effect==='sparkle'?'#d7a4ff':colors[0];ctx.shadowBlur=effect==='sparkle'?24:(effect!=='none'?12:0);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
+  ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  // [ADDED V32] Effect-specific ornaments are drawn into the actual generated profile, not just the shop preview.
+  const effectEnd=Math.min(270+nameWidth,675);
   if(effect==='sparkle'){
-    const glint=(gx,gy,r)=>{ctx.save();ctx.translate(gx,gy);ctx.shadowColor='#fff4b0';ctx.shadowBlur=12;ctx.fillStyle='#fffbe9';ctx.beginPath();ctx.moveTo(0,-r);ctx.quadraticCurveTo(r*.18,-r*.18,r,0);ctx.quadraticCurveTo(r*.18,r*.18,0,r);ctx.quadraticCurveTo(-r*.18,r*.18,-r,0);ctx.quadraticCurveTo(-r*.18,-r*.18,0,-r);ctx.fill();ctx.restore();};
-    glint(270+Math.min(nameWidth,65),163,5);glint(310+Math.min(nameWidth,90),191,3.5);glint(270+Math.min(nameWidth,150),159,3);glint(270+Math.min(nameWidth,225),188,4.5);
-    ctx.save();ctx.globalAlpha=.75;ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(278,195);ctx.quadraticCurveTo(390,202,Math.min(270+nameWidth,665),194);ctx.stroke();ctx.restore();
+    const glint=(gx,gy,r)=>{ctx.save();ctx.translate(gx,gy);ctx.shadowColor='#fff4b0';ctx.shadowBlur=14;ctx.fillStyle='#fffbe9';ctx.beginPath();ctx.moveTo(0,-r);ctx.quadraticCurveTo(r*.18,-r*.18,r,0);ctx.quadraticCurveTo(r*.18,r*.18,0,r);ctx.quadraticCurveTo(-r*.18,r*.18,-r,0);ctx.quadraticCurveTo(-r*.18,-r*.18,0,-r);ctx.fill();ctx.restore();};
+    glint(270+Math.min(nameWidth,65),163,5);glint(310+Math.min(nameWidth,90),191,3.5);glint(270+Math.min(nameWidth,150),159,3);glint(Math.max(280,effectEnd-8),169,4.5);
+    ctx.save();ctx.globalAlpha=.8;ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(278,195);ctx.quadraticCurveTo(390,202,effectEnd,194);ctx.stroke();ctx.restore();
+  } else if(effect==='heart'){
+    ctx.save();ctx.fillStyle='#ff80c7';ctx.shadowColor='#ff62b5';ctx.shadowBlur=12;ctx.font='bold 15px Sans';ctx.fillText('♥',Math.max(278,effectEnd-5),164);ctx.fillText('♥',Math.min(286+nameWidth,650),193);ctx.restore();
+  } else if(effect==='fire'){
+    ctx.save();ctx.strokeStyle='#ff8a3d';ctx.shadowColor='#ff4d22';ctx.shadowBlur=12;ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(274,195);ctx.quadraticCurveTo(360,204,Math.min(effectEnd,665),195);ctx.stroke();ctx.fillStyle='#ffe36a';for(let j=0;j<3;j++){const fx=285+j*Math.max(18,Math.min(nameWidth,260)/3);ctx.beginPath();ctx.moveTo(fx,159);ctx.lineTo(fx+4,151-(j%2)*4);ctx.lineTo(fx+8,160);ctx.fill();}ctx.restore();
+  } else if(effect==='ice'){
+    ctx.save();ctx.strokeStyle='#d8fbff';ctx.shadowColor='#78eaff';ctx.shadowBlur=10;ctx.lineWidth=1.5;for(let j=0;j<3;j++){const ix=Math.min(280+j*Math.max(20,Math.min(nameWidth,260)/3),effectEnd);ctx.beginPath();ctx.moveTo(ix-4,159);ctx.lineTo(ix+4,167);ctx.moveTo(ix+4,159);ctx.lineTo(ix-4,167);ctx.stroke();}ctx.restore();
+  } else if(effect==='neon'){
+    ctx.save();ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=17;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(272,196);ctx.lineTo(effectEnd,196);ctx.stroke();ctx.restore();
+  } else if(effect==='blossom'){
+    ctx.save();ctx.fillStyle='#ff9cdb';ctx.shadowColor='#ff70a6';ctx.shadowBlur=10;for(let j=0;j<3;j++){const bx=Math.min(280+j*Math.max(20,Math.min(nameWidth,260)/3),effectEnd);for(let p=0;p<5;p++){const a=p*Math.PI*2/5;ctx.beginPath();ctx.ellipse(bx+Math.cos(a)*4,161+Math.sin(a)*4,2.5,4,a,0,Math.PI*2);ctx.fill();}}ctx.restore();
+  } else if(effect==='dark'){
+    ctx.save();ctx.globalAlpha=.7;ctx.strokeStyle='#bd9bff';ctx.shadowColor='#5c4b8a';ctx.shadowBlur=12;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(274,197);ctx.quadraticCurveTo(420,211,effectEnd,196);ctx.stroke();ctx.restore();
+  } else if(effect!=='none'){
+    ctx.save();ctx.globalAlpha=.9;ctx.strokeStyle=effectGlow[effect]||colors[0];ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=12;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(274,196);ctx.lineTo(effectEnd,196);ctx.stroke();ctx.restore();
   }
   // [UPGRADED V31] Large fixed-position verified shield on the RIGHT side of the profile identity card.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
@@ -654,16 +673,26 @@ async function generateShopProductPreview(product, user) {
     ctx.shadowBlur = 0;
   } else {
     const displayName = String(getDisplayName(previewUser) || previewUser.name || 'Jojo Member').slice(0, 25);
-    if (key === 'rainbow') {
-      const g = ctx.createLinearGradient(170, 0, 630, 0);
-      ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'].forEach((c,i)=>g.addColorStop(i/6,c));
-      ctx.fillStyle = g;
-    } else if (key === 'sparkle') {
-      const g = ctx.createLinearGradient(175, 0, 625, 0);
-      ['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((c,i)=>g.addColorStop(i/4,c));
-      ctx.fillStyle = g;
-    } else ctx.fillStyle = item.color;
-    ctx.shadowColor = key === 'sparkle' ? '#d7a4ff' : item.color; ctx.shadowBlur = key === 'sparkle' ? 34 : 22; ctx.font = 'bold 34px Sans'; ctx.fillText(displayName, 400, 385); ctx.shadowBlur = 0;
+    // [UPGRADED V32] Shop preview uses the same effect palette and matching glow as the generated Visual Profile.
+    const previewPalettes = {
+      rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
+      sparkle:['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'],
+      fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'],
+      blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'],
+      red:['#ff5252','#ff9b9b'],blue:['#54a8ff','#a6d8ff'],green:['#64f59b','#c2ffd9'],yellow:['#ffe65b','#fff4b0']
+    };
+    const previewPalette=previewPalettes[key];
+    if(previewPalette&&previewPalette.length>1){const g=ctx.createLinearGradient(170,0,630,0);previewPalette.forEach((c,i)=>g.addColorStop(i/(previewPalette.length-1),c));ctx.fillStyle=g;}
+    else ctx.fillStyle=item.color;
+    ctx.shadowColor=key==='sparkle'?'#d7a4ff':item.color;ctx.shadowBlur=key==='sparkle'||key==='neon'?34:24;ctx.font='bold 34px Sans';ctx.fillText(displayName,400,385);ctx.shadowBlur=0;
+    // [ADDED V32] Show a different visual signature for each effect before purchase.
+    if(key==='heart'){ctx.fillStyle='#ff80c7';ctx.font='bold 20px Sans';ctx.fillText('♥',535,359);ctx.fillText('♥',260,399);}
+    else if(key==='fire'){ctx.strokeStyle='#ff8a3d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(220,410);ctx.quadraticCurveTo(400,430,580,410);ctx.stroke();ctx.fillStyle='#ffe36a';ctx.font='bold 18px Sans';ctx.fillText('✦',300,355);ctx.fillText('✦',500,355);}
+    else if(key==='ice'){ctx.fillStyle='#d8fbff';ctx.font='bold 19px Sans';ctx.fillText('✧',275,360);ctx.fillText('✧',525,405);}
+    else if(key==='neon'){ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=22;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(210,415);ctx.lineTo(590,415);ctx.stroke();ctx.shadowBlur=0;}
+    else if(key==='blossom'){ctx.fillStyle='#ff9cdb';ctx.font='bold 18px Sans';ctx.fillText('✿',265,359);ctx.fillText('✿',535,406);}
+    else if(key==='dark'){ctx.strokeStyle='#9b7cff';ctx.shadowColor='#5c4b8a';ctx.shadowBlur=16;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(400,383,215,45,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
+    else if(['red','blue','green','yellow'].includes(key)){ctx.strokeStyle=item.color;ctx.shadowColor=item.color;ctx.shadowBlur=14;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(235,415);ctx.lineTo(565,415);ctx.stroke();ctx.shadowBlur=0;}
     if (key === 'sparkle') {
       // Static preview glints make the real visual style obvious before purchase.
       const sparkleStar = (sx,sy,r) => { ctx.save(); ctx.translate(sx,sy); ctx.shadowColor='#fff4b0'; ctx.shadowBlur=18; ctx.fillStyle='#fffbe9'; ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.16,-r*.16,r,0); ctx.quadraticCurveTo(r*.16,r*.16,0,r); ctx.quadraticCurveTo(-r*.16,r*.16,-r,0); ctx.quadraticCurveTo(-r*.16,-r*.16,0,-r); ctx.fill(); ctx.restore(); };
@@ -803,6 +832,18 @@ async function generateLeaderboardCanvas(users) {
       ctx.shadowBlur = 0;
     }
     ctx.fillText(text, x, y);
+    // [ADDED V32] Small effect-specific marks make equipped effects recognizable on leaderboard names too.
+    const normalizedEffect=String(effectKey||'').toLowerCase(), endX=Math.min(x+Math.min(ctx.measureText(text).width,maxWidth),x+maxWidth);
+    if(normalizedEffect==='sparkle'){
+      ctx.fillStyle='#fff4b0';ctx.shadowColor='#d7a4ff';ctx.shadowBlur=10;
+      for(let j=0;j<2;j++){const sx=Math.min(endX-3,x+18+j*36);ctx.beginPath();ctx.moveTo(sx,y-fontSize*.85);ctx.lineTo(sx+2,y-fontSize*.55);ctx.lineTo(sx+5,y-fontSize*.85);ctx.lineTo(sx+2,y-fontSize*1.05);ctx.closePath();ctx.fill();}
+    } else if(normalizedEffect==='heart'){
+      ctx.fillStyle='#ff80c7';ctx.font='bold '+Math.max(9,fontSize-4)+'px Sans';ctx.fillText('♥',endX+2,y);
+    } else if(normalizedEffect==='fire'||normalizedEffect==='ice'||normalizedEffect==='blossom'){
+      ctx.strokeStyle=normalizedEffect==='fire'?'#ff8a3d':(normalizedEffect==='ice'?'#d8fbff':'#ff9cdb');ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y+3);ctx.lineTo(endX,y+3);ctx.stroke();
+    } else if(normalizedEffect==='neon'){
+      ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=8;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,y+4);ctx.lineTo(endX,y+4);ctx.stroke();
+    }
     ctx.restore();
   };
   const getHouse = item => {
