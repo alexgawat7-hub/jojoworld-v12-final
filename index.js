@@ -255,7 +255,7 @@ function checkHouseTax(user) {
   return `🏠 House tax paid: ${tax} coins. Remaining balance: ${user.coins}c.`;
 }
 function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
-  const words = String(text ?? '').split(/\\s+/); let line = ''; let lines = 0;
+  const words = String(text ?? '').split(/\s+/); let line = ''; let lines = 0;
   for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
   if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
 }
@@ -694,7 +694,7 @@ A new user joined using your link! 🎁
         if (upperRaw.trim() === 'UNEQUIP') { const old = user.nameEffect; user.nameEffect = 'none'; if (!await saveUserToDB(psid)) { user.nameEffect = old; send(psid,'⚠️ Hindi na-save ang pagbabago.'); } else send(psid,'✅ Name effect removed.'); continue; }
         // [ADDED] [UPGRADED V28] Scatter game, independent of legacy SPIN command.
         if (upperRaw.trim().startsWith('SCATTER')) {
-          const parts = upperRaw.trim().split(/\\s+/); const bet = Number(parts[1]);
+          const parts = upperRaw.trim().split(/\s+/); const bet = Number(parts[1]);
           if (!Number.isInteger(bet) || bet < 50 || bet > 1000) { send(psid,'🎰 Use: scatter <50-1000> coins.'); continue; }
           const diff = Date.now() - (Number(user.lastScatter) || 0);
           if (diff < 120000) { send(psid, `⏳ Cooldown pa boss! ${Math.ceil((120000-diff)/1000)} secs pa!`); continue; }
@@ -707,7 +707,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 house purchase with prerequisite and duplicate checks before charging.
         if (upperRaw.trim().startsWith('BUY ')) {
-          const parts = upperRaw.trim().split(/\\s+/); const house = (parts[1]||'').toLowerCase(); const cfg = HOUSE_CONFIG[house];
+          const parts = upperRaw.trim().split(/\s+/); const house = (parts[1]||'').toLowerCase(); const cfg = HOUSE_CONFIG[house];
           if (!cfg || house === 'none') { send(psid,'🏠 Use: buy kubo / bahay / mansion / building'); continue; }
           const required = HOUSE_REQUIREMENTS[house];
           if (String(user.house||'none').toLowerCase() === house) { send(psid,'❌ Meron ka na nyan boss!'); continue; }
@@ -719,7 +719,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 flex effect purchase command, one active effect at a time.
         if (upperRaw.trim().startsWith('EFFECT ')) {
-          const effect = upperRaw.trim().split(/\\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
+          const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
           if (!FLEX_BADGES[effect]) { send(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
           if (user.nameEffect && user.nameEffect !== 'none') { send(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
           if (user.coins < prices[effect]) { send(psid,`❌ Kulang coins! Need ${prices[effect]}c, meron ka lang ${user.coins}c.`); continue; }
