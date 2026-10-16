@@ -1,8 +1,8 @@
 {
-  "name": "jojoworld-v26-ultimate-evolution",
-  "version": "26.0.0",
+  "name": "jojoworld-v28-ultimate-evolution",
+  "version": "28.0.0",
   "private": true,
-  "description": "JojoWorld Messenger bot with V26 Gift Hub integration + V28 Canvas Template",
+  "description": "JojoWorld Messenger bot with V28 economy, house tax, Canvas profile/leaderboard, gifts and payments",
   "main": "index.js",
   "engines": {
     "node": ">=20"
@@ -20,6 +20,7 @@
     "dotenv": "^16.4.7",
     "fca-unofficial": "^1.0.0",
     "fs-extra": "^11.1.1",
-    "canvas": "^2.11.2"
+    "canvas": "^2.11.2",
+    "form-data": "^4.0.1"
   }
 }
