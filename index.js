@@ -658,7 +658,28 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillStyle = '#111127'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(radius * 0.9) + 'px Sans';
     ctx.fillText(String(rank), x, y + radius * 0.32); ctx.restore();
   };
-  const drawPodium = (item, rank, x, y, w, h, color, featured) => {
+  // [UPGRADED V28] Draw each player's saved profile photo; use a clean initials/avatar fallback.
+  const drawLeaderboardAvatar = async (item, x, y, radius) => {
+    ctx.save();
+    ctx.fillStyle = '#172344'; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+    let avatar = null;
+    try {
+      if (item && item.user && item.user.profilePhotoData) avatar = await loadImage(Buffer.from(item.user.profilePhotoData, 'base64'));
+      else if (item && item.user && item.user.profilePhotoUrl) avatar = await loadImage(item.user.profilePhotoUrl);
+    } catch (e) { console.warn('[LEADERBOARD PHOTO] Could not load profile photo:', e.message); }
+    if (avatar) {
+      ctx.save(); ctx.beginPath(); ctx.arc(x, y, radius - 3, 0, Math.PI * 2); ctx.clip();
+      const scale = Math.max((radius - 3) * 2 / avatar.width, (radius - 3) * 2 / avatar.height);
+      const aw = avatar.width * scale, ah = avatar.height * scale;
+      ctx.drawImage(avatar, x - aw / 2, y - ah / 2, aw, ah); ctx.restore();
+    } else {
+      const initials = String(item && item.user ? getDisplayName(item.user) || item.user.name || 'JW' : 'JW').trim().split(/\\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
+      ctx.fillStyle = '#d9e8ff'; ctx.font = 'bold ' + Math.round(radius * .8) + 'px Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initials || 'JW', x, y); ctx.textBaseline = 'alphabetic';
+    }
+    ctx.strokeStyle = item && item.user && (item.user.goldFrame || String(item.user.frame || '').toLowerCase().includes('gold')) ? '#ffd34f' : '#65eaff';
+    ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  };
+  const drawPodium = async (item, rank, x, y, w, h, color, featured) => {
     const grad = ctx.createLinearGradient(x, y, x + w, y + h);
     grad.addColorStop(0, featured ? '#68400b' : (rank === 2 ? '#25334b' : '#471746'));
     grad.addColorStop(0.5, featured ? '#21152b' : '#11152b'); grad.addColorStop(1, '#071321');
@@ -668,6 +689,7 @@ async function generateLeaderboardCanvas(users) {
     ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
     ctx.font = 'bold ' + (featured ? 24 : 20) + 'px Sans'; ctx.fillText(rank === 1 ? '♛ #1 CHAMPION' : '#' + rank, x + w / 2, y + 29); ctx.shadowBlur = 0;
     drawMedal(x + w / 2, y + 62, rank, color, featured ? 25 : 20);
+    if (item) await drawLeaderboardAvatar(item, x + w / 2, y + 112, featured ? 31 : 27);
     if (!item) {
       ctx.fillStyle = '#9eb5cc'; ctx.font = 'bold 16px Sans'; ctx.fillText('OPEN RANK', x + w / 2, y + 105);
       ctx.fillStyle = '#6e849b'; ctx.font = '11px Sans'; ctx.fillText('Play to claim this spot', x + w / 2, y + 126);
@@ -686,9 +708,9 @@ async function generateLeaderboardCanvas(users) {
   };
 
   // [UPGRADED V28] A real podium layout for the top three, with the champion centered.
-  drawPodium(top[1], 2, 38, 218, 222, 282, '#b8d8ff', false);
-  drawPodium(top[0], 1, 270, 201, 260, 299, '#ffd34f', true);
-  drawPodium(top[2], 3, 540, 218, 222, 282, '#ff83e9', false);
+  await drawPodium(top[1], 2, 38, 218, 222, 282, '#b8d8ff', false);
+  await drawPodium(top[0], 1, 270, 201, 260, 299, '#ffd34f', true);
+  await drawPodium(top[2], 3, 540, 218, 222, 282, '#ff83e9', false);
 
   // [UPGRADED V28] Compact, readable neon cards for ranks 4–10.
   for (let rank = 4; rank <= 10; rank++) {
@@ -713,9 +735,11 @@ async function generateLeaderboardCanvas(users) {
       continue;
     }
     const name = getName(item), coins = Math.max(0, Number(item.user.coins) || 0);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans'; ctx.fillText(name, 119, y + 25);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 15px Sans'; ctx.fillText(coins.toLocaleString('en-US') + 'c', 119, y + 48);
-    ctx.fillStyle = '#a8eefa'; ctx.font = '12px Sans'; ctx.fillText('House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)', 290, y + 39);
+    // [UPGRADED V28] Leaderboard rows also show each player's uploaded profile photo.
+    await drawLeaderboardAvatar(item, 125, y + 33, 24);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans'; ctx.fillText(name, 160, y + 25);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 15px Sans'; ctx.fillText(coins.toLocaleString('en-US') + 'c', 160, y + 48);
+    ctx.fillStyle = '#a8eefa'; ctx.font = '12px Sans'; ctx.fillText('House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)', 320, y + 39);
     ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 500, y + 24);
     ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
