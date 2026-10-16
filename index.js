@@ -363,29 +363,52 @@ async function generateShopCanvas() {
     ctx.restore();
   };
   const card = (x, y, w, h, color, emoji, title, price, subtitle) => {
-    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#17172e'); g.addColorStop(1, '#080d1a');
-    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 11; ctx.strokeStyle = color; ctx.lineWidth = 1.7; ctx.strokeRect(x, y, w, h); ctx.restore();
-    // [ADDED] Item illustration window makes the item itself the visual focus.
-    ctx.fillStyle = '#050914'; ctx.fillRect(x + 7, y + 7, w - 14, Math.max(44, h * 0.43));
-    ctx.save(); drawProductLogo(title, x + w / 2, y + h * 0.29, Math.min(39, w * 0.24), color); ctx.restore();
-    text(title, x + w / 2, y + h * 0.60, Math.min(15, w * 0.12), '#f3f7ff');
-    text(price, x + w / 2, y + h * 0.76, Math.min(16, w * 0.13), '#ffe16b');
-    // Bright visual BUY label; Messenger quick replies below the image perform the actual action.
-    const bh = 24, by = y + h - bh - 7;
-    const buy = ctx.createLinearGradient(x, by, x, by + bh); buy.addColorStop(0, '#b9ff64'); buy.addColorStop(1, '#0cba70');
-    ctx.fillStyle = buy; ctx.fillRect(x + 8, by, w - 16, bh);
-    text('BUY / PREVIEW', x + w / 2, by + 17, 11, '#042719');
-    if (subtitle) text(subtitle, x + w / 2, y + h * 0.69, 9, '#a9c6de', 'center', false);
+    // [UPGRADED V28] Premium rounded glass card, layered neon rim, spotlight and coin-price pill.
+    const rr = (px, py, pw, ph, radius) => {
+      ctx.beginPath(); ctx.moveTo(px + radius, py); ctx.arcTo(px + pw, py, px + pw, py + ph, radius);
+      ctx.arcTo(px + pw, py + ph, px, py + ph, radius); ctx.arcTo(px, py + ph, px, py, radius);
+      ctx.arcTo(px, py, px + pw, py, radius); ctx.closePath();
+    };
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 16; rr(x, y, w, h, 13); ctx.fillStyle = '#080b19'; ctx.fill(); ctx.restore();
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#28254a'); g.addColorStop(0.48, '#10172e'); g.addColorStop(1, '#070b18');
+    rr(x, y, w, h, 13); ctx.fillStyle = g; ctx.fill();
+    ctx.save(); rr(x, y, w, h, 13); ctx.clip();
+    const sheen = ctx.createLinearGradient(x, y, x + w, y + h); sheen.addColorStop(0, 'rgba(255,255,255,0.15)'); sheen.addColorStop(0.32, 'rgba(255,255,255,0.015)'); sheen.addColorStop(1, 'rgba(0,0,0,0.18)');
+    ctx.fillStyle = sheen; ctx.fillRect(x, y, w, h);
+    ctx.restore();
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.strokeStyle = color; ctx.lineWidth = 2; rr(x, y, w, h, 13); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1; rr(x + 4, y + 4, w - 8, h - 8, 10); ctx.stroke(); ctx.restore();
+    const windowH = Math.max(42, h * 0.43);
+    const win = ctx.createLinearGradient(x + 5, y + 5, x + w - 5, y + windowH + 4); win.addColorStop(0, '#050816'); win.addColorStop(1, '#15102b');
+    ctx.fillStyle = win; ctx.fillRect(x + 6, y + 6, w - 12, windowH);
+    ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = color;
+    for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x + 12 + ((k * 37) % Math.max(20, w - 24)), y + 13 + ((k * 19) % Math.max(18, windowH - 15)), 1.3, 0, Math.PI * 2); ctx.fill(); }
+    ctx.restore();
+    ctx.save(); drawProductLogo(title, x + w / 2, y + windowH * 0.58, Math.min(43, w * 0.26), color); ctx.restore();
+    text(title, x + w / 2, y + h * 0.60, Math.min(15, w * 0.12), '#ffffff');
+    if (subtitle) text(subtitle, x + w / 2, y + h * 0.69, 9, '#9fc8ef', 'center', false);
+    const pillY = y + h * 0.72, pillH = Math.max(17, h * 0.16);
+    rr(x + 8, pillY, w - 16, pillH, pillH / 2); ctx.fillStyle = '#060a16'; ctx.fill(); ctx.strokeStyle = '#6d82a9'; ctx.lineWidth = 0.8; ctx.stroke();
+    const coinX = x + w * 0.30, coinY = pillY + pillH / 2, coinR = Math.min(7, pillH * 0.31);
+    const cg = ctx.createLinearGradient(coinX - coinR, coinY - coinR, coinX + coinR, coinY + coinR); cg.addColorStop(0, '#fff4a3'); cg.addColorStop(0.45, '#ffbd22'); cg.addColorStop(1, '#d47b08');
+    ctx.beginPath(); ctx.arc(coinX, coinY, coinR, 0, Math.PI * 2); ctx.fillStyle = cg; ctx.fill(); ctx.strokeStyle = '#fff0a1'; ctx.lineWidth = 1; ctx.stroke();
+    text(price, x + w * 0.60, pillY + pillH * 0.68, Math.min(15, w * 0.115), '#ffe57a');
+    // Decorative button label only; the actual purchase is handled by Messenger quick replies.
+    const bh = Math.min(25, h * 0.19), by = y + h - bh - 6;
+    const buy = ctx.createLinearGradient(x, by, x, by + bh); buy.addColorStop(0, '#7dffb0'); buy.addColorStop(0.5, '#17d879'); buy.addColorStop(1, '#087b55');
+    rr(x + 8, by, w - 16, bh, bh / 2); ctx.fillStyle = buy; ctx.fill();
+    ctx.save(); ctx.shadowColor = '#35ff9a'; ctx.shadowBlur = 7; ctx.strokeStyle = '#a7ffd0'; ctx.lineWidth = 1; rr(x + 8, by, w - 16, bh, bh / 2); ctx.stroke(); ctx.restore();
+    text('✦ PREVIEW / BUY ✦', x + w / 2, by + bh * 0.69, Math.min(11, w * 0.085), '#042719');
   };
 
-  text('♛ JOJOWORLD SHOP ♛', 400, 77, 43, '#65ffff');
-  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; text('UPGRADE YOUR PROFILE • SHOW YOUR STYLE', 400, 112, 16, '#ff8ff1'); ctx.shadowBlur = 0;
-  text('✨ PICK AN ITEM TO SEE ITS PREVIEW ✨', 400, 145, 14, '#d8e9ff');
+  text('♛ JOJOWORLD ♛', 400, 66, 22, '#ffdb70');
+  text('SHOP', 400, 105, 47, '#65ffff');
+  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; text('UPGRADE YOUR PROFILE • SHOW YOUR STYLE', 400, 137, 16, '#ff8ff1'); ctx.shadowBlur = 0;
+  text('✦ PREMIUM ITEMS  •  PREVIEW BEFORE YOU BUY ✦', 400, 161, 13, '#d8e9ff');
 
-  panel(35, 170, 730, 196, '#ffd34f', '👑 VIP & PROFILE FRAMES');
-  card(52, 216, 345, 133, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
-  card(413, 216, 335, 133, '#ffb83f', '💎', 'GOLD PROFILE FRAME', '150 COINS', 'GOLD BORDER');
+  panel(35, 182, 730, 184, '#ffd34f', '👑 VIP & PROFILE FRAMES');
+  card(52, 223, 345, 128, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
+  card(413, 223, 335, 128, '#ffb83f', '💎', 'GOLD PROFILE FRAME', '150 COINS', 'GOLD BORDER');
 
   panel(35, 384, 730, 550, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
   const effects = [
