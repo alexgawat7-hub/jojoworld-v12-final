@@ -1540,37 +1540,49 @@ ${renderGiftCatalog()}
           continue;
         }
 
-        // SHOP & THEMES
-        if (cleanText === "shop" || upperRaw === "SHOP") {
-          // [UPGRADED V28] Display the full V28 shop catalog, not only VIP and Gold Frame.
-          send(psid, `🛍️ JOJOWORLD V28 FULL SHOP
-━━━━━━━━━━━━━━━━━━━━
-👑 PROFILE UPGRADES
-[1] VIP Verified Badge — 1,000c (type: BUY_VIP)
-[2] Gold Profile Frame — 150c (type: BUY_FRAME)
-
-🏠 HOUSE COLLECTION
-[13] Kubo — 1,500c (type: BUY KUBO)
-[14] Bahay — 5,000c (requires Kubo; type: BUY BAHAY)
-[15] Mansion — 15,000c (requires Bahay; type: BUY MANSION)
-[16] Building — 40,000c (requires Mansion; type: BUY BUILDING)
-Daily house tax applies; insufficient coins may downgrade your house.
-
-✨ NAME EFFECTS (one at a time; remove with UNEQUIP)
-EFFECT rainbow — 5,000c
-EFFECT sparkle — 10,000c
-EFFECT heart / fire / ice / dark — 2,500c each
-EFFECT neon — 3,000c
-EFFECT blossom — 2,000c
-EFFECT red / blue / green / yellow — 1,000c each
-
-💡 Type the exact command shown beside the item to purchase.`, [
-            { content_type: "text", title: "👑 VIP Badge (1,000c)", payload: "BUY_VIP" },
-            { content_type: "text", title: "💎 Gold Frame (150c)", payload: "BUY_FRAME" },
-            { content_type: "text", title: "↩️ Menu", payload: "MENU" }
-          ]);          continue;
+        // [UPGRADED V28] Messenger shop with category buttons and direct purchase quick replies.
+        // Messenger quick replies support up to 13 items, so the catalog is split into categories.
+        if (upperRaw === 'SHOP_EFFECTS') {
+          send(psid, "💎 JOJOWORLD SHOP\n✨ NAME EFFECTS — VERIFIED STYLE\n━━━━━━━━━━━━━━━━━━━━\n🌈 RAINBOW [RARE] — 5,000c\n✨ SPARKLE [MYTHIC] — 10,000c\n💖 HEART [LOVE] — 2,500c\n🔥 FIRE [HOT] — 2,500c\n❄️ ICE [COLD] — 2,500c\n⚡ NEON [NEON] — 3,000c\n🌸 BLOSSOM [CUTE] — 2,000c\n🖤 DARK [DARK] — 2,500c\n🔴 RED • 🔵 BLUE • 🟢 GREEN • 🟡 YELLOW — 1,000c each\n\nTap an item below to buy it. One name effect can be active at a time; use UNEQUIP before buying another.", [
+            { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "EFFECT rainbow" },
+            { content_type: "text", title: "✨ Sparkle 10,000c", payload: "EFFECT sparkle" },
+            { content_type: "text", title: "💖 Heart 2,500c", payload: "EFFECT heart" },
+            { content_type: "text", title: "🔥 Fire 2,500c", payload: "EFFECT fire" },
+            { content_type: "text", title: "❄️ Ice 2,500c", payload: "EFFECT ice" },
+            { content_type: "text", title: "⚡ Neon 3,000c", payload: "EFFECT neon" },
+            { content_type: "text", title: "🌸 Blossom 2,000c", payload: "EFFECT blossom" },
+            { content_type: "text", title: "🖤 Dark 2,500c", payload: "EFFECT dark" },
+            { content_type: "text", title: "🔴 Red 1,000c", payload: "EFFECT red" },
+            { content_type: "text", title: "🔵 Blue 1,000c", payload: "EFFECT blue" },
+            { content_type: "text", title: "🟢 Green 1,000c", payload: "EFFECT green" },
+            { content_type: "text", title: "🟡 Yellow 1,000c", payload: "EFFECT yellow" },
+            { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
+          ]);
+          continue;
         }
 
+        if (upperRaw === 'SHOP_HOUSES') {
+          send(psid, "🏠 JOJOWORLD HOUSE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[13] 🛖 Kubo — 1,500c\n[14] 🏡 Bahay — 5,000c (requires Kubo)\n[15] 🏰 Mansion — 15,000c (requires Bahay)\n[16] 🏢 Building — 40,000c (requires Mansion)\n\nHouse upgrades must be purchased in order. Tap the house you want below; your balance and requirements will be checked before any coins are deducted.", [
+            { content_type: "text", title: "🛖 Kubo 1,500c", payload: "BUY KUBO" },
+            { content_type: "text", title: "🏡 Bahay 5,000c", payload: "BUY BAHAY" },
+            { content_type: "text", title: "🏰 Mansion 15k", payload: "BUY MANSION" },
+            { content_type: "text", title: "🏢 Building 40k", payload: "BUY BUILDING" },
+            { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
+          ]);
+          continue;
+        }
+
+        if (cleanText === "shop" || upperRaw === "SHOP") {
+          // [UPGRADED V28] Shop front page; purchase buttons lead to validated existing buy handlers.
+          send(psid, "🛍️ JOJOWORLD SHOP\n💎 VERIFIED • NEON • PREMIUM\n━━━━━━━━━━━━━━━━━━━━\n👑 PROFILE UPGRADES\n[1] 👑 VIP Verified Badge — 1,000c\n[2] ✨ Gold Profile Frame — 150c\n\n💎 NAME EFFECTS\n🌈 Rainbow 5,000c • ✨ Sparkle 10,000c\n💖 Heart / 🔥 Fire / ❄️ Ice 2,500c each\n⚡ Neon 3,000c • 🌸 Blossom 2,000c\n🖤 Dark 2,500c • 🔴🔵🟢🟡 Colors 1,000c each\n\n🏠 HOUSE COLLECTION\n🛖 Kubo 1,500c • 🏡 Bahay 5,000c\n🏰 Mansion 15,000c • 🏢 Building 40,000c\n\nTap a category or item button below to continue. Purchases check your coins and save to your profile.", [
+            { content_type: "text", title: "👑 VIP Badge 1,000c", payload: "BUY_VIP" },
+            { content_type: "text", title: "✨ Gold Frame 150c", payload: "BUY_FRAME" },
+            { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
+            { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+          ]);
+          continue;
+        }
         if (upperRaw === "BUY_VIP") {
           // [FIXED] Duplicate VIP validation happens before deducting coins.
           if (user.vip || user.badge === "👑 VIP Elite") { send(psid, "❌ Meron ka na VIP boss!"); continue; }
