@@ -329,8 +329,8 @@ function drawV28Canvas(title, width, height) {
 }
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
-  // [UPGRADED V28] Ultra HD profile output: render at 2x resolution while preserving layout coordinates.
-  const W = 800, H = 1320, RENDER_SCALE = 2, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
+  const W = 800, H = 1320, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'] };
@@ -460,8 +460,8 @@ async function generateProfileCanvas(user) {
 }
 async function generateShopCanvas() {
   // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
-  // [UPGRADED V28] Ultra HD shop image output at 1600x2960; existing layout remains in logical 800x1480 coordinates.
-  const W = 800, H = 1480, RENDER_SCALE = 2, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  // Smooth visual mode: standard 800x1480 output keeps the full shop layout while reducing render cost.
+  const W = 800, H = 1480, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#050510'); bg.addColorStop(0.45, '#11102d'); bg.addColorStop(1, '#020914');
@@ -671,8 +671,8 @@ async function generateShopProductPreview(product, user) {
   else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key)) previewUser.nameEffect = key;
   else if (['kubo','bahay','mansion','building'].includes(key)) previewUser.house = key;
 
-  // [UPGRADED V28] Ultra HD product preview at 1600x1800 without changing the preview layout.
-  const W = 800, H = 900, RENDER_SCALE = 2, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  // Smooth visual mode: standard 800x900 product previews reduce rendering and upload time.
+  const W = 800, H = 900, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#050510'); bg.addColorStop(0.5, '#11102b'); bg.addColorStop(1, '#030a17');
@@ -803,7 +803,7 @@ async function generateLeaderboardCanvas(users) {
   }
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   // [UPGRADED V28] Canvas height trimmed to remove unused bottom space; content uses nearly the full image.
-  const W = 800, H = 1320, RENDER_SCALE = 2; // [UPGRADED V28] Ultra HD leaderboard output at 1600x2640 for sharper names, avatars, effects and stats.
+  const W = 800, H = 1320, RENDER_SCALE = 1; // Smooth standard-resolution leaderboard; names and layout retain their existing logical sizes.
   const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
