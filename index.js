@@ -1310,7 +1310,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 image commands. Existing textual profile command remains supported below.
         if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
-        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img); send(psid, 'Pindutin ang Exit para bumalik sa menu.', [{ content_type: 'text', title: '🚪 Exit', payload: 'MENU' }]); continue; } // [FIXED] No extra leaderboard heading caption.
+        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img); continue; } // [FIXED] Image only: no extra caption, arrow, or unrelated exit prompt.
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
@@ -2184,15 +2184,9 @@ ${renderGiftCatalog()}
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
           try {
             const leaderboardImage = await generateLeaderboardCanvas(await getLeaderboardUsers());
+            // [FIXED] Send only the leaderboard image; no unrelated follow-up text or arrow quick-reply.
             const sent = await sendImage(psid, leaderboardImage);
             if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
-            else {
-              // [ADDED] Dedicated leaderboard exit action, separate from the image itself.
-              // [FIXED] Remove the unrelated leaderboard heading text; keep only a simple Exit action.
-              send(psid, 'Pindutin ang Exit para bumalik sa menu.', [
-                { content_type: 'text', title: '🚪 Exit', payload: 'MENU' }
-              ]);
-            }
           } catch (leaderboardError) {
             console.error('[FIXED] Leaderboard canvas failed:', leaderboardError.message);
           }
