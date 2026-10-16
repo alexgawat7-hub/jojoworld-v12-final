@@ -386,7 +386,7 @@ function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
 }
 // [UPGRADED V35] Render name effects as vivid gradient text with a clean outline and subtle effect-colored light particles.
 // Never draw a background box or plate behind the name; shop preview and applied profile share this renderer.
-function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'left') {
+function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'left', baseFontSize = 48) {
   const n = String(name || '').toUpperCase();
   const effect = String(effectKey || '').toLowerCase();
   const supported = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
@@ -396,7 +396,7 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   ctx.textAlign = align;
   ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
-  let fontSize = 40;
+  let fontSize = baseFontSize;
   ctx.font = 'bold ' + fontSize + 'px Arial Black';
   while (ctx.measureText(n).width > maxWidth && fontSize > 12) {
     fontSize -= 1;
@@ -957,7 +957,7 @@ async function generateShopProductPreview(product, user) {
     const displayName = getPlainDisplayName(previewUser).slice(0, 25);
     // Render the selected name effect with the same effect renderer used by Profile and Leaderboard.
     const previewEffect = String(previewUser.nameEffect || key || 'none').toLowerCase();
-    if (!drawPremiumNameEffect(ctx, displayName, 400, 385, 500, previewEffect, 'center')) {
+    if (!drawPremiumNameEffect(ctx, displayName, 400, 385, 620, previewEffect, 'center', 62)) {
       ctx.save();
       ctx.textAlign = 'center';
       ctx.font = 'bold 34px Arial Black';
