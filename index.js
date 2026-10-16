@@ -2111,15 +2111,22 @@ Please try again in a little while!`, [
           }
 
           const match = candidate.data;
-          const candidateName = String(match.name || "Jojo Member").slice(0, 40);
-          const candidateAge = Number.isFinite(Number(match.age)) ? Number(match.age) : "—";
-          const candidateLocation = String(match.location || "Not set").slice(0, 50);
-          const candidateBio = String(match.bio || "No bio yet.").slice(0, 180);
-          send(psid, `💘 REAL MATCH FOUND (-10 coins)\\n━━━━━━━━━━━━━━━━━━━━\\n👤 ${candidateName}, ${candidateAge}\\n📍 ${candidateLocation}\\n💬 ${candidateBio}\\n\\nUnlock chat for 20 coins to connect.`, [
-            { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
-            { content_type: "text", title: "⏭️ Next Match (10c)", payload: "FIND MATCH" },
-            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-          ]);
+          // [UPGRADED] Show the matched user's generated Visual Profile image instead of a text-only result.
+          try {
+            const matchProfileImage = await generateProfileCanvas({ ...match, id: candidate.psid });
+            await sendImage(psid, matchProfileImage, `💘 REAL MATCH FOUND! • 10 coins deducted.\\n👑 Here's your match's Visual Profile.\\n💬 Unlock chat for 20 coins to connect.`, [
+              { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
+              { content_type: "text", title: "⏭️ Next Match (10c)", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+          } catch (matchProfileError) {
+            console.error("[MATCH PROFILE] Visual profile generation failed:", matchProfileError.message);
+            send(psid, "💘 Match found, pero hindi ma-generate ang Visual Profile ngayon. Subukan ulit mamaya.", [
+              { content_type: "text", title: "💬 Unlock Chat (20c)", payload: "UNLOCK_CHAT" },
+              { content_type: "text", title: "⏭️ Next Match (10c)", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+          }
           continue;
         }
 
