@@ -722,6 +722,15 @@ async function send(id, text, qr = null) {
   }
 }
 
+
+// [FIXED] Keep users inside the Shop after every purchase result; offer repeat shopping and Menu navigation.
+async function sendShopResult(id, message) {
+  return send(id, message, [
+    { content_type: "text", title: "🛍️ Continue Shopping", payload: "SHOP" },
+    { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+  ]);
+}
+
 // SANITIZE INPUT FUNCTION
 function sanitizeInput(text) {
   if (!text) return "";
@@ -1100,14 +1109,14 @@ A new user joined using your link! 🎁
         // [ADDED] V28 house purchase with prerequisite and duplicate checks before charging.
         if (upperRaw.trim().startsWith('BUY ')) {
           const parts = upperRaw.trim().split(/\s+/); const house = (parts[1]||'').toLowerCase(); const cfg = HOUSE_CONFIG[house];
-          if (!cfg || house === 'none') { send(psid,'🏠 Use: buy kubo / bahay / mansion / building'); continue; }
+          if (!cfg || house === 'none') { sendShopResult(psid,'🏠 Use: buy kubo / bahay / mansion / building'); continue; }
           const required = HOUSE_REQUIREMENTS[house];
-          if (String(user.house||'none').toLowerCase() === house) { send(psid,'❌ Meron ka na nyan boss!'); continue; }
-          if (getHouseTier(user.house) + 1 !== cfg.tier || String(user.house||'none').toLowerCase() !== required) { send(psid,`❌ Requirement: ${required} muna bago ${house}.`); continue; }
-          if ((Number(user.coins)||0) < cfg.price) { send(psid,`❌ Kulang coins! Need ${cfg.price}c, meron ka lang ${user.coins}c.`); continue; }
+          if (String(user.house||'none').toLowerCase() === house) { sendShopResult(psid,'❌ Meron ka na nyan boss!'); continue; }
+          if (getHouseTier(user.house) + 1 !== cfg.tier || String(user.house||'none').toLowerCase() !== required) { sendShopResult(psid,`❌ Requirement: ${required} muna bago ${house}.`); continue; }
+          if ((Number(user.coins)||0) < cfg.price) { sendShopResult(psid,`❌ Kulang coins! Need ${cfg.price}c, meron ka lang ${user.coins}c.`); continue; }
           const old = {coins:user.coins,house:user.house}; user.coins -= cfg.price; user.house=house;
-          if (!await saveUserToDB(psid)) { Object.assign(user,old); send(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
-          send(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
+          if (!await saveUserToDB(psid)) { Object.assign(user,old); sendShopResult(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
+          sendShopResult(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
         }
         // [ADDED] [UPGRADED V28] Visual item previews with an explicit confirm-to-buy button.
         if (upperRaw.startsWith('PREVIEW_')) {
@@ -1130,12 +1139,12 @@ A new user joined using your link! 🎁
         // [ADDED] V28 flex effect purchase command, one active effect at a time.
         if (upperRaw.trim().startsWith('EFFECT ')) {
           const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
-          if (!FLEX_BADGES[effect]) { send(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
-          if (user.nameEffect && user.nameEffect !== 'none') { send(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
-          if (user.coins < prices[effect]) { send(psid,`❌ Kulang coins! Need ${prices[effect]}c, meron ka lang ${user.coins}c.`); continue; }
+          if (!FLEX_BADGES[effect]) { sendShopResult(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
+          if (user.nameEffect && user.nameEffect !== 'none') { sendShopResult(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
+          if (user.coins < prices[effect]) { sendShopResult(psid,`❌ Kulang coins! Need ${prices[effect]}c, meron ka lang ${user.coins}c.`); continue; }
           const old = {coins:user.coins,nameEffect:user.nameEffect}; user.coins -= prices[effect]; user.nameEffect=effect;
-          if (!await saveUserToDB(psid)) { Object.assign(user,old); send(psid,'⚠️ Hindi na-save ang effect.'); continue; }
-          send(psid,`✨ Equipped ${FLEX_BADGES[effect]}! ${getDisplayName(user)}`); continue;
+          if (!await saveUserToDB(psid)) { Object.assign(user,old); sendShopResult(psid,'⚠️ Hindi na-save ang effect.'); continue; }
+          sendShopResult(psid,`✨ Equipped ${FLEX_BADGES[effect]}! ${getDisplayName(user)}`); continue;
         }
         // [ADDED] V28 image commands. Existing textual profile command remains supported below.
         if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
@@ -1951,9 +1960,9 @@ ${renderGiftCatalog()}
         }
         if (upperRaw === "BUY_VIP") {
           // [FIXED] Duplicate VIP validation happens before deducting coins.
-          if (user.vip || user.badge === "👑 VIP Elite") { send(psid, "❌ Meron ka na VIP boss!"); continue; }
+          if (user.vip || user.badge === "👑 VIP Elite") { sendShopResult(psid, "❌ Meron ka na VIP boss!"); continue; }
           if (user.coins < 1000) {
-            send(psid, `❌ Not enough coins! VIP Badge costs 1,000 coins.`);
+            sendShopResult(psid, `❌ Not enough coins! VIP Badge costs 1,000 coins.`);
           } else {
             const previousVipState = { coins: user.coins, badge: user.badge, vip: user.vip };
             user.coins -= 1000;
@@ -1963,19 +1972,19 @@ ${renderGiftCatalog()}
               user.coins = previousVipState.coins;
               user.badge = previousVipState.badge;
               user.vip = previousVipState.vip;
-              send(psid, "⚠️ Hindi na-save ang VIP purchase. Walang coins na ikakaltas.");
+              sendShopResult(psid, "⚠️ Hindi na-save ang VIP purchase. Walang coins na ikakaltas.");
               continue;
             }
-            send(psid, `🎉 SUCCESS! You are now a VIP Elite member! 👑`);
+            sendShopResult(psid, `🎉 SUCCESS! You are now a VIP Elite member! 👑`);
           }
           continue;
         }
 
         if (upperRaw === "BUY_FRAME") {
           // [FIXED] Duplicate gold-frame validation happens before deducting coins.
-          if (user.goldFrame || String(user.frame || "").toLowerCase().includes("gold")) { send(psid, "❌ Meron ka na Gold Frame boss!"); continue; }
+          if (user.goldFrame || String(user.frame || "").toLowerCase().includes("gold")) { sendShopResult(psid, "❌ Meron ka na Gold Frame boss!"); continue; }
           if (user.coins < 150) {
-            send(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
+            sendShopResult(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
           } else {
             const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame };
             user.coins -= 150;
@@ -1985,10 +1994,10 @@ ${renderGiftCatalog()}
               user.coins = previousFrameState.coins;
               user.frame = previousFrameState.frame;
               user.goldFrame = previousFrameState.goldFrame;
-              send(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
+              sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
               continue;
             }
-            send(psid, `🎉 SUCCESS! Gold Frame unlocked! 💎`);
+            sendShopResult(psid, `🎉 SUCCESS! Gold Frame unlocked! 💎`);
           }
           continue;
         }
