@@ -922,7 +922,7 @@ A new user joined using your link! 🎁
         }
 
         // VIEW PROFILE
-        if (cleanText === "profile" || upperRaw === "PROFILE") {
+        if (["profile", "me", "my"].includes(cleanText) || ["PROFILE", "ME", "MY"].includes(upperRaw)) {
           // [UPGRADED V28] Keep legacy text profile command and include verified display name.
           user.views = (user.views || 0) + 1;
           await saveUserToDB(psid, { saveJackpot: false });
@@ -1473,7 +1473,7 @@ ${renderGiftCatalog()}
         }
 
         // LEADERBOARD
-        if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
+        if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
           // [UPGRADED V28] Real leaderboard ordering by liquid coins + house value.
           const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
           const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net} net worth`).join("\n");
