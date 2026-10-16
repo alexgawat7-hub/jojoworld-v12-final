@@ -495,7 +495,6 @@ async function generateProfileCanvas(user) {
       else {ctx.beginPath();ctx.arc(0,0,j%4===0?3.2:1.8,0,Math.PI*2);ctx.fill();}
       ctx.restore();
     }
-    ctx.globalAlpha=.13;ctx.fillStyle=frameColor;ctx.beginPath();ctx.arc(ax,ay,116,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
