@@ -1865,7 +1865,7 @@ A new user joined using your link! 🎁
           }
           try {
             const profileImage = await generateProfileCanvas({ ...user, id: psid });
-            await sendImage(psid, profileImage, `✨ JOJOWORLD VISUAL PROFILE • ${getDisplayName(user)} ✨\nYour equipped shop items are displayed on your profile.\nUse the quick buttons below to edit your Zodiac, Relationship Goal, or profile photo.`, [
+            await sendImage(psid, profileImage, `👑✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 • 𝐕𝐈𝐒𝐔𝐀𝐋 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 ✨👑\n💎 Your equipped shop items, proudly displayed.\n⚡ Use the buttons below to customize your profile.`, [
               { content_type: "text", title: "✏️ Edit Profile", payload: "EDIT_PROFILE_MENU" },
               { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
               { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
