@@ -960,41 +960,64 @@ app.post('/paymongo-webhook', async (req, res) => {
       return res.sendStatus(400);
     }
 
-    // Reserve the event before applying credit. The unique MongoDB index blocks
-    // concurrent duplicate deliveries; the in-memory set is only a local fallback.
-    if (MONGODB_URI && mongoose.connection.readyState === 1) {
-      try {
-        await PaymentEventModel.create({ eventId: ev.id, status: 'processing', psid });
-      } catch (error) {
-        if (error.code === 11000) return res.sendStatus(200);
-        throw error;
-      }
-    } else {
-      if (processedPaymentEvents.has(ev.id)) return res.sendStatus(200);
-      processedPaymentEvents.add(ev.id);
-    }
-
-    const user = await loadUserFromDB(psid);
-    if (!user) {
-      if (!MONGODB_URI || mongoose.connection.readyState !== 1) processedPaymentEvents.delete(ev.id);
-      else await PaymentEventModel.deleteOne({ eventId: ev.id, status: 'processing' });
-      return res.sendStatus(404);
-    }
-
-    const previousCoins = user.coins;
-    user.coins = Number.isFinite(user.coins) && user.coins >= 0 ? user.coins + coins : coins;
-    const saved = await saveUserToDB(psid);
-    if (!saved) {
-      user.coins = previousCoins;
-      if (!MONGODB_URI || mongoose.connection.readyState !== 1) processedPaymentEvents.delete(ev.id);
-      else await PaymentEventModel.deleteOne({ eventId: ev.id, status: 'processing' });
+    // [FIXED] Payments require MongoDB so event deduplication and wallet credit are durable.
+    // [FIXED] Create the event, update the wallet, and mark it processed in ONE transaction.
+    // A crash rolls back all three changes, allowing PayMongo to retry safely.
+    if (!MONGODB_URI || mongoose.connection.readyState !== 1) {
+      console.error('PayMongo webhook deferred: MongoDB is not connected; payment was not credited.');
       return res.sendStatus(503);
     }
-    if (MONGODB_URI && mongoose.connection.readyState === 1) {
-      await PaymentEventModel.updateOne({ eventId: ev.id }, { $set: { status: 'processed' } });
-    }
+
+    let newBalance;
+    const session = await mongoose.startSession();
     try {
-      await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${user.coins} coins\n\nEnjoy JojoWorld V26! 🚀`);
+      await session.withTransaction(async () => {
+        // Unique eventId is the idempotency key. Duplicate deliveries abort this transaction.
+        await PaymentEventModel.create([{ eventId: ev.id, status: 'processing', psid }], { session });
+
+        const userDoc = await UserModel.findOne({ psid }).session(session);
+        if (!userDoc || !userDoc.data) {
+          const missingUserError = new Error('PAYMENT_USER_NOT_FOUND');
+          missingUserError.code = 'PAYMENT_USER_NOT_FOUND';
+          throw missingUserError;
+        }
+
+        const updatedUser = { ...userDoc.data };
+        const currentCoins = Number(updatedUser.coins);
+        updatedUser.coins = Number.isFinite(currentCoins) && currentCoins >= 0
+          ? currentCoins + coins
+          : coins;
+        newBalance = updatedUser.coins;
+
+        await UserModel.updateOne(
+          { psid },
+          { $set: { data: updatedUser } },
+          { session, runValidators: true }
+        );
+        await PaymentEventModel.updateOne(
+          { eventId: ev.id, status: 'processing' },
+          { $set: { status: 'processed' } },
+          { session }
+        );
+
+        // Refresh the in-memory cache only after the database transaction commits.
+        db.users[psid] = updatedUser;
+      });
+    } catch (paymentError) {
+      if (paymentError.code === 11000) {
+        // Already processed or being handled by another delivery; do not credit twice.
+        return res.sendStatus(200);
+      }
+      if (paymentError.code === 'PAYMENT_USER_NOT_FOUND') {
+        return res.sendStatus(404);
+      }
+      throw paymentError;
+    } finally {
+      await session.endSession();
+    }
+
+    try {
+      await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${newBalance} coins\n\nEnjoy JojoWorld V26! 🚀`);
     } catch (notifyError) {
       console.error('Payment credited but Messenger notification failed:', notifyError.message);
     }
