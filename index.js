@@ -473,7 +473,7 @@ async function generateShopCanvas() {
 
   panel(35, 182, 730, 184, '#ffd34f', '👑 VIP & PROFILE FRAMES');
   card(52, 223, 345, 128, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
-  card(413, 223, 335, 128, '#ffb83f', '👑', 'ROYALTY PROFILE FRAME', '150 COINS', 'ROYAL CROWN • GOLD FILIGREE');
+  card(413, 223, 335, 128, '#ffb83f', '👑', 'ROYALTY PROFILE FRAME', '500 COINS', 'ROYAL CROWN • GOLD FILIGREE');
 
   panel(35, 384, 730, 550, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
   const effects = [
@@ -530,7 +530,7 @@ async function generateShopProductPreview(product, user) {
   const key = String(product || '').toLowerCase();
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
-    frame: { title: 'ROYALTY PROFILE FRAME', price: '150 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'ROYAL CROWN • GOLD FILIGREE' },
+    frame: { title: 'ROYALTY PROFILE FRAME', price: '500 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'ROYAL CROWN • GOLD FILIGREE' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -1477,7 +1477,7 @@ A new user joined using your link! 🎁
         if (upperRaw.startsWith('PREVIEW_')) {
           const key = upperRaw.slice('PREVIEW_'.length).toLowerCase();
           const product = key.startsWith('house_') ? key.slice(6) : key;
-          const priceLabels = {vip:'1,000c',frame:'150c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
+          const priceLabels = {vip:'1,000c',frame:'500c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
           if (!priceLabels[product]) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
           const image = await generateShopProductPreview(product, user);
           const purchasePayload = product === 'vip' ? 'BUY_VIP'
@@ -2368,7 +2368,7 @@ ${renderGiftCatalog()}
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
-            { content_type: "text", title: "👑 Royalty Frame 150c", payload: "PREVIEW_FRAME" },
+            { content_type: "text", title: "👑 Royalty Frame 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
@@ -2400,11 +2400,11 @@ ${renderGiftCatalog()}
         if (upperRaw === "BUY_FRAME") {
           // [FIXED] Duplicate gold-frame validation happens before deducting coins.
           if (user.royalFrame || user.goldFrame || String(user.frame || "").toLowerCase().includes("royal") || String(user.frame || "").toLowerCase().includes("gold")) { sendShopResult(psid, "❌ Meron ka na Royalty Frame boss!"); continue; }
-          if (user.coins < 150) {
-            sendShopResult(psid, `❌ Not enough coins! Royalty Frame costs 150 coins.`);
+          if (user.coins < 500) {
+            sendShopResult(psid, `❌ Not enough coins! Royalty Frame costs 500 coins.`);
           } else {
             const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame, royalFrame: user.royalFrame };
-            user.coins -= 150;
+            user.coins -= 500;
             user.goldFrame = true;
             user.royalFrame = true;
             user.frame = "👑 Royalty Frame";
