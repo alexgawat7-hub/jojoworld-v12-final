@@ -1182,28 +1182,42 @@ function sendMenu(id) {
 💘 Find match & connect worldwide
 🎁 Daily bonuses & Scatter rewards
 
-[1] 👤 My Profile
-[2] 💘 Find Match (10c)
-[3] 💰 Top-Up Center
-[4] 🎁 Daily Bonus
-[5] 🎡 Scatter Wheel & Jackpot
-[6] 🛍️ Profile Shop & Themes
-[7] 🏆 Leaderboards
-[8] 🔗 Referral Invite
-
-💬 *Tip: Select options below or type 1-8!*`, [
-    { content_type: "text", title: "👤 Profile (1)", payload: "PROFILE" },
-    { content_type: "text", title: "💘 Match (2)", payload: "FIND MATCH" },
-    { content_type: "text", title: "💰 Top Up (3)", payload: "TOP UP" },
-    { content_type: "text", title: "🎁 Daily (4)", payload: "DAILY" },
-    { content_type: "text", title: "🎡 Spin (5)", payload: "SPIN" },
-    { content_type: "text", title: "🛍️ Shop (6)", payload: "SHOP" },
-    { content_type: "text", title: "🏆 Rank (7)", payload: "LEADERBOARD" },
-    { content_type: "text", title: "🔗 Referral (8)", payload: "INVITE" }
+Piliin ang section na gusto mong buksan:`, [
+    { content_type: "text", title: "👤 Profile", payload: "PROFILE" },
+    { content_type: "text", title: "💘 Find Match", payload: "FIND MATCH" },
+    { content_type: "text", title: "🛍️ Shop", payload: "SHOP" },
+    { content_type: "text", title: "☰ More Commands", payload: "MENU_MORE" }
   ]);
 }
 
-function sendTopupMenu(id) {
+function sendMoreMenu(id) {
+  send(id, `☰ JOJOWORLD • MORE COMMANDS
+━━━━━━━━━━━━━━━━━━━━
+Piliin ang command na kailangan mo:`, [
+    { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
+    { content_type: "text", title: "🎁 Daily Bonus", payload: "DAILY" },
+    { content_type: "text", title: "🎡 Scatter Spin", payload: "SPIN" },
+    { content_type: "text", title: "🏆 Leaderboard", payload: "LEADERBOARD" },
+    { content_type: "text", title: "🔗 Referral", payload: "INVITE" },
+    { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+  ]);
+}
+
+function sendTopupMenu(id, page = 1) {
+  const packages = [
+    { content_type: "text", title: "💰 P20 = 120c", payload: "TOP UP 20" },
+    { content_type: "text", title: "💰 P50 = 300c", payload: "TOP UP 50" },
+    { content_type: "text", title: "⭐ P80 = 500c", payload: "TOP UP 80" },
+    { content_type: "text", title: "💰 P100 = 700c", payload: "TOP UP 100" },
+    { content_type: "text", title: "💰 P200 = 1600c", payload: "TOP UP 200" },
+    { content_type: "text", title: "💰 P500 = 4500c", payload: "TOP UP 500" }
+  ];
+  const firstPage = page !== 2;
+  const visiblePackages = firstPage ? packages.slice(0, 3) : packages.slice(3);
+  const buttons = visiblePackages.slice();
+  if (firstPage) buttons.push({ content_type: "text", title: "➡️ More Packages", payload: "TOPUP_MORE" });
+  else buttons.push({ content_type: "text", title: "↩️ Packages 1–3", payload: "TOP UP" });
+  buttons.push({ content_type: "text", title: "↩️ More Commands", payload: "MENU_MORE" });
   send(id, `💰 JOJOWORLD TOP-UP CENTER
 ━━━━━━━━━━━━━━━━━━━━
 🔒 Secure PayMongo Gateway (GCash/Maya/Card)
@@ -1217,15 +1231,7 @@ function sendTopupMenu(id) {
 📦 P200 = 1600 Coins
 🚀 P500 = 4500 Coins (VIP CHOICE!)
 
-Select a package below:`, [
-    { content_type: "text", title: "💰 P20 = 120c", payload: "TOP UP 20" },
-    { content_type: "text", title: "💰 P50 = 300c", payload: "TOP UP 50" },
-    { content_type: "text", title: "⭐ P80 = 500c", payload: "TOP UP 80" },
-    { content_type: "text", title: "💰 P100 = 700c", payload: "TOP UP 100" },
-    { content_type: "text", title: "💰 P200 = 1600c", payload: "TOP UP 200" },
-    { content_type: "text", title: "💰 P500 = 4500c", payload: "TOP UP 500" },
-    { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-  ]);
+${firstPage ? "Packages 1–3 — tap More Packages for the rest." : "Packages 4–6 — choose your package below."}`, buttons);
 }
 
 // ================= WEBHOOKS =================
@@ -1989,22 +1995,27 @@ A new user joined using your link! 🎁
         }
 
         // [FIXED] RELATIONSHIP GOAL SELECTOR — show all choices together in one Messenger quick-reply set.
-        if (upperRaw === "SET_GOAL_MENU") {
-          send(psid, `🎯 CHOOSE YOUR GOAL
-━━━━━━━━━━━━━━━━━━━━
-Piliin ang goal na pinakaangkop sa iyo:`, [
+        if (upperRaw === "SET_GOAL_MENU" || upperRaw === "SET_GOAL_MORE") {
+          const firstGoalPage = upperRaw === "SET_GOAL_MENU";
+          const goalButtons = firstGoalPage ? [
             { content_type: "text", title: "💍 Serious Rel.", payload: "GOAL_💍 Serious Relationship" },
             { content_type: "text", title: "❤️ Long-Term", payload: "GOAL_❤️ Long-Term Relationship" },
             { content_type: "text", title: "💒 Marriage", payload: "GOAL_💒 Marriage" },
             { content_type: "text", title: "💕 Casual Dating", payload: "GOAL_💕 Casual Dating" },
             { content_type: "text", title: "☕ Coffee Dates", payload: "GOAL_☕ Coffee Dates" },
+            { content_type: "text", title: "➡️ More Goals", payload: "SET_GOAL_MORE" }
+          ] : [
             { content_type: "text", title: "🎮 Gaming Buddy", payload: "GOAL_🎮 Gaming Buddy" },
             { content_type: "text", title: "✈️ Travel Partner", payload: "GOAL_✈️ Travel Partner" },
             { content_type: "text", title: "💬 Chat Buddy", payload: "GOAL_💬 Chat Buddy" },
             { content_type: "text", title: "👫 Friendship", payload: "GOAL_👫 Friendship" },
             { content_type: "text", title: "💖 New Friends", payload: "GOAL_💖 New Friends" },
-            { content_type: "text", title: "↩️ Back to Profile", payload: "PROFILE" }
-          ]);
+            { content_type: "text", title: "↩️ Back to Goals", payload: "SET_GOAL_MENU" }
+          ];
+          goalButtons.push({ content_type: "text", title: "↩️ Back to Profile", payload: "PROFILE" });
+          send(psid, `🎯 CHOOSE YOUR GOAL
+━━━━━━━━━━━━━━━━━━━━
+${firstGoalPage ? "Goals 1–5 — tap More Goals to see the rest." : "Goals 6–10 — choose your goal below."}`, goalButtons);
           continue;
         }
 
@@ -2425,7 +2436,17 @@ ${renderGiftCatalog()}
           continue;
         }
 
-        // TOP UP & PAYMONGO ROUTING
+        // TOP UP & PAYMONGO ROUTING — package choices are split into compact pages.
+        if (upperRaw === "MENU_MORE") {
+          sendMoreMenu(psid);
+          continue;
+        }
+
+        if (upperRaw === "TOPUP_MORE") {
+          sendTopupMenu(psid, 2);
+          continue;
+        }
+
         if (cleanText === "top up" || upperRaw === "TOP UP") {
           sendTopupMenu(psid);
           continue;
@@ -2481,26 +2502,32 @@ ${renderGiftCatalog()}
 
         // [UPGRADED V28] Messenger shop with category buttons and direct purchase quick replies.
         // Messenger quick replies support up to 13 items, so the catalog is split into categories.
-        if (upperRaw === 'SHOP_EFFECTS') {
+        if (upperRaw === 'SHOP_EFFECTS' || upperRaw === 'SHOP_EFFECTS_MORE') {
           const previousPage = user.currentPage;
           user.currentPage = "SHOP";
-          // [FIXED] Do not show the category when the page state cannot be saved.
           if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
-          send(psid, "💎 JOJOWORLD SHOP — NAME EFFECTS\nPumili ng effect sa mga button sa ibaba para makita ang visual at bumili.", [
+          const firstEffectsPage = upperRaw === 'SHOP_EFFECTS';
+          const effectButtons = firstEffectsPage ? [
             { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
             { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
             { content_type: "text", title: "💖 Heart 2,500c", payload: "PREVIEW_heart" },
             { content_type: "text", title: "🔥 Fire 2,500c", payload: "PREVIEW_fire" },
             { content_type: "text", title: "❄️ Ice 2,500c", payload: "PREVIEW_ice" },
             { content_type: "text", title: "⚡ Neon 3,000c", payload: "PREVIEW_neon" },
+            { content_type: "text", title: "➡️ More Effects", payload: "SHOP_EFFECTS_MORE" }
+          ] : [
             { content_type: "text", title: "🌸 Blossom 2,000c", payload: "PREVIEW_blossom" },
             { content_type: "text", title: "🖤 Dark 2,500c", payload: "PREVIEW_dark" },
             { content_type: "text", title: "🔴 Red 1,000c", payload: "PREVIEW_red" },
             { content_type: "text", title: "🔵 Blue 1,000c", payload: "PREVIEW_blue" },
             { content_type: "text", title: "🟢 Green 1,000c", payload: "PREVIEW_green" },
             { content_type: "text", title: "🟡 Yellow 1,000c", payload: "PREVIEW_yellow" },
-            { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
-          ]);
+            { content_type: "text", title: "↩️ Back to Effects", payload: "SHOP_EFFECTS" }
+          ];
+          effectButtons.push({ content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" });
+          send(psid, `💎 JOJOWORLD SHOP — NAME EFFECTS
+Pumili ng effect sa mga button sa ibaba para makita ang visual at bumili.
+${firstEffectsPage ? "Effects 1–6 — tap More Effects to see the rest." : "Effects 7–12 — choose an effect below."}`, effectButtons);
           continue;
         }
 
