@@ -948,8 +948,17 @@ app.post('/paymongo-webhook', async (req, res) => {
     }
     if (paymentAttributes.status !== 'paid') return res.sendStatus(200);
 
+    // [FIXED] Reject non-PHP payments before interpreting the amount as pesos.
+    // PayMongo amounts are expressed in the smallest currency unit (centavos for PHP).
+    const paymentCurrency = String(paymentAttributes.currency || '').toUpperCase();
+    if (paymentCurrency !== 'PHP') {
+      console.warn('PayMongo webhook ignored: missing or unsupported payment currency.');
+      return res.sendStatus(400);
+    }
+
+    // [FIXED] Only accept exact whole-peso top-up package amounts.
     const amountInPesos = Number(paymentAttributes.amount) / 100;
-    if (!Number.isFinite(amountInPesos) || !Number.isInteger(amountInPesos)) {
+    if (!Number.isFinite(amountInPesos) || !Number.isInteger(amountInPesos) || amountInPesos <= 0) {
       console.warn('PayMongo webhook ignored: invalid payment amount.');
       return res.sendStatus(400);
     }
