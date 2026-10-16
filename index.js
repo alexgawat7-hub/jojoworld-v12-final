@@ -44,7 +44,7 @@ const META_APP_SECRET = configuredValue(process.env.META_APP_SECRET);
 const MONGODB_URI = configuredValue(process.env.MONGODB_URI);
 
 // PAGE NAME FOR MESSENGER LINK
-const PAGE_USERNAME = configuredValue(process.env.PAGE_USERNAME) || "Princelucky";
+const PAGE_USERNAME = configuredValue(process.env.PAGE_USERNAME) || "100064525073153";
 
 const UserSchema = new mongoose.Schema({ psid: { type: String, required: true, unique: true }, data: Object }, { strict: false });
 const UserModel = mongoose.models.JUser || mongoose.model('JUser', UserSchema);
@@ -1404,34 +1404,23 @@ app.post('/webhook', async (req, res) => {
           };
           user = db.users[psid];
 
-          // PROCESS REFERRAL REWARD
-          if (referralParam && referralParam.startsWith("REF_")) {
-            let referrerPsid = referralParam.replace("REF_", "");
-            if (referrerPsid !== psid) {
-              let referrer = await loadUserFromDB(referrerPsid);
-              if (referrer) {
-                const newUserSnapshot = JSON.parse(JSON.stringify(user));
-                const referrerSnapshot = JSON.parse(JSON.stringify(referrer));
-                const previousReferrerCoins = Number(referrer.coins);
-                user.coins = (Number.isFinite(Number(user.coins)) ? Number(user.coins) : 0) + 50;
-                referrer.coins = (Number.isFinite(previousReferrerCoins) && previousReferrerCoins >= 0 ? previousReferrerCoins : 0) + 100;
-                referrer.refCount = (referrer.refCount || 0) + 1;
-                const referralSaved = await saveUserPair(psid, referrerPsid);
-                if (referralSaved) {
-                  send(referrerPsid, `🎉 REFERRAL SUCCESS!
-A new user joined using your link! 🎁
-💰 +100 Coins credited to your wallet!`);
-                } else {
-                  db.users[psid] = newUserSnapshot;
-                  db.users[referrerPsid] = referrerSnapshot;
-                  user = db.users[psid];
-                  send(psid, "⚠️ Hindi na-save ang referral reward. Hindi naibigay ang bonus; maaari ka pa ring magpatuloy.");
-                }
+          await saveUserToDB(psid);
+        }
+
+        // Save the referral source now, but do not reward anyone until registration succeeds.
+        if (referralParam && referralParam.startsWith("REF_") && user.registered !== true && !user.referralRewarded) {
+          const referrerPsid = referralParam.slice(4).trim();
+          if (referrerPsid && referrerPsid !== psid && !user.pendingReferrerPsid) {
+            const referrer = await loadUserFromDB(referrerPsid);
+            if (referrer) {
+              user.pendingReferrerPsid = referrerPsid;
+              if (!await saveUserToDB(psid, { saveJackpot: false })) {
+                delete user.pendingReferrerPsid;
+                send(psid, "⚠️ Hindi na-save ang referral link. Pakisubukang muli.");
+                continue;
               }
             }
           }
-
-          await saveUserToDB(psid);
         }
 
         const numericCoins = Number(user.coins);
@@ -1478,6 +1467,21 @@ A new user joined using your link! 🎁
 
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
+
+        // Registration is mandatory before any JojoWorld feature can be used.
+        // Keep registration commands available so a new user can complete signup.
+        if (user.registered !== true &&
+            !upperRaw.startsWith("REGISTER ") &&
+            upperRaw !== "REGISTER" &&
+            upperRaw !== "REGISTER_HELP") {
+          send(psid, "👋 Welcome to JojoWorld! Bago magamit ang features, mag-register muna.\n\n✍️ I-type: REGISTER Your Name\nExample: REGISTER Alex Gawat\n\nPag successful ang registration mo, saka maa-unlock ang profile, shop, match, coins, at iba pang features.");
+          continue;
+        }
+
+        if (user.registered !== true && (upperRaw === "REGISTER" || upperRaw === "REGISTER_HELP")) {
+          send(psid, "✍️ Para mag-register, i-type ang pangalan mo pagkatapos ng REGISTER.\nExample: REGISTER Alex Gawat");
+          continue;
+        }
 
         // [ADDED V28] Allow users to upload a Messenger photo by sending an image directly in chat.
         // [FIXED] Profile photos are changed ONLY after the user explicitly taps "Change Photo".
@@ -1553,15 +1557,50 @@ A new user joined using your link! 🎁
 
         // [FIXED] Reuse the daily house tax check performed earlier in this message handler.
 
-        // [ADDED] [FIXED] V28 registration/name validation: "register Your Name".
+        // Registration is persisted before any referral reward is issued.
         if (upperRaw.startsWith('REGISTER ')) {
           const cleanName = rawText.slice(9).replace(/[^\w\s]/gi, '').trim();
           if (cleanName.length < 3) { send(psid, '❌ Bawal emoji/symbols boss! Min 3 letters!'); continue; }
           if (user.registered === true) { send(psid, "❌ Registered ka na boss! Type 'profile'"); continue; }
-          const old = { name: user.name, registered: user.registered };
-          user.name = cleanName; user.registered = true; user.id = psid;
-          if (!await saveUserToDB(psid)) { Object.assign(user, old); send(psid, '⚠️ Hindi na-save ang registration. Try ulit.'); continue; }
-          send(psid, '✅ Registered ka na, boss! Type profile para makita ang profile mo.'); continue;
+
+          const userSnapshot = JSON.parse(JSON.stringify(user));
+          const referrerPsid = String(user.pendingReferrerPsid || '').trim();
+          const referrer = referrerPsid && referrerPsid !== psid ? await loadUserFromDB(referrerPsid) : null;
+          const referrerSnapshot = referrer ? JSON.parse(JSON.stringify(referrer)) : null;
+
+          user.name = cleanName;
+          user.registered = true;
+          user.id = psid;
+
+          if (referrer && !user.referralRewarded) {
+            const previousCoins = Number(referrer.coins);
+            referrer.coins = (Number.isFinite(previousCoins) && previousCoins >= 0 ? previousCoins : 0) + 100;
+            referrer.refCount = (Number(referrer.refCount) || 0) + 1;
+            user.referralRewarded = true;
+            delete user.pendingReferrerPsid;
+
+            if (!await saveUserPair(psid, referrerPsid)) {
+              db.users[psid] = userSnapshot;
+              db.users[referrerPsid] = referrerSnapshot;
+              user = db.users[psid];
+              send(psid, '⚠️ Hindi na-save ang registration/referral. Walang referral bonus na naibigay. Subukan ulit.');
+              continue;
+            }
+            send(referrerPsid, `🎉 REFERRAL SUCCESS!
+A new user successfully registered using your link! 🎁
+💰 +100 Coins credited to your wallet!`);
+          } else {
+            delete user.pendingReferrerPsid;
+            if (!await saveUserToDB(psid)) {
+              db.users[psid] = userSnapshot;
+              user = db.users[psid];
+              send(psid, '⚠️ Hindi na-save ang registration. Try ulit.');
+              continue;
+            }
+          }
+
+          send(psid, '✅ Registered ka na, boss! Type profile para makita ang profile mo.');
+          continue;
         }
         // [ADDED] V28 balance includes liquid coins, house value, and net worth.
         if (['BALANCE','WALLET'].includes(upperRaw.trim())) { send(psid, `💰 ${getDisplayName(user)}\\nCoins: ${user.coins}c\\nHouse value: ${getHouseValue(user.house)}c\\nNET WORTH: ${getNetWorth(user)}c\\nHouse tier: ${getHouseTier(user.house)}`); continue; }
@@ -2561,7 +2600,7 @@ ${renderGiftCatalog()}
 
         // REFERRAL MESSENGER DIRECT LINK
         if (cleanText === "invite" || upperRaw === "INVITE") {
-          let messengerLink = `https://m.me/${PAGE_USERNAME}?start=REF_${psid}`;
+          let messengerLink = `https://m.me/${PAGE_USERNAME}?ref=REF_${psid}`;
           send(psid, `🔗 REFERRAL & INVITE PROGRAM\n━━━━━━━━━━━━━━━━━━━━\n🎁 Share your unique Messenger link below to earn rewards!\n\n👇 Your Referral Link:\n${messengerLink}\n\n👥 Total Successful Invites: ${user.refCount || 0}\n💰 Earn +100 Coins for every friend who joins!`, [{ content_type: "text", title: "↩️ Menu", payload: "MENU" }]);
           continue;
         }
