@@ -1163,6 +1163,7 @@ A new user joined using your link! 🎁
         if (incomingImage) {
           const previousProfilePhotoData = user.profilePhotoData;
           const previousProfilePhotoUrl = user.profilePhotoUrl;
+          const wasAwaitingProfilePhoto = user.awaitingProfilePhoto;
           try {
             // [UPGRADED V28] Download the Messenger attachment and store a resized JPEG in MongoDB for persistence.
             const photoResponse = await axios.get(incomingImage.payload.url, {
@@ -1180,14 +1181,15 @@ A new user joined using your link! 🎁
             if (compressedPhoto.length > 2 * 1024 * 1024) throw new Error('Compressed profile photo exceeds 2 MB');
             user.profilePhotoData = compressedPhoto.toString('base64');
             delete user.profilePhotoUrl;
+            // [FIXED] Clear upload mode before the single persistence attempt, so a failed second save cannot leave it armed.
+            delete user.awaitingProfilePhoto;
             if (!await saveUserToDB(psid, { saveJackpot: false })) {
               if (previousProfilePhotoData) user.profilePhotoData = previousProfilePhotoData;
               else delete user.profilePhotoData;
               if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
+              if (wasAwaitingProfilePhoto) user.awaitingProfilePhoto = true;
               send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
             } else {
-              delete user.awaitingProfilePhoto;
-              await saveUserToDB(psid, { saveJackpot: false });
               send(psid, '📸 Profile photo saved! Check your Visual Profile to see it with your equipped frame.', [
                 { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
                 { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
