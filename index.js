@@ -1963,25 +1963,22 @@ A new user joined using your link! 🎁
           continue;
         }
 
-        // [UPGRADED V28] RELATIONSHIP GOAL SELECTOR — all choices, split into Messenger-safe groups.
+        // [FIXED] RELATIONSHIP GOAL SELECTOR — show all choices together in one Messenger quick-reply set.
         if (upperRaw === "SET_GOAL_MENU") {
-          send(psid, `🎯 SELECT RELATIONSHIP GOAL:\n━━━━━━━━━━━━━━━━━━━━\nChoose a goal below (1/4):`, [
+          send(psid, `🎯 CHOOSE YOUR GOAL
+━━━━━━━━━━━━━━━━━━━━
+Piliin ang goal na pinakaangkop sa iyo:`, [
             { content_type: "text", title: "💍 Serious Rel.", payload: "GOAL_💍 Serious Relationship" },
             { content_type: "text", title: "❤️ Long-Term", payload: "GOAL_❤️ Long-Term Relationship" },
-            { content_type: "text", title: "💒 Marriage", payload: "GOAL_💒 Marriage" }
-          ]);
-          send(psid, `🎯 MORE GOALS (2/4):`, [
+            { content_type: "text", title: "💒 Marriage", payload: "GOAL_💒 Marriage" },
             { content_type: "text", title: "💕 Casual Dating", payload: "GOAL_💕 Casual Dating" },
             { content_type: "text", title: "☕ Coffee Dates", payload: "GOAL_☕ Coffee Dates" },
-            { content_type: "text", title: "🎮 Gaming Buddy", payload: "GOAL_🎮 Gaming Buddy" }
-          ]);
-          send(psid, `🎯 MORE GOALS (3/4):`, [
+            { content_type: "text", title: "🎮 Gaming Buddy", payload: "GOAL_🎮 Gaming Buddy" },
             { content_type: "text", title: "✈️ Travel Partner", payload: "GOAL_✈️ Travel Partner" },
             { content_type: "text", title: "💬 Chat Buddy", payload: "GOAL_💬 Chat Buddy" },
-            { content_type: "text", title: "👫 Friendship", payload: "GOAL_👫 Friendship" }
-          ]);
-          send(psid, `🎯 MORE GOALS (4/4):`, [
-            { content_type: "text", title: "💖 New Friends", payload: "GOAL_💖 New Friends" }
+            { content_type: "text", title: "👫 Friendship", payload: "GOAL_👫 Friendship" },
+            { content_type: "text", title: "💖 New Friends", payload: "GOAL_💖 New Friends" },
+            { content_type: "text", title: "↩️ Back to Profile", payload: "PROFILE" }
           ]);
           continue;
         }
