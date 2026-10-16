@@ -1072,16 +1072,16 @@ async function generateLeaderboardCanvas(users) {
     grad.addColorStop(0, rank % 2 === 0 ? '#092843' : '#21113c'); grad.addColorStop(1, '#080f24');
     ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 88);
     ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 88); ctx.restore();
-    // [ADDED] Faceted-style rank badge.
-    ctx.fillStyle = color; ctx.beginPath();
-    for (let p = 0; p < 10; p++) {
-      const angle = -Math.PI / 2 + p * Math.PI / 5, rad = p % 2 === 0 ? 28 : 22;
-      const px = 78 + Math.cos(angle) * rad, py = y + 40 + Math.sin(angle) * rad;
-      if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 24px Sans'; ctx.fillText(String(rank), 78, y + 48);
     if (!item) {
+      // [FIXED V37] Show the rank badge only for empty slots; occupied rows use the avatar instead.
+      ctx.fillStyle = color; ctx.beginPath();
+      for (let p = 0; p < 10; p++) {
+        const angle = -Math.PI / 2 + p * Math.PI / 5, rad = p % 2 === 0 ? 28 : 22;
+        const px = 78 + Math.cos(angle) * rad, py = y + 40 + Math.sin(angle) * rad;
+        if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 24px Sans'; ctx.fillText(String(rank), 78, y + 48);
       ctx.textAlign = 'left'; ctx.fillStyle = '#a9c2d8'; ctx.font = 'bold 19px Sans'; ctx.fillText('OPEN RANK', 119, y + 33);
       ctx.fillStyle = '#7189a0'; ctx.font = '13px Sans'; ctx.fillText('Register and play to claim this spot', 119, y + 57);
       ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 13px Sans'; ctx.fillText('AVAILABLE', 744, y + 47);
@@ -1128,9 +1128,7 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillText('NET WORTH', 744, y + 49);
     ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 18px Sans';
     ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 76);
-    ctx.fillStyle = color; ctx.font = 'bold 12px Sans';
-    const effect = String(item.user.nameEffect || '').toUpperCase();
-    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 80);
+    // [FIXED V37] Removed the extra effect/RANKED PLAYER line so it cannot overlap net worth.
   }
 
   // [UPGRADED V28] Bright season footer and climb-to-the-top callout.
