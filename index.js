@@ -430,9 +430,29 @@ async function generateProfileCanvas(user) {
     label('✓ OWNED • PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
   }else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
   panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
-  panel(404,1015,368,220,'#7651a5');heading('GIFTS SHOWCASE',426,1053);
-  const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{},giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count)),giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
-  label('Total received: '+giftTotal,426,1086,15,'#ffe8a0');ctx.fillStyle='#c6d5f0';ctx.textAlign='left';ctx.font='15px Sans';const showcase=String(user.giftsShowcase||'None yet');canvasText(ctx,giftNames.length?giftNames.join(' • '):(showcase!=='None yet'?showcase:'No gifts yet 🎁'),426,1117,320,22,4);
+  panel(404,1015,368,220,'#d6a84b');heading('🎁 GIFTS SHOWCASE',426,1053);
+  const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
+  const giftCatalogForProfile={
+    ROSE:{icon:'🌹',name:'Red Rose'},COFFEE:{icon:'☕',name:'Coffee Cup'},
+    BEAR:{icon:'🧸',name:'Teddy Bear'},RING:{icon:'💍',name:'Diamond Ring'},
+    CAR:{icon:'🏎️',name:'Sports Car'}
+  };
+  const giftEntries=Object.entries(received).filter(([name,count])=>Number(count)>0);
+  const giftTotal=Math.max(Number(user.giftsCount)||0,giftEntries.reduce((sum,[name,count])=>sum+(Number(count)||0),0));
+  label('🏆 TOTAL GIFTS RECEIVED: '+giftTotal,426,1086,14,'#ffe8a0');
+  if(giftEntries.length){
+    giftEntries.slice(0,5).forEach(([name,count],index)=>{
+      const gift=giftCatalogForProfile[String(name).toUpperCase()]||{icon:'🎁',name:String(name).replace(/_/g,' ')};
+      const yy=1110+index*23;
+      ctx.fillStyle=index%2===0?'#20264b':'#171d3a';
+      rr(420,yy-16,326,20,7);ctx.fill();
+      label(gift.icon+' '+gift.name,430,yy,13,'#f4f7ff');
+      ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 13px Sans';ctx.fillText('× '+Number(count),735,yy);
+    });
+  }else{
+    const showcase=String(user.giftsShowcase||'None yet');
+    label(showcase!=='None yet'?showcase:'No gifts yet — be the first! 🎁',426,1124,13,'#c6d5f0');
+  }
   ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD  •  PROFILE & STATS',400,1280);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
