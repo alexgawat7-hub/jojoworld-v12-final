@@ -1002,34 +1002,26 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
     await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
-    // [FIXED] Wrap long full names into two lines; never cut the name to a single first word.
-    // [UPGRADED V28] Apply the purchased effect directly to Top 4–10 leaderboard names.
+    // [FIXED V33] Every Top 4–10 name starts at the same x/y position and stays on one line.
+    // Long names shrink smoothly, then use an ellipsis only if they still cannot fit.
+    // This prevents names from colliding with the coin row or the fixed NET WORTH column.
     const rowEffect = String(item.user.nameEffect || '').toLowerCase();
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff';
+    const nameX = 184, nameY = y + 32, nameMaxWidth = 540;
+    let displayRowName = name;
     let rowNameFontSize = 22;
+    ctx.textAlign = 'left';
     ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
-    let rowNameLines = [], rowNameLine = '';
-    for (const word of name.split(/\s+/)) {
-      const candidate = rowNameLine ? rowNameLine + ' ' + word : word;
-      if (ctx.measureText(candidate).width > 555 && rowNameLine) {
-        rowNameLines.push(rowNameLine);
-        rowNameLine = word;
-      } else rowNameLine = candidate;
-    }
-    if (rowNameLine) rowNameLines.push(rowNameLine);
-    while (rowNameLines.some(line => ctx.measureText(line).width > 555) && rowNameFontSize > 13) {
+    while (ctx.measureText(displayRowName).width > nameMaxWidth && rowNameFontSize > 12) {
       rowNameFontSize--;
       ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
     }
-    if (rowNameLines.length > 2) {
-      rowNameLines = [rowNameLines.slice(0, rowNameLines.length - 1).join(' '), rowNameLines[rowNameLines.length - 1]];
-      while (ctx.measureText(rowNameLines[0]).width > 555 && rowNameFontSize > 13) {
-        rowNameFontSize--;
-        ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
+    if (ctx.measureText(displayRowName).width > nameMaxWidth) {
+      while (displayRowName.length > 1 && ctx.measureText(displayRowName + '…').width > nameMaxWidth) {
+        displayRowName = displayRowName.slice(0, -1);
       }
+      displayRowName = displayRowName.trimEnd() + '…';
     }
-    drawEffectNameLine(rowNameLines[0] || name, 184, y + (rowNameLines[1] ? 25 : 32), rowNameFontSize, rowEffect, 555);
-    if (rowNameLines[1]) drawEffectNameLine(rowNameLines[1], 184, y + 47, rowNameFontSize, rowEffect, 555);
+    drawEffectNameLine(displayRowName, nameX, nameY, rowNameFontSize, rowEffect, nameMaxWidth);
     // [FIXED] Keep the lower stats aligned in fixed columns below the complete name.
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
     ctx.fillText(coins.toLocaleString('en-US') + ' coins', 184, y + 70);
