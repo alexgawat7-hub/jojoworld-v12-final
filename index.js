@@ -287,53 +287,101 @@ async function generateProfileCanvas(user) {
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateShopCanvas() {
-  // [UPGRADED V28] Premium neon shop poster based on the user's sample.
-  const W = 800, H = 1100, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
+  const W = 800, H = 1480, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#060511'); bg.addColorStop(0.5, '#10102b'); bg.addColorStop(1, '#020b18');
+  bg.addColorStop(0, '#050510'); bg.addColorStop(0.45, '#11102d'); bg.addColorStop(1, '#020914');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 190; i++) {
     const x = (i * 131 + 29) % (W - 8) + 4, y = (i * 79 + 17) % (H - 8) + 4;
     ctx.fillStyle = ['#39efff', '#ff48e9', '#ffd75b', '#a77bff'][i % 4];
-    ctx.globalAlpha = 0.12 + (i % 4) * 0.08; ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.4 : 1, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.13 + (i % 4) * 0.075; ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.4 : 1, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 20; ctx.strokeStyle = '#35eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, W - 36, H - 36);
-  ctx.shadowColor = '#ec48ff'; ctx.strokeStyle = '#ec48ff'; ctx.lineWidth = 1.5; ctx.strokeRect(29, 29, W - 58, H - 58); ctx.shadowBlur = 0;
-  ctx.textAlign = 'center'; ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; ctx.fillStyle = '#65ffff'; ctx.font = 'bold 43px Sans'; ctx.fillText('JOJOWORLD SHOP', 400, 82);
-  ctx.shadowBlur = 0; ctx.fillStyle = '#ff8ff1'; ctx.font = 'bold 22px Sans'; ctx.fillText('💎 PREMIUM PROFILE UPGRADES', 400, 121);
+  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 22; ctx.strokeStyle = '#35eaff'; ctx.lineWidth = 4; ctx.strokeRect(15, 15, W - 30, H - 30);
+  ctx.shadowColor = '#ec48ff'; ctx.strokeStyle = '#ec48ff'; ctx.lineWidth = 1.5; ctx.strokeRect(27, 27, W - 54, H - 54); ctx.shadowBlur = 0;
+
+  const text = (value, x, y, size, color, align = 'center', bold = true) => {
+    ctx.textAlign = align; ctx.fillStyle = color; ctx.font = (bold ? 'bold ' : '') + size + 'px Sans'; ctx.fillText(value, x, y);
+  };
   const panel = (x, y, w, h, color, title) => {
-    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#15132c'); g.addColorStop(1, '#080f1d');
-    ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 9; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore();
-    ctx.textAlign = 'left'; ctx.fillStyle = color; ctx.font = 'bold 22px Sans'; ctx.fillText(title, x + 18, y + 32);
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#181632'); g.addColorStop(1, '#070e1d');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore();
+    text(title, x + 18, y + 31, 21, color, 'left');
   };
-  const line = (x, y, title, price, color = '#eafaff') => {
-    ctx.textAlign = 'left'; ctx.fillStyle = color; ctx.font = 'bold 18px Sans'; ctx.fillText(title, x, y);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe16b'; ctx.font = 'bold 18px Sans'; ctx.fillText(price, 742, y);
+  const card = (x, y, w, h, color, emoji, title, price, subtitle) => {
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#17172e'); g.addColorStop(1, '#080d1a');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 11; ctx.strokeStyle = color; ctx.lineWidth = 1.7; ctx.strokeRect(x, y, w, h); ctx.restore();
+    // [ADDED] Item illustration window makes the item itself the visual focus.
+    ctx.fillStyle = '#050914'; ctx.fillRect(x + 7, y + 7, w - 14, Math.max(44, h * 0.43));
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 18; text(emoji, x + w / 2, y + h * 0.36, Math.min(42, w * 0.28), color); ctx.restore();
+    text(title, x + w / 2, y + h * 0.60, Math.min(15, w * 0.12), '#f3f7ff');
+    text(price, x + w / 2, y + h * 0.76, Math.min(16, w * 0.13), '#ffe16b');
+    // Bright visual BUY label; Messenger quick replies below the image perform the actual action.
+    const bh = 24, by = y + h - bh - 7;
+    const buy = ctx.createLinearGradient(x, by, x, by + bh); buy.addColorStop(0, '#b9ff64'); buy.addColorStop(1, '#0cba70');
+    ctx.fillStyle = buy; ctx.fillRect(x + 8, by, w - 16, bh);
+    text('BUY / PREVIEW', x + w / 2, by + 17, 11, '#042719');
+    if (subtitle) text(subtitle, x + w / 2, y + h * 0.69, 9, '#a9c6de', 'center', false);
   };
-  panel(48, 151, 704, 130, '#ff59e8', '👑 PROFILE UPGRADES');
-  line(72, 218, '👑 VIP Verified Badge', '1,000c');
-  line(72, 253, '✨ Gold Profile Frame', '150c');
-  panel(48, 300, 704, 438, '#5bffff', '💎 NAME EFFECTS');
-  ctx.fillStyle = '#aebed9'; ctx.font = '15px Sans'; ctx.textAlign = 'left'; ctx.fillText('LEGENDARY • 8 PREMIUM STYLES', 72, 365);
-  line(72, 405, '🌈 Rainbow [RARE]', '5,000c');
-  line(72, 445, '✨ Sparkle [MYTHIC]', '10,000c');
-  line(72, 485, '💖 Heart [LOVE]', '2,500c');
-  line(72, 525, '🔥 Fire [HOT]', '2,500c');
-  line(72, 565, '❄️ Ice [COLD]', '2,500c');
-  ctx.strokeStyle = '#5bffff'; ctx.globalAlpha = 0.65; ctx.beginPath(); ctx.moveTo(72, 586); ctx.lineTo(728, 586); ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.fillStyle = '#ff8ff1'; ctx.textAlign = 'left'; ctx.font = 'bold 15px Sans'; ctx.fillText('EPIC • NEON COLLECTION', 72, 616);
-  line(72, 653, '⚡ Neon [NEON]', '3,000c');
-  line(72, 691, '🌸 Blossom • 🖤 Dark', '2,000c / 2,500c');
-  ctx.fillStyle = '#aebed9'; ctx.font = '14px Sans'; ctx.textAlign = 'left'; ctx.fillText('🔴 Red • 🔵 Blue • 🟢 Green • 🟡 Yellow — 1,000c each', 72, 720);
-  panel(48, 757, 704, 220, '#a77bff', '🏠 HOUSE COLLECTION');
-  line(72, 819, '🛖 Kubo', '1,500c');
-  line(72, 858, '🏡 Bahay  • requires Kubo', '5,000c');
-  line(72, 897, '🏰 Mansion • requires Bahay', '15,000c');
-  line(72, 936, '🏢 Building • requires Mansion', '40,000c');
-  ctx.textAlign = 'center'; ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 12; ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 19px Sans';
-  ctx.fillText('CHOOSE AN ITEM BELOW TO BUY', 400, 1024); ctx.shadowBlur = 0;
-  ctx.fillStyle = '#aebed9'; ctx.font = '13px Sans'; ctx.fillText('Coins are checked • purchases save to your profile', 400, 1050);
+
+  text('♛ JOJOWORLD SHOP ♛', 400, 77, 43, '#65ffff');
+  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; text('UPGRADE YOUR PROFILE • SHOW YOUR STYLE', 400, 112, 16, '#ff8ff1'); ctx.shadowBlur = 0;
+  text('✨ PICK AN ITEM TO SEE ITS PREVIEW ✨', 400, 145, 14, '#d8e9ff');
+
+  panel(35, 170, 730, 196, '#ffd34f', '👑 VIP & PROFILE FRAMES');
+  card(52, 216, 345, 133, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
+  card(413, 216, 335, 133, '#ffb83f', '💎', 'GOLD PROFILE FRAME', '150 COINS', 'GOLD BORDER');
+
+  panel(35, 384, 730, 550, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
+  const effects = [
+    ['🌈','RAINBOW','5,000c','#ff64d9'], ['✨','SPARKLE','10,000c','#d7a0ff'], ['💖','HEART','2,500c','#ff62b5'],
+    ['🔥','FIRE','2,500c','#ff8748'], ['❄️','ICE','2,500c','#62eaff'], ['⚡','NEON','3,000c','#4affff'],
+    ['🌸','BLOSSOM','2,000c','#ffa0dc'], ['🖤','DARK','2,500c','#b99bff'], ['🔴','RED','1,000c','#ff5555'],
+    ['🔵','BLUE','1,000c','#59aaff'], ['🟢','GREEN','1,000c','#65f3a2'], ['🟡','YELLOW','1,000c','#ffe45c']
+  ];
+  const ew = 224, eh = 112, ex = [52, 288, 524], ey = [431, 550, 669, 788];
+  effects.forEach((e, i) => card(ex[i % 3], ey[Math.floor(i / 3)], ew, eh, e[3], e[0], e[1], e[2], 'NAME EFFECT'));
+
+  panel(35, 952, 730, 300, '#55efff', '🏠 HOUSE COLLECTION • UPGRADE YOUR HOME');
+  const houses = [
+    ['🛖','KUBO','1,500c','#e8c58e'], ['🏡','BAHAY','5,000c','#65eaff'],
+    ['🏰','MANSION','15,000c','#c79bff'], ['🏢','BUILDING','40,000c','#ffd34f']
+  ];
+  const hw = 168, hh = 205, hx = [51, 229, 407, 585];
+  houses.forEach((h, i) => {
+    const x = hx[i], y = 995, w = hw, ht = hh, color = h[3];
+    const g = ctx.createLinearGradient(x, y, x + w, y + ht); g.addColorStop(0, '#1b1a32'); g.addColorStop(1, '#070d1b');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, ht); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 10; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(x, y, w, ht); ctx.restore();
+    // [ADDED] Illustrated house thumbnails drawn directly on canvas, not generic placeholder panels.
+    ctx.fillStyle = '#050914'; ctx.fillRect(x + 7, y + 7, w - 14, 102);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 13;
+    if (i === 0) {
+      ctx.fillStyle = '#b88b53'; ctx.beginPath(); ctx.moveTo(x+25,y+58); ctx.lineTo(x+w/2,y+20); ctx.lineTo(x+w-25,y+58); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8e6038'; ctx.fillRect(x+34,y+58,w-68,43); ctx.fillStyle = '#3b2418'; ctx.fillRect(x+w/2-10,y+75,20,26);
+    } else if (i === 1) {
+      ctx.fillStyle = '#4aa8ff'; ctx.beginPath(); ctx.moveTo(x+24,y+59); ctx.lineTo(x+w/2,y+18); ctx.lineTo(x+w-24,y+59); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#e6c18b'; ctx.fillRect(x+31,y+59,w-62,42); ctx.fillStyle = '#3d2b28'; ctx.fillRect(x+w/2-10,y+76,20,25);
+    } else if (i === 2) {
+      ctx.fillStyle = '#d5a4ff'; ctx.fillRect(x+28,y+43,w-56,58); ctx.fillRect(x+39,y+25,26,18); ctx.fillRect(x+w-65,y+25,26,18);
+      ctx.fillStyle = '#61eaff'; for(let k=0;k<3;k++) ctx.fillRect(x+38+k*30,y+55,17,15);
+    } else {
+      ctx.fillStyle = '#42dfff'; ctx.fillRect(x+38,y+17,w-76,84); ctx.fillStyle = '#08162d';
+      for(let yy=y+27;yy<y+88;yy+=19) for(let xx=x+47;xx<x+w-48;xx+=21) ctx.fillRect(xx,yy,11,10);
+    }
+    ctx.restore();
+    text(h[1], x + w/2, y + 132, 15, '#f4f7ff');
+    text(h[2], x + w/2, y + 158, 17, '#ffe16b');
+    ctx.fillStyle = '#16d98a'; ctx.fillRect(x + 12, y + 169, w - 24, 25); text('BUY / PREVIEW', x+w/2, y+186, 11, '#052b21');
+  });
+
+  // [ADDED] Clear action hint; real Messenger quick replies are sent alongside this image.
+  ctx.textAlign = 'center'; ctx.shadowColor = '#36efff'; ctx.shadowBlur = 12;
+  text('TAP A SHOP BUTTON BELOW TO PREVIEW & BUY', 400, 1292, 17, '#5af4ff'); ctx.shadowBlur = 0;
+  text('COINS CHECKED • CONFIRM BEFORE PURCHASE', 400, 1320, 13, '#b6c9e4');
+  text('MORE STYLE • MORE STATUS • MORE JOJOWORLD', 400, 1370, 15, '#ff8ff1');
+  text('BE LEGENDARY!', 400, 1417, 27, '#ffe16b');
   const file = path.join(cacheDir, 'shop.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateShopProductPreview(product, user) {
