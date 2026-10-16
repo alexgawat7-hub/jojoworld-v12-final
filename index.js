@@ -1099,13 +1099,8 @@ async function send(id, text, qr = null) {
     return false;
   }
   try {
-    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, {
-      recipient: { id },
-      sender_action: "typing_on"
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 350));
-
+    // Fast path: skip the extra typing_on API request and artificial 350ms delay.
+    // Send the actual reply immediately to reduce perceived Messenger latency.
     const body = { recipient: { id }, message: { text } };
     // [ADDED V35] Never leave a text-only page without navigation: add Main Menu when no quick replies exist.
     const quickReplies = Array.isArray(qr) ? [...qr] : [];
