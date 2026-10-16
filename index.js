@@ -1450,7 +1450,7 @@ Choose an action below:`, [
         if (cleanText === "find match" || upperRaw === "FIND MATCH") {
           user.currentPage = "FIND_MATCH";
           await saveUserToDB(psid);
-          send(psid, "💘 HANAP-KA-MATCH\\n━━━━━━━━━━━━━━━━━━━━\\nMay makikilala ka bang bagong kaibigan? 😊\\n\\nPindutin ang Search Match para maghanap ng available na ka-chat.\\n\\n💰 Search fee: 10 coins", [
+          send(psid, "💘 FIND YOUR MATCH ✨\n━━━━━━━━━━━━━━━━━━━━\nReady to spark a new connection? 💖\nMeet someone new, start a fun conversation, and see where it goes!\n\n💎 Search Fee: 10 Coins", [
             { content_type: "text", title: "🔎 Search Match (10c)", payload: "SEARCH_MATCH" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
           ]);
