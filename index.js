@@ -610,8 +610,8 @@ async function getLeaderboardUsers() {
 
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
-  // [UPGRADED V28] Higher-resolution leaderboard image for clearer photos, names, and flex stats in Messenger.
-  const W = 800, H = 1200, RENDER_SCALE = 1.25;
+  // [UPGRADED V28] Taller leaderboard canvas for larger, more readable Top 10 cards on mobile.
+  const W = 800, H = 1500, RENDER_SCALE = 1.25;
   const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -724,50 +724,52 @@ async function generateLeaderboardCanvas(users) {
 
   // [UPGRADED V28] Compact, readable neon cards for ranks 4–10.
   for (let rank = 4; rank <= 10; rank++) {
-    const i = rank - 1, item = top[i], y = 535 + (rank - 4) * 76, color = accents[i];
-    const grad = ctx.createLinearGradient(38, y, 762, y + 65);
+    // [UPGRADED V28] Taller leaderboard cards for readable photos, names, and flex stats.
+    const i = rank - 1, item = top[i], y = 535 + (rank - 4) * 91, color = accents[i];
+    const grad = ctx.createLinearGradient(38, y, 762, y + 80);
     grad.addColorStop(0, rank % 2 === 0 ? '#092843' : '#21113c'); grad.addColorStop(1, '#080f24');
-    ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 66);
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 66); ctx.restore();
+    ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 80);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 80); ctx.restore();
     // [ADDED] Faceted-style rank badge.
     ctx.fillStyle = color; ctx.beginPath();
     for (let p = 0; p < 10; p++) {
-      const angle = -Math.PI / 2 + p * Math.PI / 5, rad = p % 2 === 0 ? 25 : 20;
-      const px = 78 + Math.cos(angle) * rad, py = y + 33 + Math.sin(angle) * rad;
+      const angle = -Math.PI / 2 + p * Math.PI / 5, rad = p % 2 === 0 ? 28 : 22;
+      const px = 78 + Math.cos(angle) * rad, py = y + 40 + Math.sin(angle) * rad;
       if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
     ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 22px Sans'; ctx.fillText(String(rank), 78, y + 41);
+    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 24px Sans'; ctx.fillText(String(rank), 78, y + 48);
     if (!item) {
-      ctx.textAlign = 'left'; ctx.fillStyle = '#a9c2d8'; ctx.font = 'bold 17px Sans'; ctx.fillText('OPEN RANK', 119, y + 28);
-      ctx.fillStyle = '#7189a0'; ctx.font = '12px Sans'; ctx.fillText('Register and play to claim this spot', 119, y + 48);
-      ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 12px Sans'; ctx.fillText('AVAILABLE', 744, y + 39);
+      ctx.textAlign = 'left'; ctx.fillStyle = '#a9c2d8'; ctx.font = 'bold 19px Sans'; ctx.fillText('OPEN RANK', 119, y + 33);
+      ctx.fillStyle = '#7189a0'; ctx.font = '13px Sans'; ctx.fillText('Register and play to claim this spot', 119, y + 57);
+      ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 13px Sans'; ctx.fillText('AVAILABLE', 744, y + 47);
       continue;
     }
     const name = getName(item), coins = Math.max(0, Number(item.user.coins) || 0);
     // [FIXED] Stable leaderboard grid: avatar, player/coins, house, and net worth have separate columns.
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
-    await drawLeaderboardAvatar(item, 122, y + 33, 25);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans';
+    // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
+    await drawLeaderboardAvatar(item, 122, y + 40, 29);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 19px Sans';
     let rowName = name;
-    while (ctx.measureText(rowName).width > 190 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
-    ctx.fillText(rowName, 158, y + 25);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 14px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 158, y + 49);
-    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 12px Sans';
+    while (ctx.measureText(rowName).width > 195 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
+    ctx.fillText(rowName, 160, y + 30);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 16px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 160, y + 58);
+    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 13px Sans';
     let houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
-    while (ctx.measureText(houseText).width > 170 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
-    ctx.fillText(houseText, 380, y + 39);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 11px Sans';
-    ctx.fillText('NET WORTH', 744, y + 22);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
-    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 45);
-    ctx.fillStyle = color; ctx.font = 'bold 10px Sans';
+    while (ctx.measureText(houseText).width > 165 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
+    ctx.fillText(houseText, 380, y + 48);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 13px Sans';
+    ctx.fillText('NET WORTH', 744, y + 27);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 17px Sans';
+    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 52);
+    ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
-    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 59);
+    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 72);
   }
 
   // [UPGRADED V28] Bright season footer and climb-to-the-top callout.
-  const footerY = 1088;
+  const footerY = 1370;
   ctx.fillStyle = '#090d28'; ctx.fillRect(38, footerY, 724, 62);
   ctx.strokeStyle = divider; ctx.lineWidth = 2; ctx.strokeRect(38, footerY, 724, 62);
   ctx.textAlign = 'center'; ctx.shadowColor = '#34efff'; ctx.shadowBlur = 12;
@@ -2186,8 +2188,9 @@ ${renderGiftCatalog()}
             if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
             else {
               // [ADDED] Dedicated leaderboard exit action, separate from the image itself.
-              send(psid, '🏆 LEADERBOARD • TOP 10', [
-                { content_type: 'text', title: '🚪 Exit Leaderboard', payload: 'MENU' }
+              // [FIXED] Remove the unrelated leaderboard heading text; keep only a simple Exit action.
+              send(psid, '↩️', [
+                { content_type: 'text', title: '🚪 Exit', payload: 'MENU' }
               ]);
             }
           } catch (leaderboardError) {
