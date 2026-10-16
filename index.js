@@ -5,12 +5,19 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
+// [ADDED] V28 canvas profile and leaderboard rendering.
+const { createCanvas } = require('canvas');
+const path = require('path');
+const fsExtra = require('fs-extra');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GIFT_CATALOG, GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
+// [ADDED] V28 cache directory for generated profile and leaderboard images.
+const cacheDir = path.join(__dirname, 'cache');
+fsExtra.ensureDirSync(cacheDir);
 const app = express();
 
 // Body-parser rawBody configuration para sa PayMongo Webhook HMAC signature
@@ -208,6 +215,97 @@ const TOPUP_RATES = { 20: 120, 50: 300, 80: 500, 100: 700, 200: 1600, 500: 4500 
 
 // Shared V26 Gift Hub catalog keeps Messenger prices in sync with tests.
 const GIFTS = GIFT_CATALOG;
+
+// [ADDED] [UPGRADED V28] House tiers, values, flex labels, tax, and canvas helpers.
+const HOUSE_CONFIG = {
+  none: { tier: 0, value: 0, price: 0, tax: 0, badge: '' },
+  kubo: { tier: 1, value: 1500, price: 1500, tax: 20, badge: '🛖' },
+  bahay: { tier: 2, value: 6500, price: 5000, tax: 100, badge: '🏠' },
+  mansion: { tier: 3, value: 21500, price: 15000, tax: 350, badge: '🏰' },
+  building: { tier: 4, value: 61500, price: 40000, tax: 1000, badge: '🏢' }
+};
+const HOUSE_REQUIREMENTS = { kubo: 'none', bahay: 'kubo', mansion: 'bahay', building: 'mansion' };
+const FLEX_BADGES = { rainbow: '🌈 [RARE]', sparkle: '✨ [MYTHIC]', heart: '💖 [LOVE]', fire: '🔥 [HOT]', ice: '❄️ [COLD]', neon: '⚡ [NEON]', blossom: '🌸 [CUTE]', dark: '🖤 [DARK]', red: '🔴', blue: '🔵', green: '🟢', yellow: '🟡' };
+function getHouseTier(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.tier ?? 0; }
+function getHouseValue(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.value ?? 0; }
+function getNetWorth(user) { return Math.max(0, Number(user.coins) || 0) + getHouseValue(user.house); }
+function getDisplayName(user) {
+  const badges = [];
+  if (HOUSE_CONFIG[user.house]?.badge) badges.push(HOUSE_CONFIG[user.house].badge);
+  if (user.vip || user.badge === '👑 VIP Elite' || user.badge === 'VIP') badges.push('👑');
+  if (user.goldFrame || String(user.frame || '').toLowerCase().includes('gold')) badges.push('🖼️');
+  if (user.nameEffect && user.nameEffect !== 'none') badges.push(FLEX_BADGES[user.nameEffect] || '✨');
+  return badges.length ? `${String(user.name || 'Jojo Member')} ${badges.join(' ')}` : String(user.name || 'Jojo Member');
+}
+function checkHouseTax(user) {
+  const now = Date.now();
+  const lastTax = Number(user.lastTax) || 0;
+  if (now - lastTax < 86400000) return null;
+  const house = String(user.house || 'none').toLowerCase();
+  const tax = HOUSE_CONFIG[house]?.tax || 0;
+  if (!tax) { user.lastTax = now; return null; }
+  if ((Number(user.coins) || 0) < tax) {
+    const downgrade = { building: 'mansion', mansion: 'bahay', bahay: 'kubo', kubo: 'none' };
+    user.house = downgrade[house] || 'none';
+    user.lastTax = now;
+    return `⚠️ Hindi sapat ang coins para sa ${house} tax (${tax}c). Na-downgrade ang bahay mo sa ${user.house}.`;
+  }
+  user.coins -= tax;
+  user.lastTax = now;
+  return `🏠 House tax paid: ${tax} coins. Remaining balance: ${user.coins}c.`;
+}
+function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
+  const words = String(text ?? '').split(/\\s+/); let line = ''; let lines = 0;
+  for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
+  if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
+}
+function drawV28Canvas(title, width, height) {
+  const canvas = createCanvas(width, height); const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 6; ctx.strokeRect(12, 12, width - 24, height - 24);
+  ctx.fillStyle = '#FFD700'; ctx.font = 'bold 34px Sans'; ctx.fillText(title, 36, 62);
+  ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(36, 82); ctx.lineTo(width - 36, 82); ctx.stroke();
+  return { canvas, ctx };
+}
+async function generateProfileCanvas(user) {
+  const { canvas, ctx } = drawV28Canvas('JOJOWORLD V28 • PROFILE', 800, 850);
+  const rows = [
+    ['DISPLAY NAME', getDisplayName(user).slice(0, 35)],
+    ['WEALTH', `Coins: ${Number(user.coins) || 0}  |  House value: ${getHouseValue(user.house)}`],
+    ['NET WORTH', String(getNetWorth(user))], ['HOUSE TIER', `${String(user.house || 'none').toUpperCase()} • Tier ${getHouseTier(user.house)}`],
+    ['VIEWS / GIFTS / SCATTER WINS', `${user.views || 0} / ${user.giftsCount || Object.values(user.giftsReceived || {}).reduce((a,b)=>a+(Number(b)||0),0)} / ${user.scatterWins || 0}`],
+    ['IDENTITY', `${user.location || 'Nueva Ecija'} • ${user.zodiac || 'Not set'} • Age ${user.age || 25}`],
+    ['GOAL', user.relationshipGoal || 'Serious Relationship'], ['BIO', user.bio || 'Hello JojoWorld V28!'],
+    ['FLEX', `${user.nameEffect || 'none'} • VIP: ${user.vip ? 'YES' : 'NO'} • Gold Frame: ${user.goldFrame ? 'YES' : 'NO'}`]
+  ];
+  let y = 122;
+  for (const [label, value] of rows) {
+    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 19px Sans'; ctx.fillText(label, 38, y);
+    ctx.fillStyle = '#FFFFFF'; ctx.font = '20px Sans'; canvasText(ctx, value, 38, y + 28, 710, 25, label === 'BIO' ? 3 : 2); y += label === 'BIO' ? 84 : 72;
+  }
+  const file = path.join(cacheDir, `profile_${String(user.id || user.psid || 'user').replace(/[^a-zA-Z0-9_-]/g, '')}.png`);
+  await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+}
+async function generateLeaderboardCanvas(users) {
+  const { canvas, ctx } = drawV28Canvas('JOJOWORLD V28 • TOP 10 RICHEST', 800, 1050);
+  const top = Object.entries(users || {}).map(([id,u])=>({id,user:u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
+  let y = 132;
+  top.forEach((item, i) => { const medal = ['🥇','🥈','🥉'][i] || `#${i+1}`; ctx.fillStyle = i < 3 ? '#FFD700' : '#FFFFFF'; ctx.font = 'bold 21px Sans'; ctx.fillText(`${medal} ${String(item.user.name || 'Jojo Member').slice(0,24)}`, 38, y); ctx.fillStyle = '#FFFFFF'; ctx.font = '18px Sans'; ctx.fillText(`Coins ${Number(item.user.coins)||0} • House ${getHouseValue(item.user.house)} • Net ${item.net}`, 60, y+29); y += 82; });
+  const file = path.join(cacheDir, 'lb.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+}
+// [ADDED] Messenger attachment upload for generated canvas images.
+async function sendImage(id, imagePath, body) {
+  if (!PAGE_TOKEN || !id) return false;
+  try {
+    const FormData = require('form-data'); const form = new FormData();
+    form.append('recipient', JSON.stringify({ id }));
+    form.append('message', JSON.stringify({ attachment: { type: 'image', payload: { is_reusable: false } } }));
+    form.append('filedata', fs.createReadStream(imagePath), { contentType: 'image/png', filename: path.basename(imagePath) });
+    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
+    if (body) await send(id, body);
+    return true;
+  } catch (e) { console.error('Canvas image send failed:', e.response?.data?.error?.message || e.message); return false; }
+}
 
 // ASYNC SAFE SEND FUNCTION WITH TYPING INDICATOR
 async function send(id, text, qr = null) {
@@ -465,14 +563,25 @@ app.post('/webhook', async (req, res) => {
 
         if (!user) {
           db.users[psid] = {
-            coins: 200,
-            location: "Manila",
+            // [UPGRADED V28] New accounts start with 100 coins and V28 defaults.
+            id: psid,
+            coins: 100,
+            house: "none",
+            nameEffect: "none",
+            vip: false,
+            goldFrame: false,
+            lastScatter: 0,
+            lastTax: Date.now(),
+            scatterWins: 0,
+            location: "Nueva Ecija",
             rating: 5.0,
-            bio: "Hello JojoWorld V26!",
-            age: 21,
+            bio: "Hello JojoWorld V28!",
+            age: 25,
             gender: "Not set",
             name: "Jojo Member",
             created: Date.now(),
+            joinDate: new Date().toISOString(),
+            giftsShowcase: "None yet",
             lastDaily: 0,
             lastSpin: 0,
             refCount: 0,
@@ -483,7 +592,7 @@ app.post('/webhook', async (req, res) => {
             giftsCount: 0,
             giftsReceived: {},
             zodiac: "Not set 🌟",
-            relationshipGoal: "☕ Coffee Dates",
+            relationshipGoal: "Serious Relationship",
             profileEdits: 0,
             state: "IDLE",
             activeMatchPsid: null
@@ -524,7 +633,10 @@ A new user joined using your link! 🎁
         user.coins = Number.isFinite(numericCoins) && numericCoins >= 0 ? numericCoins : 0;
         user.lastActive = Date.now();
         // Persist presence without rewriting the global jackpot on every message.
+        // [ADDED] [UPGRADED V28] Daily house tax is checked on each incoming message.
+        const houseTaxNotice = checkHouseTax(user);
         const activitySaved = await saveUserToDB(psid, { saveJackpot: false });
+        if (houseTaxNotice) send(psid, houseTaxNotice);
         if (!activitySaved) {
           console.error("Could not persist activity timestamp; command processing stopped for user:", psid);
           send(psid, "⚠️ Hindi available ang database ngayon. Walang command na pinroseso; subukan ulit mamaya.");
@@ -538,6 +650,7 @@ A new user joined using your link! 🎁
 
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
+        // [ADDED] [UPGRADED V28] V28 text commands. Existing command routing remains below.
 
         // ADMIN COMMAND SUITE
         if (psid === ADMIN_ID && upperRaw.startsWith("ADMIN_ADDCOINS_")) {
@@ -564,6 +677,59 @@ A new user joined using your link! 🎁
           }
           continue;
         }
+
+        // [ADDED] [FIXED] V28 registration/name validation: "register Your Name".
+        if (upperRaw.startsWith('REGISTER ')) {
+          const cleanName = rawText.slice(9).replace(/[^\\w\\s]/gi, '').trim();
+          if (cleanName.length < 3) { send(psid, '❌ Bawal emoji/symbols boss! Min 3 letters!'); continue; }
+          if (user.registered === true) { send(psid, "❌ Registered ka na boss! Type 'profile'"); continue; }
+          const old = { name: user.name, registered: user.registered };
+          user.name = cleanName; user.registered = true; user.id = psid;
+          if (!await saveUserToDB(psid)) { Object.assign(user, old); send(psid, '⚠️ Hindi na-save ang registration. Try ulit.'); continue; }
+          send(psid, '✅ Registered ka na, boss! Type profile para makita ang profile mo.'); continue;
+        }
+        // [ADDED] V28 balance includes liquid coins, house value, and net worth.
+        if (['BALANCE','WALLET'].includes(upperRaw.trim())) { send(psid, `💰 ${getDisplayName(user)}\\nCoins: ${user.coins}c\\nHouse value: ${getHouseValue(user.house)}c\\nNET WORTH: ${getNetWorth(user)}c\\nHouse tier: ${getHouseTier(user.house)}`); continue; }
+        // [ADDED] V28 unequip and one-at-a-time name effects.
+        if (upperRaw.trim() === 'UNEQUIP') { const old = user.nameEffect; user.nameEffect = 'none'; if (!await saveUserToDB(psid)) { user.nameEffect = old; send(psid,'⚠️ Hindi na-save ang pagbabago.'); } else send(psid,'✅ Name effect removed.'); continue; }
+        // [ADDED] [UPGRADED V28] Scatter game, independent of legacy SPIN command.
+        if (upperRaw.trim().startsWith('SCATTER')) {
+          const parts = upperRaw.trim().split(/\\s+/); const bet = Number(parts[1]);
+          if (!Number.isInteger(bet) || bet < 50 || bet > 1000) { send(psid,'🎰 Use: scatter <50-1000> coins.'); continue; }
+          const diff = Date.now() - (Number(user.lastScatter) || 0);
+          if (diff < 120000) { send(psid, `⏳ Cooldown pa boss! ${Math.ceil((120000-diff)/1000)} secs pa!`); continue; }
+          if ((Number(user.coins)||0) < bet) { send(psid, `❌ Kulang coins! Need ${bet}c, meron ka lang ${user.coins}c.`); continue; }
+          const snapshot = { coins:user.coins, lastScatter:user.lastScatter, scatterWins:user.scatterWins };
+          const isWin = Math.random() < 0.30; user.coins = isWin ? user.coins - bet + Math.floor(bet*1.8) : user.coins - bet;
+          user.lastScatter = Date.now(); if (isWin) user.scatterWins = (user.scatterWins||0)+1;
+          if (!await saveUserToDB(psid)) { Object.assign(user,snapshot); send(psid,'⚠️ Hindi na-save ang scatter.'); continue; }
+          send(psid, isWin ? `🎉 SCATTER WIN! +${Math.floor(bet*0.8)} net coins. Balance: ${user.coins}c` : `🎰 Scatter loss: -${bet}c. Balance: ${user.coins}c`); continue;
+        }
+        // [ADDED] V28 house purchase with prerequisite and duplicate checks before charging.
+        if (upperRaw.trim().startsWith('BUY ')) {
+          const parts = upperRaw.trim().split(/\\s+/); const house = (parts[1]||'').toLowerCase(); const cfg = HOUSE_CONFIG[house];
+          if (!cfg || house === 'none') { send(psid,'🏠 Use: buy kubo / bahay / mansion / building'); continue; }
+          const required = HOUSE_REQUIREMENTS[house];
+          if (String(user.house||'none').toLowerCase() === house) { send(psid,'❌ Meron ka na nyan boss!'); continue; }
+          if (getHouseTier(user.house) + 1 !== cfg.tier || String(user.house||'none').toLowerCase() !== required) { send(psid,`❌ Requirement: ${required} muna bago ${house}.`); continue; }
+          if ((Number(user.coins)||0) < cfg.price) { send(psid,`❌ Kulang coins! Need ${cfg.price}c, meron ka lang ${user.coins}c.`); continue; }
+          const old = {coins:user.coins,house:user.house}; user.coins -= cfg.price; user.house=house;
+          if (!await saveUserToDB(psid)) { Object.assign(user,old); send(psid,'⚠️ Hindi na-save ang house purchase. Walang coins na ikakaltas.'); continue; }
+          send(psid,`🏠 Congratulations! Purchased ${house} for ${cfg.price}c. House value: ${cfg.value}c.`); continue;
+        }
+        // [ADDED] V28 flex effect purchase command, one active effect at a time.
+        if (upperRaw.trim().startsWith('EFFECT ')) {
+          const effect = upperRaw.trim().split(/\\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
+          if (!FLEX_BADGES[effect]) { send(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
+          if (user.nameEffect && user.nameEffect !== 'none') { send(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
+          if (user.coins < prices[effect]) { send(psid,`❌ Kulang coins! Need ${prices[effect]}c, meron ka lang ${user.coins}c.`); continue; }
+          const old = {coins:user.coins,nameEffect:user.nameEffect}; user.coins -= prices[effect]; user.nameEffect=effect;
+          if (!await saveUserToDB(psid)) { Object.assign(user,old); send(psid,'⚠️ Hindi na-save ang effect.'); continue; }
+          send(psid,`✨ Equipped ${FLEX_BADGES[effect]}! ${getDisplayName(user)}`); continue;
+        }
+        // [ADDED] V28 image commands. Existing textual profile command remains supported below.
+        if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
+        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(db.users); await sendImage(psid,img,'🏆 JojoWorld V28 Top 10 Richest • Net Worth'); continue; }
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
@@ -757,6 +923,11 @@ A new user joined using your link! 🎁
 
         // VIEW PROFILE
         if (cleanText === "profile" || upperRaw === "PROFILE") {
+          // [UPGRADED V28] Keep legacy text profile command and include verified display name.
+          user.views = (user.views || 0) + 1;
+          await saveUserToDB(psid, { saveJackpot: false });
+          // [ADDED] Canvas preview accompanies the legacy text profile to preserve old behavior.
+          try { const profileImage = await generateProfileCanvas({ ...user, id: psid }); await sendImage(psid, profileImage, `${getDisplayName(user)} • Black Gold Profile`); } catch (canvasError) { console.error("Profile canvas generation failed:", canvasError.message); }
           const giftsReceived = user.giftsReceived && typeof user.giftsReceived === "object" ? user.giftsReceived : {};
           const giftEntries = Object.entries(giftsReceived)
             .filter(([, count]) => Number.isFinite(count) && count > 0);
@@ -1258,15 +1429,19 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === "BUY_VIP") {
+          // [FIXED] Duplicate VIP validation happens before deducting coins.
+          if (user.vip || user.badge === "👑 VIP Elite") { send(psid, "❌ Meron ka na VIP boss!"); continue; }
           if (user.coins < 200) {
             send(psid, `❌ Not enough coins! VIP Badge costs 200 coins.`);
           } else {
-            const previousVipState = { coins: user.coins, badge: user.badge };
+            const previousVipState = { coins: user.coins, badge: user.badge, vip: user.vip };
             user.coins -= 200;
+            user.vip = true;
             user.badge = "👑 VIP Elite";
             if (!await saveUserToDB(psid)) {
               user.coins = previousVipState.coins;
               user.badge = previousVipState.badge;
+              user.vip = previousVipState.vip;
               send(psid, "⚠️ Hindi na-save ang VIP purchase. Walang coins na ikakaltas.");
               continue;
             }
@@ -1276,15 +1451,19 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === "BUY_FRAME") {
+          // [FIXED] Duplicate gold-frame validation happens before deducting coins.
+          if (user.goldFrame || String(user.frame || "").toLowerCase().includes("gold")) { send(psid, "❌ Meron ka na Gold Frame boss!"); continue; }
           if (user.coins < 150) {
             send(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
           } else {
-            const previousFrameState = { coins: user.coins, frame: user.frame };
+            const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame };
             user.coins -= 150;
+            user.goldFrame = true;
             user.frame = "💎 Gold Frame";
             if (!await saveUserToDB(psid)) {
               user.coins = previousFrameState.coins;
               user.frame = previousFrameState.frame;
+              user.goldFrame = previousFrameState.goldFrame;
               send(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
               continue;
             }
@@ -1295,7 +1474,10 @@ ${renderGiftCatalog()}
 
         // LEADERBOARD
         if (cleanText === "leaderboard" || upperRaw === "LEADERBOARD") {
-          send(psid, `🏆 JOJOWORLD V26 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n🥇 1. Jojo_Master — 5,200 coins\n🥈 2. Elite_Prenz — 4,100 coins\n🥉 3. You (${user.name}) — ${user.coins} coins`, [
+          // [UPGRADED V28] Real leaderboard ordering by liquid coins + house value.
+          const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
+          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net} net worth`).join("\n");
+          send(psid, `🏆 JOJOWORLD V28 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`, [
             { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
             { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
