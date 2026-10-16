@@ -1198,13 +1198,7 @@ A new user joined using your link! 🎁
         if (ev.message && Array.isArray(ev.message.attachments) &&
             ev.message.attachments.some(item => item && item.type === 'image') &&
             user.awaitingProfilePhoto !== true) {
-          // [FIXED] Do not show profile-photo instructions when the user is simply reacting/viewing the leaderboard.
-          // [ADDED] Give a clear Exit action instead of sending the user into the wrong Profile flow.
-          if (!isStickerOrLike && !ev.message.sticker_id) {
-            send(psid, '🏆 Nasa JojoWorld Leaderboard ka. Pindutin ang Exit kung gusto mong bumalik sa Main Menu.', [
-              { content_type: 'text', title: '🚪 Exit Leaderboard', payload: 'MENU' }
-            ]);
-          }
+          // [FIXED] Ignore unrelated image/Like attachments; do not show a misleading profile-photo or leaderboard message.
           continue;
         }
         // [ADDED] [UPGRADED V28] V28 text commands. Existing command routing remains below.
@@ -2183,6 +2177,12 @@ ${renderGiftCatalog()}
             const leaderboardImage = await generateLeaderboardCanvas(await getLeaderboardUsers());
             const sent = await sendImage(psid, leaderboardImage);
             if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
+            else {
+              // [ADDED] Dedicated leaderboard exit action, separate from the image itself.
+              send(psid, '🏆 LEADERBOARD • TOP 10', [
+                { content_type: 'text', title: '🚪 Exit Leaderboard', payload: 'MENU' }
+              ]);
+            }
           } catch (leaderboardError) {
             console.error('[FIXED] Leaderboard canvas failed:', leaderboardError.message);
           }
