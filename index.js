@@ -1424,12 +1424,33 @@ ${renderGiftCatalog()}
 
         // SHOP & THEMES
         if (cleanText === "shop" || upperRaw === "SHOP") {
-          send(psid, `🛍️ JOJOWORLD PROFILE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[1] 👑 VIP Verified Badge - 200 coins\n[2] 💎 Gold Profile Frame - 150 coins`, [
+          // [UPGRADED V28] Display the full V28 shop catalog, not only VIP and Gold Frame.
+          send(psid, `🛍️ JOJOWORLD V28 FULL SHOP
+━━━━━━━━━━━━━━━━━━━━
+👑 PROFILE UPGRADES
+[1] VIP Verified Badge — 200c (type: BUY_VIP)
+[2] Gold Profile Frame — 150c (type: BUY_FRAME)
+
+🏠 HOUSE COLLECTION
+[13] Kubo — 1,500c (type: BUY KUBO)
+[14] Bahay — 5,000c (requires Kubo; type: BUY BAHAY)
+[15] Mansion — 15,000c (requires Bahay; type: BUY MANSION)
+[16] Building — 40,000c (requires Mansion; type: BUY BUILDING)
+Daily house tax applies; insufficient coins may downgrade your house.
+
+✨ NAME EFFECTS (one at a time; remove with UNEQUIP)
+EFFECT rainbow — 5,000c
+EFFECT sparkle — 10,000c
+EFFECT heart / fire / ice / dark — 2,500c each
+EFFECT neon — 3,000c
+EFFECT blossom — 2,000c
+EFFECT red / blue / green / yellow — 1,000c each
+
+💡 Type the exact command shown beside the item to purchase.`, [
             { content_type: "text", title: "👑 VIP Badge (200c)", payload: "BUY_VIP" },
             { content_type: "text", title: "💎 Gold Frame (150c)", payload: "BUY_FRAME" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
-          ]);
-          continue;
+          ]);          continue;
         }
 
         if (upperRaw === "BUY_VIP") {
