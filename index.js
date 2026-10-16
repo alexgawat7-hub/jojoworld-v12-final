@@ -1476,12 +1476,12 @@ app.post('/webhook', async (req, res) => {
             !upperRaw.startsWith("REGISTER ") &&
             upperRaw !== "REGISTER" &&
             upperRaw !== "REGISTER_HELP") {
-          send(psid, "👋 Welcome to JojoWorld! Bago magamit ang features, mag-register muna.\n\n✍️ I-type: REGISTER Your Name\nExample: REGISTER Alex Gawat\n\nPag successful ang registration mo, saka maa-unlock ang profile, shop, match, coins, at iba pang features.");
+          send(psid, "╔══════════════════════╗\n     ✨ 𝐖𝐄𝐋𝐂𝐎𝐌𝐄 𝐓𝐎 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃! ✨\n╚══════════════════════╝\n\n🌟 𝐘𝐨𝐮𝐫 𝐉𝐨𝐮𝐫𝐧𝐞𝐲 𝐁𝐞𝐠𝐢𝐧𝐬 𝐇𝐞𝐫𝐞!\n\n🔐 Before exploring JojoWorld, you must complete your registration first.\n\n📝 𝐇𝐎𝐖 𝐓𝐎 𝐑𝐄𝐆𝐈𝐒𝐓𝐄𝐑\n➤ Type: REGISTER Your Name\n\n💡 𝐄𝐱𝐚𝐦𝐩𝐥𝐞:\nREGISTER John Doe\n\n╭━━━━━━━━━━━━━━━━━━━━╮\n✅ Once your registration is successful, you will unlock access to:\n\n👤 𝐕𝐢𝐬𝐮𝐚𝐥 𝐏𝐫𝐨𝐟𝐢𝐥𝐞\n🛍️ 𝐒𝐡𝐨𝐩 & 𝐄𝐱𝐜𝐥𝐮𝐬𝐢𝐯𝐞 𝐈𝐭𝐞𝐦𝐬\n💕 𝐌𝐚𝐭𝐜𝐡𝐢𝐧𝐠 𝐒𝐲𝐬𝐭𝐞𝐦\n🪙 𝐂𝐨𝐢𝐧𝐬 & 𝐑𝐞𝐰𝐚𝐫𝐝𝐬\n🎮 𝐀𝐧𝐝 𝐌𝐚𝐧𝐲 𝐌𝐨𝐫𝐞 𝐅𝐞𝐚𝐭𝐮𝐫𝐞𝐬!\n╰━━━━━━━━━━━━━━━━━━━━╯\n\n🚀 𝐑𝐞𝐠𝐢𝐬𝐭𝐞𝐫 𝐍𝐨𝐰 𝐚𝐧𝐝 𝐄𝐧𝐭𝐞𝐫 𝐭𝐡𝐞 𝐖𝐨𝐫𝐥𝐝 𝐨𝐟 𝐉𝐨𝐣𝐨𝐖𝐨𝐫𝐥𝐝! 💎");
           continue;
         }
 
         if (user.registered !== true && (upperRaw === "REGISTER" || upperRaw === "REGISTER_HELP")) {
-          send(psid, "✍️ Para mag-register, i-type ang pangalan mo pagkatapos ng REGISTER.\nExample: REGISTER Alex Gawat");
+          send(psid, "✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 𝐑𝐄𝐆𝐈𝐒𝐓𝐑𝐀𝐓𝐈𝐎𝐍 ✨\n\n📝 Type: REGISTER Your Name\n💡 Example: REGISTER John Doe\n\n🚀 Complete your registration to unlock all JojoWorld features!");
           continue;
         }
 
