@@ -1198,6 +1198,17 @@ A new user joined using your link! 🎁
         else if (ev.message && ev.message.text) rawText = ev.message.text;
         else if (ev.postback && ev.postback.payload) rawText = ev.postback.payload;
 
+        // [ADDED] [UPGRADED V28] Block external links in user-to-user active chat to reduce coin-sale scams.
+        // Only checks ordinary text messages while chatting; button payloads and other bot features remain unaffected.
+        const isActiveChatLinkMessage = user.state === "CHATTING" &&
+          ev.message && typeof ev.message.text === "string" &&
+          !ev.message.quick_reply &&
+          /(?:https?:\/\/|www\.)\S+|\b(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/\S*)?/i.test(ev.message.text);
+        if (isActiveChatLinkMessage) {
+          send(psid, "⛔ Bawal mag-send ng link habang nasa active chat para maiwasan ang scam at bentahan ng coins. Mag-chat gamit ang text na walang link.");
+          continue;
+        }
+
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
 
