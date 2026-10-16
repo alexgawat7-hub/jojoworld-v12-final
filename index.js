@@ -915,7 +915,7 @@ async function generateLeaderboardCanvas(users) {
       const aw = avatar.width * scale, ah = avatar.height * scale;
       ctx.drawImage(avatar, x - aw / 2, y - ah / 2, aw, ah); ctx.restore();
     } else {
-      const initials = String(item && item.user ? getDisplayName(item.user) || item.user.name || 'JW' : 'JW').trim().split(/\\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
+      const initials = String(item && item.user ? getDisplayName(item.user) || item.user.name || 'JW' : 'JW').trim().split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
       ctx.fillStyle = '#d9e8ff'; ctx.font = 'bold ' + Math.round(radius * .8) + 'px Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initials || 'JW', x, y); ctx.textBaseline = 'alphabetic';
     }
     ctx.strokeStyle = item && item.user && (item.user.goldFrame || String(item.user.frame || '').toLowerCase().includes('gold')) ? '#ffd34f' : '#65eaff';
@@ -1652,8 +1652,8 @@ A new user joined using your link! 🎁
 
         // [ADDED] [UPGRADED V28] Admin user lookup; validates PSID and does not expose other users to non-admins.
         if (psid === ADMIN_ID && upperRaw.trim().startsWith('ADMIN USER ')) {
-          const targetAdminPsid = upperRaw.trim().split(/\\s+/)[2] || '';
-          if (!/^\\d{5,32}$/.test(targetAdminPsid)) {
+          const targetAdminPsid = upperRaw.trim().split(/\s+/)[2] || '';
+          if (!/^\d{5,32}$/.test(targetAdminPsid)) {
             send(psid, '❌ Invalid PSID. Gamitin: ADMIN USER PSID', [
               { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
               { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
@@ -1682,10 +1682,10 @@ A new user joined using your link! 🎁
 
         // [ADDED] [UPGRADED V28] Admin coin credit with save/rollback protection.
         if (psid === ADMIN_ID && upperRaw.trim().startsWith('ADMIN ADDCOINS ')) {
-          const adminCoinParts = upperRaw.trim().split(/\\s+/);
+          const adminCoinParts = upperRaw.trim().split(/\s+/);
           const targetAdminPsid = adminCoinParts[2] || '';
           const adminAddAmount = Number(adminCoinParts[3]);
-          if (!/^\\d{5,32}$/.test(targetAdminPsid) || !Number.isSafeInteger(adminAddAmount) || adminAddAmount < 1 || adminAddAmount > 1000000) {
+          if (!/^\d{5,32}$/.test(targetAdminPsid) || !Number.isSafeInteger(adminAddAmount) || adminAddAmount < 1 || adminAddAmount > 1000000) {
             send(psid, '❌ Invalid format. Gamitin: ADMIN ADDCOINS PSID AMOUNT (1–1,000,000).', [
               { content_type: 'text', title: '👑 Admin Panel', payload: 'ADMIN_PANEL' },
               { content_type: 'text', title: '↩️ Main Menu', payload: 'MENU' }
