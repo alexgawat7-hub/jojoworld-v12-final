@@ -61,6 +61,19 @@ const PaymentEventSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 const PaymentEventModel = mongoose.models.JPaymentEvent || mongoose.model('JPaymentEvent', PaymentEventSchema);
+
+// [FIXED] Store each generated PayMongo Link ID against its exact user/package.
+// PayMongo link.payment.paid payloads do not reliably include the custom remarks field.
+const TopupOrderSchema = new mongoose.Schema({
+  linkId: { type: String, required: true, unique: true },
+  psid: { type: String, required: true },
+  amount: { type: Number, required: true },
+  coins: { type: Number, required: true },
+  status: { type: String, enum: ['pending', 'processed'], default: 'pending' },
+  eventId: { type: String },
+  createdAt: { type: Date, default: Date.now }
+});
+const TopupOrderModel = mongoose.models.JTopupOrder || mongoose.model('JTopupOrder', TopupOrderSchema);
 const processedPaymentEvents = new Set();
 
 // Messenger may retry delivery of the same message. Keep a unique message ID
@@ -876,8 +889,18 @@ async function createPaymongoLink(amount, coins, psid) {
     }, {
       headers: { Authorization: `Basic ${Buffer.from(PAYMONGO_SECRET + ':').toString('base64')}`, 'Content-Type': 'application/json' }
     });
-    return res.data.data.attributes.checkout_url;
+    const linkData = res.data && res.data.data;
+    const checkoutUrl = linkData && linkData.attributes && linkData.attributes.checkout_url;
+    const linkId = linkData && linkData.id;
+    if (!checkoutUrl || !linkId) {
+      console.error('[TOP-UP] PayMongo did not return a link ID and checkout URL.');
+      return null;
+    }
+    // [FIXED] Save the order before showing the payment URL so the webhook can identify the recipient.
+    await TopupOrderModel.create({ linkId, psid: String(psid), amount: Number(amount), coins: Number(coins), status: 'pending' });
+    return checkoutUrl;
   } catch (e) {
+    console.error('[TOP-UP] Could not create/save PayMongo top-up link:', e.message);
     return null;
   }
 }
@@ -944,7 +967,6 @@ app.get('/webhook', (req, res) => {
 
 // SECURED, IDEMPOTENT PAYMONGO WEBHOOK
 app.post('/paymongo-webhook', async (req, res) => {
-  // Fail closed: never accept payment events if webhook verification is not configured.
   if (!PAYMONGO_WEBHOOK_SECRET) {
     console.error('PayMongo webhook rejected: PAYMONGO_WEBHOOK_SECRET is not configured.');
     return res.sendStatus(503);
@@ -953,102 +975,74 @@ app.post('/paymongo-webhook', async (req, res) => {
     console.warn('PayMongo webhook rejected: missing, stale, or invalid signature.');
     return res.sendStatus(401);
   }
-
   try {
     const ev = req.body?.data;
     if (!ev || !ev.id) return res.sendStatus(400);
     const eventAttributes = ev.attributes || {};
     const eventType = eventAttributes.type;
-    const paymentAttributes = eventAttributes.data?.attributes || eventAttributes;
-    if (eventType && !['link.payment.paid', 'payment.paid'].includes(eventType)) {
-      return res.sendStatus(200);
-    }
+    // [FIXED] This bot creates Payment Links, so fulfill only link.payment.paid.
+    // payment.paid contains a payment ID, not the saved Payment Link ID.
+    if (eventType !== 'link.payment.paid') return res.sendStatus(200);
+    const linkResource = eventAttributes.data || {};
+    const paymentAttributes = linkResource.attributes || {};
     if (paymentAttributes.status !== 'paid') return res.sendStatus(200);
-
-    // [FIXED] Reject non-PHP payments before interpreting the amount as pesos.
-    // PayMongo amounts are expressed in the smallest currency unit (centavos for PHP).
-    const paymentCurrency = String(paymentAttributes.currency || '').toUpperCase();
-    if (paymentCurrency !== 'PHP') {
+    if (String(paymentAttributes.currency || '').toUpperCase() !== 'PHP') {
       console.warn('PayMongo webhook ignored: missing or unsupported payment currency.');
       return res.sendStatus(400);
     }
-
-    // [FIXED] Only accept exact whole-peso top-up package amounts.
     const amountInPesos = Number(paymentAttributes.amount) / 100;
     if (!Number.isFinite(amountInPesos) || !Number.isInteger(amountInPesos) || amountInPesos <= 0) {
       console.warn('PayMongo webhook ignored: invalid payment amount.');
       return res.sendStatus(400);
     }
-    const coins = TOPUP_RATES[amountInPesos] || 0;
-    const psid = String(paymentAttributes.remarks || '').trim();
-    if (!coins || !/^\d{5,32}$/.test(psid)) {
-      console.warn('PayMongo webhook ignored: unrecognized amount package or recipient.');
-      return res.sendStatus(400);
-    }
-
-    // [FIXED] Payments require MongoDB so event deduplication and wallet credit are durable.
-    // [FIXED] Create the event, update the wallet, and mark it processed in ONE transaction.
-    // A crash rolls back all three changes, allowing PayMongo to retry safely.
+    // [FIXED] Match by the Payment Link ID saved when the checkout URL was generated, not webhook remarks.
+    const linkId = String(linkResource.id || '').trim();
+    if (!linkId) return res.sendStatus(400);
     if (!MONGODB_URI || mongoose.connection.readyState !== 1) {
       console.error('PayMongo webhook deferred: MongoDB is not connected; payment was not credited.');
       return res.sendStatus(503);
     }
-
-    let newBalance;
-    let committedUserData;
+    let newBalance, committedUserData, creditedPsid, creditedCoins;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
-        // Unique eventId is the idempotency key. Duplicate deliveries abort this transaction.
-        await PaymentEventModel.create([{ eventId: ev.id, status: 'processing', psid }], { session });
-
-        const userDoc = await UserModel.findOne({ psid }).session(session);
-        if (!userDoc || !userDoc.data) {
-          const missingUserError = new Error('PAYMENT_USER_NOT_FOUND');
-          missingUserError.code = 'PAYMENT_USER_NOT_FOUND';
-          throw missingUserError;
+        await PaymentEventModel.create([{ eventId: ev.id, status: 'processing' }], { session });
+        const order = await TopupOrderModel.findOne({ linkId }).session(session);
+        if (!order) { const err = new Error('TOPUP_ORDER_NOT_FOUND'); err.code = 'TOPUP_ORDER_NOT_FOUND'; throw err; }
+        if (order.status === 'processed') { const err = new Error('TOPUP_ORDER_ALREADY_PROCESSED'); err.code = 'TOPUP_ORDER_ALREADY_PROCESSED'; throw err; }
+        if (Number(order.amount) !== amountInPesos || !TOPUP_RATES[amountInPesos] || Number(order.coins) !== TOPUP_RATES[amountInPesos]) {
+          const err = new Error('TOPUP_ORDER_AMOUNT_MISMATCH'); err.code = 'TOPUP_ORDER_AMOUNT_MISMATCH'; throw err;
         }
-
+        const psid = String(order.psid || '').trim(), coins = Number(order.coins);
+        if (!/^\d{5,32}$/.test(psid) || !Number.isSafeInteger(coins) || coins <= 0) {
+          const err = new Error('TOPUP_ORDER_INVALID'); err.code = 'TOPUP_ORDER_INVALID'; throw err;
+        }
+        const userDoc = await UserModel.findOne({ psid }).session(session);
+        if (!userDoc || !userDoc.data) { const err = new Error('PAYMENT_USER_NOT_FOUND'); err.code = 'PAYMENT_USER_NOT_FOUND'; throw err; }
         const updatedUser = { ...userDoc.data };
         const currentCoins = Number(updatedUser.coins);
-        updatedUser.coins = Number.isFinite(currentCoins) && currentCoins >= 0
-          ? currentCoins + coins
-          : coins;
-        newBalance = updatedUser.coins;
-
-        await UserModel.updateOne(
-          { psid },
-          { $set: { data: updatedUser } },
-          { session, runValidators: true }
-        );
-        await PaymentEventModel.updateOne(
-          { eventId: ev.id, status: 'processing' },
-          { $set: { status: 'processed' } },
-          { session }
-        );
-
+        updatedUser.coins = Number.isFinite(currentCoins) && currentCoins >= 0 ? currentCoins + coins : coins;
+        newBalance = updatedUser.coins; creditedPsid = psid; creditedCoins = coins;
+        await UserModel.updateOne({ psid }, { $set: { data: updatedUser } }, { session, runValidators: true });
+        const orderUpdate = await TopupOrderModel.updateOne({ linkId, status: 'pending' }, { $set: { status: 'processed', eventId: ev.id } }, { session });
+        if (orderUpdate.matchedCount !== 1) { const err = new Error('TOPUP_ORDER_ALREADY_PROCESSED'); err.code = 'TOPUP_ORDER_ALREADY_PROCESSED'; throw err; }
+        await PaymentEventModel.updateOne({ eventId: ev.id, status: 'processing' }, { $set: { status: 'processed', psid } }, { session });
         committedUserData = updatedUser;
       });
-      // [FIXED] Update the in-memory cache only after the transaction successfully commits.
-      if (committedUserData) db.users[psid] = committedUserData;
+      if (committedUserData && creditedPsid) db.users[creditedPsid] = committedUserData;
     } catch (paymentError) {
-      if (paymentError.code === 11000) {
-        // Already processed or being handled by another delivery; do not credit twice.
-        return res.sendStatus(200);
+      if (paymentError.code === 11000 || paymentError.code === 'TOPUP_ORDER_ALREADY_PROCESSED') return res.sendStatus(200);
+      if (paymentError.code === 'PAYMENT_USER_NOT_FOUND' || paymentError.code === 'TOPUP_ORDER_NOT_FOUND') {
+        console.error('[TOP-UP] No matching saved order/user for paid link:', linkId); return res.sendStatus(404);
       }
-      if (paymentError.code === 'PAYMENT_USER_NOT_FOUND') {
-        return res.sendStatus(404);
+      if (paymentError.code === 'TOPUP_ORDER_AMOUNT_MISMATCH' || paymentError.code === 'TOPUP_ORDER_INVALID') {
+        console.error('[TOP-UP] Paid event did not match the saved top-up order:', linkId); return res.sendStatus(400);
       }
       throw paymentError;
-    } finally {
-      await session.endSession();
-    }
-
+    } finally { await session.endSession(); }
     try {
-      await send(psid, `✅ PAYMENT SUCCESSFUL!\n💰 +${coins} Coins added to your account!\n💎 New Balance: ${newBalance} coins\n\nEnjoy JojoWorld V26! 🚀`);
-    } catch (notifyError) {
-      console.error('Payment credited but Messenger notification failed:', notifyError.message);
-    }
+      await send(creditedPsid, `✅ PAYMENT SUCCESSFUL!\n💰 +${creditedCoins} Coins added to your account!\n💎 New Balance: ${newBalance} coins\n\nEnjoy JojoWorld V26! 🚀`);
+    } catch (notifyError) { console.error('Payment credited but Messenger notification failed:', notifyError.message); }
     return res.sendStatus(200);
   } catch (e) {
     console.error('PayMongo webhook processing error:', e.message);
