@@ -1199,7 +1199,7 @@ A new user joined using your link! 🎁
               if (previousProfilePhotoUrl) user.profilePhotoUrl = previousProfilePhotoUrl;
               send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
             } else {
-              send(psid, '📸 Profile photo saved permanently to your JojoWorld account database! Ipapakita ito sa Visual Profile kasama ang frame na naka-equip mula sa Shop.', [
+              send(psid, '📸 Profile photo saved! Check your Visual Profile to see it with your equipped frame.', [
                 { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
                 { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
               ]);
@@ -1563,7 +1563,7 @@ A new user joined using your link! 🎁
 
         // [FIXED] Restore a clear profile-photo action; users upload by sending an image in this Messenger chat.
         if (upperRaw === "SET_PROFILE_PHOTO") {
-          send(psid, "📸 CHANGE PROFILE PHOTO\n━━━━━━━━━━━━━━━━━━━━\nI-send mo rito sa chat ang picture na gusto mong gawing profile photo. Piliin ang photo sa Messenger at pindutin ang Send. Awtomatikong ise-save ito sa account mo at ipapakita sa Visual Profile kasama ang frame na naka-equip sa Shop.", [
+          send(psid, "📸 Send a photo here to update your profile picture!", [
             { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
             { content_type: "text", title: "↩️ Back to Edit", payload: "EDIT_PROFILE_MENU" }
           ]);
