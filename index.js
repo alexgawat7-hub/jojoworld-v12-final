@@ -676,7 +676,8 @@ async function generateLeaderboardCanvas(users) {
   const top = Object.entries(users || {}).map(([id, user]) => ({ id, user, net: getNetWorth(user) }))
     .sort((a, b) => b.net - a.net).slice(0, 10);
   const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff'];
-  const getName = item => String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').slice(0, 19);
+  // [FIXED] Preserve the complete displayed player name; sizing is handled per card so names are not cut at 19 characters.
+  const getName = item => String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').trim();
   const getHouse = item => {
     const key = String(item.user.house || 'none').toLowerCase();
     return houseNames[key] || String(item.user.house || 'No House');
@@ -731,10 +732,14 @@ async function generateLeaderboardCanvas(users) {
     await drawLeaderboardAvatar(item, x + w / 2, y + 135, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
-    ctx.font = 'bold ' + (featured ? 26 : 23) + 'px Sans'; // [UPGRADED V28] Larger podium player names.
-    let podiumName = name;
-    while (ctx.measureText(podiumName).width > w - 24 && podiumName.length > 5) podiumName = podiumName.slice(0, -2) + '…';
-    ctx.fillText(podiumName, x + w / 2, y + 191);
+    // [FIXED] Fit the complete name inside each podium card instead of cutting off the end.
+    let podiumFontSize = featured ? 26 : 23;
+    ctx.font = 'bold ' + podiumFontSize + 'px Sans';
+    while (ctx.measureText(name).width > w - 20 && podiumFontSize > 11) {
+      podiumFontSize--;
+      ctx.font = 'bold ' + podiumFontSize + 'px Sans';
+    }
+    ctx.fillText(name, x + w / 2, y + 191);
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 219);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
@@ -779,20 +784,27 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
     await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 27px Sans'; // [UPGRADED V28] Bigger Top 4–10 names.
-    let rowName = name;
-    while (ctx.measureText(rowName).width > 215 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
-    ctx.fillText(rowName, 172, y + 34);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 22px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 172, y + 70); // [UPGRADED V28] Bigger coin stats.
-    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 17px Sans'; // [UPGRADED V28] Bigger house stats.
-    let houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
-    while (ctx.measureText(houseText).width > 170 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
-    ctx.fillText(houseText, 395, y + 52);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 17px Sans';
-    ctx.fillText('NET WORTH', 744, y + 30);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 22px Sans';
-    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 58);
-    ctx.fillStyle = color; ctx.font = 'bold 13px Sans';
+    // [FIXED] Align names to one shared left edge and use the full row width for long names.
+    // [FIXED] Reduce font size only as needed; never truncate the player's displayed name.
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff';
+    let rowNameFontSize = 27;
+    ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
+    while (ctx.measureText(name).width > 560 && rowNameFontSize > 14) {
+      rowNameFontSize--;
+      ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
+    }
+    ctx.fillText(name, 172, y + 32);
+    // [FIXED] Keep the lower stats aligned in fixed columns below the complete name.
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
+    ctx.fillText(coins.toLocaleString('en-US') + ' coins', 172, y + 70);
+    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
+    const houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
+    ctx.fillText(houseText, 395, y + 70);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 14px Sans';
+    ctx.fillText('NET WORTH', 744, y + 28);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 20px Sans';
+    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 57);
+    ctx.fillStyle = color; ctx.font = 'bold 12px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
     ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 80);
   }
