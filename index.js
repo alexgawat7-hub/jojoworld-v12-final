@@ -1198,8 +1198,12 @@ A new user joined using your link! 🎁
         if (ev.message && Array.isArray(ev.message.attachments) &&
             ev.message.attachments.some(item => item && item.type === 'image') &&
             user.awaitingProfilePhoto !== true) {
+          // [FIXED] Do not show profile-photo instructions when the user is simply reacting/viewing the leaderboard.
+          // [ADDED] Give a clear Exit action instead of sending the user into the wrong Profile flow.
           if (!isStickerOrLike && !ev.message.sticker_id) {
-            send(psid, '📸 Para palitan ang profile picture, buksan ang Profile at pindutin ang Change Photo.');
+            send(psid, '🏆 Nasa JojoWorld Leaderboard ka. Pindutin ang Exit kung gusto mong bumalik sa Main Menu.', [
+              { content_type: 'text', title: '🚪 Exit Leaderboard', payload: 'MENU' }
+            ]);
           }
           continue;
         }
