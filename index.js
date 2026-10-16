@@ -807,28 +807,65 @@ async function generateShopProductPreview(product, user) {
   ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY AFTER APPLY', 400, 240);
 
   if (['kubo','bahay','mansion','building'].includes(key)) {
-    ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15;
-    if (key === 'kubo') {
-      ctx.beginPath(); ctx.moveTo(260,405); ctx.lineTo(400,300); ctx.lineTo(540,405); ctx.closePath(); ctx.fill();
-      ctx.fillRect(285,405,230,125); ctx.fillStyle='#39251b'; ctx.fillRect(375,445,55,85); ctx.fillStyle='#9af7ff'; ctx.fillRect(315,435,38,35); ctx.fillRect(447,435,38,35);
-    } else if (key === 'bahay') {
-      ctx.beginPath(); ctx.moveTo(250,405); ctx.lineTo(400,290); ctx.lineTo(550,405); ctx.closePath(); ctx.fill();
-      ctx.fillRect(275,405,250,140); ctx.fillStyle='#302044'; ctx.fillRect(375,465,55,80); ctx.fillStyle='#8cf7ff'; ctx.fillRect(305,435,45,45); ctx.fillRect(450,435,45,45);
-    } else if (key === 'mansion') {
-      ctx.fillRect(240,365,320,180); ctx.fillRect(280,305,75,60); ctx.fillRect(445,305,75,60);
-      ctx.beginPath(); ctx.moveTo(265,305); ctx.lineTo(317,255); ctx.lineTo(370,305); ctx.closePath(); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(430,305); ctx.lineTo(482,255); ctx.lineTo(535,305); ctx.closePath(); ctx.fill();
-      ctx.fillStyle='#25203b'; ctx.fillRect(370,445,60,100);
-    } else {
-      ctx.fillRect(270,270,260,275); ctx.fillStyle='#25203b';
-      for (let yy=300; yy<480; yy+=55) for (let xx=295; xx<500; xx+=55) ctx.fillRect(xx,yy,28,30);
-      ctx.fillStyle=item.color; ctx.fillRect(370,485,60,60);
+    // Use the exact same house-art renderer as the Visual Profile so the preview matches the purchased asset.
+    const houseGlow = ctx.createRadialGradient(400, 420, 8, 400, 420, 190);
+    houseGlow.addColorStop(0, item.color + '66'); houseGlow.addColorStop(1, '#07102000');
+    ctx.fillStyle = houseGlow; ctx.fillRect(180, 260, 440, 360);
+    drawHouseArt(ctx, key, 285, 280, 230, 300);
+    ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 12;
+    ctx.font = 'bold 22px Sans'; ctx.textAlign = 'center'; ctx.fillText(item.title, 400, 590); ctx.shadowBlur = 0;
+  } else if (key === 'frame') {
+    // Preview the frame around an avatar using the shared frame state/color logic used by Profile and Leaderboard.
+    const frameStyle = getEquippedFrameStyle(previewUser);
+    const ax = 400, ay = 385, photoRadius = 78;
+    ctx.save(); ctx.fillStyle = '#091226'; ctx.shadowColor = frameStyle.glow; ctx.shadowBlur = 25;
+    ctx.beginPath(); ctx.arc(ax, ay, 88, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    let photoShown = false;
+    try {
+      let photo = null;
+      if (user.profilePhotoData) photo = await loadCachedProfilePhotoData(user.profilePhotoData);
+      else if (user.profilePhotoUrl) photo = await loadCachedProfilePhotoUrl(user.profilePhotoUrl);
+      if (photo) {
+        ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, photoRadius, 0, Math.PI * 2); ctx.clip();
+        const scale = Math.max((photoRadius * 2) / photo.width, (photoRadius * 2) / photo.height);
+        const pw = photo.width * scale, ph = photo.height * scale;
+        ctx.drawImage(photo, ax - pw / 2, ay - ph / 2, pw, ph); ctx.restore(); photoShown = true;
+      }
+    } catch (photoError) {
+      console.warn('[SHOP PREVIEW] Could not load profile photo:', photoError.message);
     }
-    ctx.shadowBlur = 0;
+    if (!photoShown) {
+      ctx.save(); ctx.fillStyle = '#263c62'; ctx.beginPath(); ctx.arc(ax, ay - 20, 26, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(ax, ay + 38, 43, 32, 0, Math.PI, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#d9e8fa'; ctx.font = 'bold 12px Sans'; ctx.textAlign = 'center'; ctx.fillText('YOUR AVATAR', ax, ay + 8); ctx.restore();
+    }
+    ctx.save(); ctx.shadowColor = frameStyle.glow; ctx.shadowBlur = frameStyle.equipped ? 25 : 12;
+    ctx.strokeStyle = frameStyle.equipped ? frameStyle.color : item.color;
+    ctx.lineWidth = frameStyle.equipped ? 9 : 5; ctx.beginPath(); ctx.arc(ax, ay, 87, 0, Math.PI * 2); ctx.stroke();
+    if (frameStyle.gold || frameStyle.royal) {
+      ctx.strokeStyle = '#fff2b3'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ax, ay, 77, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (frameStyle.diamond || frameStyle.neon) {
+      ctx.strokeStyle = frameStyle.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ax, ay, 77, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (frameStyle.royal) {
+      ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 16; ctx.strokeStyle = '#fff0a6'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(ax, ay, 98, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#d99018'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(ax, ay, 105, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+      ctx.fillStyle = '#ffdf69';
+      for (let j = 0; j < 12; j++) { const angle = -Math.PI / 2 + j * Math.PI / 6, rx = ax + Math.cos(angle) * 101, ry = ay + Math.sin(angle) * 101; ctx.beginPath(); ctx.arc(rx, ry, j % 3 === 0 ? 5 : 2.5, 0, Math.PI * 2); ctx.fill(); }
+      ctx.beginPath(); ctx.moveTo(ax - 47, ay - 88); ctx.lineTo(ax - 38, ay - 119); ctx.lineTo(ax - 13, ay - 97); ctx.lineTo(ax, ay - 132); ctx.lineTo(ax + 14, ay - 97); ctx.lineTo(ax + 39, ay - 119); ctx.lineTo(ax + 48, ay - 88); ctx.closePath();
+      ctx.fillStyle = '#d99a25'; ctx.fill(); ctx.strokeStyle = '#fff0a6'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#63eaff'; ctx.beginPath(); ctx.arc(ax, ay - 113, 5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+    const displayName = getPlainDisplayName(previewUser).slice(0, 25);
+    ctx.textAlign = 'center'; ctx.font = 'bold 26px Sans'; ctx.fillStyle = '#f4f7ff';
+    ctx.shadowColor = frameStyle.glow; ctx.shadowBlur = 10; ctx.fillText(displayName, 400, 535); ctx.shadowBlur = 0;
+    ctx.fillStyle = frameStyle.color; ctx.font = 'bold 18px Sans'; ctx.fillText('ROYALTY FRAME • CROWN BORDER', 400, 585);
   } else {
     const displayName = getPlainDisplayName(previewUser).slice(0, 25);
-    // [UPGRADED V35] Show the exact purchased-style name treatment in Shop Preview.
-    // The effect is applied to the name itself only: no surrounding symbols, lines, ornaments, or text boxes.
+    // Render the selected name effect with the same effect renderer used by Profile and Leaderboard.
     const previewEffect = String(previewUser.nameEffect || key || 'none').toLowerCase();
     if (!drawPremiumNameEffect(ctx, displayName, 400, 385, 500, previewEffect, 'center')) {
       ctx.save();
@@ -843,8 +880,6 @@ async function generateShopProductPreview(product, user) {
     ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
     if (key === 'vip') {
       ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
-    } else if (key === 'frame') {
-      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('ROYALTY FRAME • CROWN BORDER', 400, 585);
     } else {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
     }
