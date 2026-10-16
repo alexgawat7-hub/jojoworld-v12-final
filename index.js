@@ -1450,7 +1450,37 @@ Choose an action below:`, [
         if (cleanText === "find match" || upperRaw === "FIND MATCH") {
           user.currentPage = "FIND_MATCH";
           await saveUserToDB(psid);
-          send(psid, "💘 FIND YOUR MATCH ✨\n━━━━━━━━━━━━━━━━━━━━\nReady to spark a new connection? 💖\nMeet someone new, start a fun conversation, and see where it goes!\n\n💎 Search Fee: 10 Coins", [
+          const matchCountCutoff = Date.now() - 15 * 60 * 1000;
+          let availableMatchCount = 0;
+          try {
+            if (MONGODB_URI && mongoose.connection.readyState === 1) {
+              availableMatchCount = await UserModel.countDocuments({
+                psid: { $ne: psid },
+                "data.state": "IDLE",
+                "data.activeMatchPsid": null,
+                "data.age": { $gte: 18, $lte: 99 },
+                "data.lastActive": { $gte: matchCountCutoff }
+              });
+            } else {
+              availableMatchCount = Object.keys(db.users).filter(candidateId =>
+                candidateId !== psid &&
+                db.users[candidateId]?.state === "IDLE" &&
+                !db.users[candidateId]?.activeMatchPsid &&
+                Number(db.users[candidateId]?.age) >= 18 &&
+                Number(db.users[candidateId]?.age) <= 99 &&
+                Number(db.users[candidateId]?.lastActive || 0) >= matchCountCutoff
+              ).length;
+            }
+          } catch (error) {
+            console.error("Available match count failed:", error.message);
+          }
+          send(psid, `💘 FIND YOUR MATCH ✨
+━━━━━━━━━━━━━━━━━━━━
+Ready to spark a new connection? 💖
+Meet someone new, start a fun conversation, and see where it goes!
+
+🟢 Available Matches: ${availableMatchCount}
+💎 Search Fee: 10 Coins (charged only when a match is found)`, [
             { content_type: "text", title: "🔎 Search Match (10c)", payload: "SEARCH_MATCH" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
           ]);
@@ -1493,8 +1523,15 @@ Choose an action below:`, [
           }
 
           if (!candidate || !candidate.data) {
-            send(psid, "😕 Wala pang available na active match ngayon. Walang coins na ikakaltas. Subukan ulit mamaya.", [
-              { content_type: "text", title: "🔎 Search Again", payload: "FIND MATCH" },
+            send(psid, `😕 NO ACTIVE MATCHES RIGHT NOW
+━━━━━━━━━━━━━━━━━━━━
+There are currently no active users available to match with.
+
+💰 No coins were deducted.
+🟢 Available Matches: 0
+
+Please try again in a little while!`, [
+              { content_type: "text", title: "🔄 Refresh Matches", payload: "FIND MATCH" },
               { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
             ]);
             continue;
