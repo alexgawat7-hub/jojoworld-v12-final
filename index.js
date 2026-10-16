@@ -2483,7 +2483,7 @@ ${renderGiftCatalog()}
           }
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
-          await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
+          await sendImage(psid, shopImage, "💎✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 𝐒𝐇𝐎𝐏 ✨💎\n👑 Choose your upgrade below 👑", [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
             { content_type: "text", title: "👑 Royalty Frame 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
