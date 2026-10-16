@@ -316,8 +316,17 @@ async function generateProfileCanvas(user) {
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
   ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,720,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
   ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.font='bold 29px Sans';ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
-  if(vip){panel(270,200,180,36,'#b98b2f');ctx.fillStyle='#ffe7a1';ctx.font='bold 16px Sans';ctx.fillText('♛ VIP ELITE',286,224);}
-  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 13px Sans';ctx.fillText('✦ GOLD FRAME EQUIPPED',270,vip?258:224);}
+  // [UPGRADED V30] Prominent verified VIP emblem drawn with Canvas paths (no emoji-font dependency).
+  if(vip){
+    const vx=Math.min(720,Math.max(470,ctx.measureText(displayName).width+286)), vy=171;
+    ctx.save();ctx.translate(vx,vy);ctx.shadowColor='#ffd34f';ctx.shadowBlur=18;
+    const shield=()=>{ctx.beginPath();ctx.moveTo(0,-19);ctx.lineTo(18,-12);ctx.lineTo(16,5);ctx.quadraticCurveTo(10,17,0,22);ctx.quadraticCurveTo(-10,17,-16,5);ctx.lineTo(-18,-12);ctx.closePath();};
+    const gold=ctx.createLinearGradient(-18,-18,18,20);gold.addColorStop(0,'#fff6b0');gold.addColorStop(.42,'#ffc629');gold.addColorStop(1,'#b66a08');ctx.fillStyle=gold;shield();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff4bd';ctx.lineWidth=2;shield();ctx.stroke();
+    ctx.strokeStyle='#fff';ctx.lineWidth=3.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-8,1);ctx.lineTo(-2,7);ctx.lineTo(9,-6);ctx.stroke();ctx.restore();
+    panel(270,200,236,42,'#ffd34f');ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=10;ctx.fillStyle='#fff0a3';ctx.font='bold 16px Sans';ctx.textAlign='left';ctx.fillText('VERIFIED  •  VIP ELITE',284,226);ctx.restore();
+    ctx.save();ctx.textAlign='left';ctx.fillStyle='#ffdf70';ctx.font='bold 11px Sans';ctx.fillText('✦ OFFICIAL JOJOWORLD MEMBER ✦',270,257);ctx.restore();
+  }
+  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 13px Sans';ctx.fillText(royalFrame?'♛ ROYALTY FRAME EQUIPPED':'✦ GOLD FRAME EQUIPPED',270,vip?278:224);}
   label('📍 '+String(user.location||'Location not set').slice(0,32),270,294,17,'#dce8ff');
   label('♈ '+String(user.zodiac||'Zodiac not set').slice(0,28),270,326,17,'#dce8ff');
   label('🎯 '+String(user.relationshipGoal||'Goal not set').slice(0,34),270,358,16,'#dce8ff');
@@ -2351,7 +2360,7 @@ ${renderGiftCatalog()}
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
-            { content_type: "text", title: "👑 VIP Badge 1,000c", payload: "PREVIEW_VIP" },
+            { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
             { content_type: "text", title: "✨ Gold Frame 150c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
