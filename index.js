@@ -269,7 +269,7 @@ function drawV28Canvas(title, width, height) {
 }
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Visual profile card that displays purchased shop cosmetics in the actual profile.
-  const W = 800, H = 1000, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  const W = 800, H = 1240, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = {
     rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
@@ -328,9 +328,37 @@ async function generateProfileCanvas(user) {
     {x:545,label:'👀 PROFILE VIEWS',value:String(Number(user.views)||0)}
   ];
   stats.forEach(s=>{ctx.fillStyle='#11152d';rr(s.x,690,200,100,18);ctx.fill();ctx.strokeStyle='#4d5b92';ctx.lineWidth=1.5;rr(s.x,690,200,100,18);ctx.stroke();ctx.textAlign='center';ctx.fillStyle='#9fb4d6';ctx.font='bold 14px Sans';ctx.fillText(s.label,s.x+100,720);ctx.fillStyle='#fff2a8';ctx.font='bold 25px Sans';ctx.fillText(s.value,s.x+100,760);});
-  ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='bold 17px Sans';ctx.fillText('ABOUT ME',75,835);
-  ctx.fillStyle='#a9bdd8';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),75,865,650,22,3);
-  ctx.textAlign='center';ctx.fillStyle='#5af4ff';ctx.font='bold 14px Sans';ctx.fillText('SHOP ITEMS APPEAR HERE AFTER PURCHASE',400,955);
+  // [UPGRADED V28] Show the user's full profile details inside the visual card.
+  const detailsPanel=(x,y,w,h,title)=>{
+    const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#171b38');g.addColorStop(1,'#080d1c');
+    ctx.fillStyle=g;rr(x,y,w,h,18);ctx.fill();ctx.strokeStyle='#46558b';ctx.lineWidth=1.5;rr(x,y,w,h,18);ctx.stroke();
+    ctx.textAlign='left';ctx.fillStyle='#8cecff';ctx.font='bold 17px Sans';ctx.fillText(title,x+20,y+29);
+  };
+  detailsPanel(55,815,690,210,'👤 PROFILE DETAILS');
+  const detailRows=[
+    ['📍 LOCATION',String(user.location||'Not set')],
+    ['♈ ZODIAC',String(user.zodiac||'Not set 🌟')],
+    ['🎯 GOAL',String(user.relationshipGoal||'Not set')],
+    ['🌟 BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))+'  |  🖼 FRAME: '+String(goldFrame?'💎 Gold Frame':(user.frame||'None'))]
+  ];
+  ctx.font='bold 15px Sans';
+  detailRows.forEach((d,i)=>{
+    const yy=858+i*36;ctx.fillStyle='#9fb4d6';ctx.textAlign='left';ctx.fillText(d[0],78,yy);
+    ctx.fillStyle='#f4f7ff';ctx.textAlign='right';ctx.fillText(d[1].slice(0,48),720,yy);
+  });
+  detailsPanel(55,1040,335,150,'💬 ABOUT ME');
+  ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='15px Sans';
+  canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),75,1080,295,21,4);
+  detailsPanel(410,1040,335,150,'🎁 GIFTS SHOWCASE');
+  const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
+  const giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count));
+  const giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
+  ctx.fillStyle='#fff2a8';ctx.textAlign='left';ctx.font='bold 15px Sans';
+  ctx.fillText('Total Gifts Received: '+giftTotal,430,1080);
+  ctx.fillStyle='#c6d5f0';ctx.font='14px Sans';
+  const showcase=String(user.giftsShowcase||'None yet');
+  canvasText(ctx,giftNames.length?giftNames.join(' • '):(showcase!=='None yet'?showcase:'None yet 🎁'),430,1110,290,20,3);
+  ctx.textAlign='center';ctx.fillStyle='#5af4ff';ctx.font='bold 14px Sans';ctx.fillText('✨ JOJOWORLD • PROFILE & STATS ✨',400,1215);
   const file=path.join(cacheDir,`profile_${String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')}.png`);
   await fsExtra.writeFile(file,canvas.toBuffer('image/png'));return file;
 }
