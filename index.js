@@ -2368,7 +2368,7 @@ ${renderGiftCatalog()}
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
-            { content_type: "text", title: "✨ Gold Frame 150c", payload: "PREVIEW_FRAME" },
+            { content_type: "text", title: "👑 Royalty Frame 150c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
@@ -2401,7 +2401,7 @@ ${renderGiftCatalog()}
           // [FIXED] Duplicate gold-frame validation happens before deducting coins.
           if (user.royalFrame || user.goldFrame || String(user.frame || "").toLowerCase().includes("royal") || String(user.frame || "").toLowerCase().includes("gold")) { sendShopResult(psid, "❌ Meron ka na Royalty Frame boss!"); continue; }
           if (user.coins < 150) {
-            sendShopResult(psid, `❌ Not enough coins! Gold Frame costs 150 coins.`);
+            sendShopResult(psid, `❌ Not enough coins! Royalty Frame costs 150 coins.`);
           } else {
             const previousFrameState = { coins: user.coins, frame: user.frame, goldFrame: user.goldFrame, royalFrame: user.royalFrame };
             user.coins -= 150;
@@ -2416,7 +2416,7 @@ ${renderGiftCatalog()}
               sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
               continue;
             }
-            sendShopResult(psid, `🎉 SUCCESS! Gold Frame unlocked! 💎`);
+            sendShopResult(psid, `🎉 SUCCESS! Royalty Frame unlocked! 👑`);
           }
           continue;
         }
