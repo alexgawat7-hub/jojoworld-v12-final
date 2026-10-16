@@ -534,26 +534,26 @@ async function generateShopProductPreview(product, user) {
   const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
-// [FIXED] Build leaderboard from persisted MongoDB player records, not only this process's cache.
+// [UPGRADED] Merge saved MongoDB players with the local cache so a valid player
+// is not dropped from the leaderboard when this process has only a partial cache.
 async function getLeaderboardUsers() {
+  const combined = { ...(db.users || {}) };
   if (MONGODB_URI && mongoose.connection.readyState === 1) {
     try {
       const docs = await UserModel.find({}).select("psid data").lean();
-      const persisted = {};
       for (const doc of docs) {
         if (doc && doc.psid && doc.data && typeof doc.data === "object") {
-          persisted[doc.psid] = doc.data;
-          // Keep the local cache aligned with the saved player record.
+          // Persisted values are authoritative; cached-only players remain as fallback.
+          combined[doc.psid] = doc.data;
           db.users[doc.psid] = doc.data;
         }
       }
-      return persisted;
+      return combined;
     } catch (error) {
-      console.error("[FIXED] Could not load full leaderboard from MongoDB:", error.message);
+      console.error("[UPGRADED] Could not fully load leaderboard from MongoDB; using merged cache:", error.message);
     }
   }
-  // Local fallback is used only when MongoDB is not connected.
-  return db.users || {};
+  return combined;
 }
 
 async function generateLeaderboardCanvas(users) {
