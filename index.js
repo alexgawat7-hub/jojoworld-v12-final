@@ -362,9 +362,17 @@ async function generateProfileCanvas(user) {
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
   ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,650,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
+  // [UPGRADED SPARKLE] Give the MYTHIC effect a distinct pearl-white/lavender/gold shimmer and visible star glints.
+  if(effect==='sparkle'){nameFill=ctx.createLinearGradient(270,0,680,0);['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((col,i)=>nameFill.addColorStop(i/4,col));}
   // [FIXED V31] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
   let nameFontSize=29;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>405&&nameFontSize>17){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
-  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  const nameWidth=ctx.measureText(displayName).width;
+  ctx.fillStyle=nameFill;ctx.shadowColor=effect==='sparkle'?'#d7a4ff':colors[0];ctx.shadowBlur=effect==='sparkle'?24:(effect!=='none'?12:0);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  if(effect==='sparkle'){
+    const glint=(gx,gy,r)=>{ctx.save();ctx.translate(gx,gy);ctx.shadowColor='#fff4b0';ctx.shadowBlur=12;ctx.fillStyle='#fffbe9';ctx.beginPath();ctx.moveTo(0,-r);ctx.quadraticCurveTo(r*.18,-r*.18,r,0);ctx.quadraticCurveTo(r*.18,r*.18,0,r);ctx.quadraticCurveTo(-r*.18,r*.18,-r,0);ctx.quadraticCurveTo(-r*.18,-r*.18,0,-r);ctx.fill();ctx.restore();};
+    glint(270+Math.min(nameWidth,65),163,5);glint(310+Math.min(nameWidth,90),191,3.5);glint(270+Math.min(nameWidth,150),159,3);glint(270+Math.min(nameWidth,225),188,4.5);
+    ctx.save();ctx.globalAlpha=.75;ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(278,195);ctx.quadraticCurveTo(390,202,Math.min(270+nameWidth,665),194);ctx.stroke();ctx.restore();
+  }
   // [UPGRADED V31] Large fixed-position verified shield on the RIGHT side of the profile identity card.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
   if(vip){
@@ -650,8 +658,18 @@ async function generateShopProductPreview(product, user) {
       const g = ctx.createLinearGradient(170, 0, 630, 0);
       ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'].forEach((c,i)=>g.addColorStop(i/6,c));
       ctx.fillStyle = g;
+    } else if (key === 'sparkle') {
+      const g = ctx.createLinearGradient(175, 0, 625, 0);
+      ['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((c,i)=>g.addColorStop(i/4,c));
+      ctx.fillStyle = g;
     } else ctx.fillStyle = item.color;
-    ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 34px Sans'; ctx.fillText(displayName, 400, 385); ctx.shadowBlur = 0;
+    ctx.shadowColor = key === 'sparkle' ? '#d7a4ff' : item.color; ctx.shadowBlur = key === 'sparkle' ? 34 : 22; ctx.font = 'bold 34px Sans'; ctx.fillText(displayName, 400, 385); ctx.shadowBlur = 0;
+    if (key === 'sparkle') {
+      // Static preview glints make the real visual style obvious before purchase.
+      const sparkleStar = (sx,sy,r) => { ctx.save(); ctx.translate(sx,sy); ctx.shadowColor='#fff4b0'; ctx.shadowBlur=18; ctx.fillStyle='#fffbe9'; ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.16,-r*.16,r,0); ctx.quadraticCurveTo(r*.16,r*.16,0,r); ctx.quadraticCurveTo(-r*.16,r*.16,-r,0); ctx.quadraticCurveTo(-r*.16,-r*.16,0,-r); ctx.fill(); ctx.restore(); };
+      sparkleStar(220,345,13); sparkleStar(566,350,9); sparkleStar(290,411,7); sparkleStar(515,407,11); sparkleStar(375,332,5);
+      ctx.save(); ctx.globalAlpha=.6; ctx.strokeStyle='#d7a4ff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(185,420); ctx.quadraticCurveTo(400,438,615,418); ctx.stroke(); ctx.restore();
+    }
     ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
     if (key === 'vip') {
       ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
