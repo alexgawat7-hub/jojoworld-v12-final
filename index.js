@@ -6,7 +6,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 // [ADDED] V28 canvas profile and leaderboard rendering.
-const { createCanvas } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
 const fsExtra = require('fs-extra');
 const mongoose = require('mongoose');
@@ -296,10 +296,28 @@ async function generateProfileCanvas(user) {
   // [ADDED] Main profile display panel.
   const panel=ctx.createLinearGradient(70,130,730,450);panel.addColorStop(0,'#191934');panel.addColorStop(1,'#080d1d');
   ctx.fillStyle=panel;rr(55,135,690,330,28);ctx.fill();ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=18;ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?6:2.5;rr(55,135,690,330,28);ctx.stroke();ctx.restore();
-  // Avatar medallion uses a stylized silhouette so profile rendering works without external photos.
-  const ax=400,ay=260;ctx.save();ctx.shadowColor=colors[0];ctx.shadowBlur=24;ctx.fillStyle='#0b142b';ctx.beginPath();ctx.arc(ax,ay,86,0,Math.PI*2);ctx.fill();ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?8:5;ctx.stroke();ctx.restore();
-  ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.fillText('PROFILE',ax,ay+7);
+  // [UPGRADED V28] Use uploaded Messenger profile photo when available, clipped inside the medallion.
+  const ax=400,ay=260;
+  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=24;ctx.fillStyle='#0b142b';ctx.beginPath();ctx.arc(ax,ay,86,0,Math.PI*2);ctx.fill();ctx.restore();
+  let photoShown=false;
+  if(user.profilePhotoUrl){
+    try{
+      const photo=await loadImage(user.profilePhotoUrl);
+      ctx.save();ctx.beginPath();ctx.arc(ax,ay,78,0,Math.PI*2);ctx.clip();
+      const scale=Math.max(156/photo.width,156/photo.height),pw=photo.width*scale,ph=photo.height*scale;
+      ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;
+    }catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
+  }
+  if(!photoShown){
+    ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.fillText('PROFILE',ax,ay+7);
+  }
+  // [UPGRADED V28] The equipped shop frame is visibly rendered around the avatar.
+  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?24:14;
+  ctx.strokeStyle=goldFrame?'#ffd34f':(String(user.frame||'').toLowerCase().includes('silver')?'#dce8ff':border);
+  ctx.lineWidth=goldFrame?9:6;ctx.beginPath();ctx.arc(ax,ay,84,0,Math.PI*2);ctx.stroke();
+  if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,73,0,Math.PI*2);ctx.stroke();}
+  ctx.restore();
   const displayName=String(getDisplayName(user)||user.name||'Jojo Member').slice(0,28);
   let nameFill=colors[0];
   if(effect==='rainbow'){nameFill=ctx.createLinearGradient(170,0,630,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
@@ -1144,6 +1162,24 @@ A new user joined using your link! 🎁
 
         let cleanText = sanitizeInput(rawText);
         let upperRaw = rawText.toUpperCase();
+
+        // [ADDED V28] Allow users to upload a Messenger photo by sending an image directly in chat.
+        const incomingImage = ev.message && Array.isArray(ev.message.attachments)
+          ? ev.message.attachments.find(item => item && item.type === 'image' && item.payload && item.payload.url)
+          : null;
+        if (incomingImage) {
+          user.profilePhotoUrl = incomingImage.payload.url;
+          if (!await saveUserToDB(psid, { saveJackpot: false })) {
+            delete user.profilePhotoUrl;
+            send(psid, '⚠️ Hindi na-save ang profile photo. Subukan ulit mamaya.');
+          } else {
+            send(psid, '📸 Profile photo saved! Ipapakita ito sa Visual Profile kasama ang frame na naka-equip mula sa Shop.', [
+              { content_type: 'text', title: '👤 View Profile', payload: 'PROFILE' },
+              { content_type: 'text', title: '🛍️ Visit Shop', payload: 'SHOP' }
+            ]);
+          }
+          continue;
+        }
         // [ADDED] [UPGRADED V28] V28 text commands. Existing command routing remains below.
 
         // ADMIN COMMAND SUITE
