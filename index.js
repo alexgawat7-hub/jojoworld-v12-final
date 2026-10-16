@@ -1409,41 +1409,21 @@ A new user joined using your link! 🎁
           continue;
         }
 
-        // VIEW PROFILE
+        // [UPGRADED V28] Visual-only profile: show equipped/purchased shop items on the profile image, not the legacy text wall.
         if (["profile", "me", "my"].includes(cleanText) || ["PROFILE", "ME", "MY"].includes(upperRaw)) {
-          // [UPGRADED V28] Keep legacy text profile command and include verified display name.
           user.views = (user.views || 0) + 1;
           await saveUserToDB(psid, { saveJackpot: false });
-          // [ADDED] Canvas preview accompanies the legacy text profile to preserve old behavior.
-          try { const profileImage = await generateProfileCanvas({ ...user, id: psid }); await sendImage(psid, profileImage, `${getDisplayName(user)} • Black Gold Profile`); } catch (canvasError) { console.error("Profile canvas generation failed:", canvasError.message); }
-          const giftsReceived = user.giftsReceived && typeof user.giftsReceived === "object" ? user.giftsReceived : {};
-          const giftEntries = Object.entries(giftsReceived)
-            .filter(([, count]) => Number.isFinite(count) && count > 0);
-          const totalGiftsReceived = giftEntries.reduce((total, [, count]) => total + count, 0);
-          const giftSummary = giftEntries
-            .map(([k, v]) => `${GIFTS[k]?.name || k} x${v}`)
-            .join(" | ") || "None yet 🎁";
-
-          send(psid, `👤 YOUR PROFILE & STATS (V26)
-━━━━━━━━━━━━━━━━━━━━
-📛 Name: ${user.name} (${user.age})
-📍 Location: ${user.location}
-♈ Zodiac: ${user.zodiac}
-🎯 Goal: ${user.relationshipGoal}
-💬 Bio: "${user.bio}"
-💎 Coins: ${user.coins} | 👁️ Views: ${user.views}
-🌟 Badge: ${user.badge} | 🖼️ Frame: ${user.frame}
-🎁 Total Gifts Received: ${totalGiftsReceived}
-🎁 Gifts Showcase: ${giftSummary}
-🔗 Ref Link: https://m.me/${PAGE_USERNAME}?start=REF_${psid}
-
-Choose an action below:`, [
-            { content_type: "text", title: "✏️ Edit Profile", payload: "EDIT_PROFILE_MENU" },
-            { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
-            { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
-            { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
-            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-          ]);
+          try {
+            const profileImage = await generateProfileCanvas({ ...user, id: psid });
+            await sendImage(psid, profileImage, `✨ JOJOWORLD VISUAL PROFILE • ${getDisplayName(user)} ✨\nYour equipped shop items are displayed on your profile.`, [
+              { content_type: "text", title: "✏️ Edit Profile", payload: "EDIT_PROFILE_MENU" },
+              { content_type: "text", title: "🛍️ Visit Shop", payload: "SHOP" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+          } catch (canvasError) {
+            console.error("Visual profile generation failed:", canvasError.message);
+            send(psid, "⚠️ Your visual profile could not be generated. Please try again.");
+          }
           continue;
         }
 
