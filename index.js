@@ -292,7 +292,8 @@ async function generateProfileCanvas(user) {
   const frameKey = String(user.frame || '').toLowerCase();
   const royalFrame = !!user.royalFrame || frameKey.includes('royal');
   const goldFrame = royalFrame || !!user.goldFrame || frameKey.includes('gold');
-  // [FIXED V31] Show the purchased VIP badge even if an older saved account only has its badge label.\n  const vip = !!user.vip || String(user.badge || '').toLowerCase().includes('vip');
+  // [FIXED V31] Show the purchased VIP badge even if an older saved account only has its badge label.
+  const vip = !!user.vip || String(user.badge || '').toLowerCase().includes('vip');
   const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   for(let i=0;i<115;i++){ctx.globalAlpha=.10+(i%3)*.045;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2:1,0,Math.PI*2);ctx.fill();}
