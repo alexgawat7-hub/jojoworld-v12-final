@@ -732,14 +732,33 @@ async function generateLeaderboardCanvas(users) {
     await drawLeaderboardAvatar(item, x + w / 2, y + 135, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
-    // [FIXED] Fit the complete name inside each podium card instead of cutting off the end.
-    let podiumFontSize = featured ? 26 : 23;
+    // [FIXED] Show the full podium name by wrapping it inside the card instead of letting neighboring cards cover it.
+    const podiumWords = name.split(/\s+/);
+    let podiumLines = [], podiumLine = '';
+    let podiumFontSize = featured ? 22 : 19;
     ctx.font = 'bold ' + podiumFontSize + 'px Sans';
-    while (ctx.measureText(name).width > w - 20 && podiumFontSize > 11) {
+    for (const word of podiumWords) {
+      const candidate = podiumLine ? podiumLine + ' ' + word : word;
+      if (ctx.measureText(candidate).width > w - 18 && podiumLine) {
+        podiumLines.push(podiumLine);
+        podiumLine = word;
+      } else podiumLine = candidate;
+    }
+    if (podiumLine) podiumLines.push(podiumLine);
+    while (podiumLines.some(line => ctx.measureText(line).width > w - 18) && podiumFontSize > 12) {
       podiumFontSize--;
       ctx.font = 'bold ' + podiumFontSize + 'px Sans';
     }
-    ctx.fillText(name, x + w / 2, y + 191);
+    if (podiumLines.length > 2) {
+      podiumLines = [podiumLines.slice(0, podiumLines.length - 1).join(' '), podiumLines[podiumLines.length - 1]];
+      while (ctx.measureText(podiumLines[0]).width > w - 18 && podiumFontSize > 12) {
+        podiumFontSize--;
+        ctx.font = 'bold ' + podiumFontSize + 'px Sans';
+      }
+    }
+    ctx.textAlign = 'center';
+    ctx.fillText(podiumLines[0] || name, x + w / 2, y + 187);
+    if (podiumLines[1]) ctx.fillText(podiumLines[1], x + w / 2, y + 205);
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 219);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
@@ -784,16 +803,32 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
     await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
-    // [FIXED] Align names to one shared left edge and use the full row width for long names.
-    // [FIXED] Reduce font size only as needed; never truncate the player's displayed name.
+    // [FIXED] Wrap long full names into two lines; never cut the name to a single first word.
     ctx.textAlign = 'left'; ctx.fillStyle = '#effaff';
-    let rowNameFontSize = 27;
+    let rowNameFontSize = 22;
     ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
-    while (ctx.measureText(name).width > 560 && rowNameFontSize > 14) {
+    let rowNameLines = [], rowNameLine = '';
+    for (const word of name.split(/\s+/)) {
+      const candidate = rowNameLine ? rowNameLine + ' ' + word : word;
+      if (ctx.measureText(candidate).width > 555 && rowNameLine) {
+        rowNameLines.push(rowNameLine);
+        rowNameLine = word;
+      } else rowNameLine = candidate;
+    }
+    if (rowNameLine) rowNameLines.push(rowNameLine);
+    while (rowNameLines.some(line => ctx.measureText(line).width > 555) && rowNameFontSize > 13) {
       rowNameFontSize--;
       ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
     }
-    ctx.fillText(name, 172, y + 32);
+    if (rowNameLines.length > 2) {
+      rowNameLines = [rowNameLines.slice(0, rowNameLines.length - 1).join(' '), rowNameLines[rowNameLines.length - 1]];
+      while (ctx.measureText(rowNameLines[0]).width > 555 && rowNameFontSize > 13) {
+        rowNameFontSize--;
+        ctx.font = 'bold ' + rowNameFontSize + 'px Sans';
+      }
+    }
+    ctx.fillText(rowNameLines[0] || name, 172, y + (rowNameLines[1] ? 25 : 32));
+    if (rowNameLines[1]) ctx.fillText(rowNameLines[1], 172, y + 47);
     // [FIXED] Keep the lower stats aligned in fixed columns below the complete name.
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 20px Sans';
     ctx.fillText(coins.toLocaleString('en-US') + ' coins', 172, y + 70);
