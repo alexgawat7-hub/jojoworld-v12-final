@@ -1362,8 +1362,14 @@ A new user joined using your link! 🎁
             }
 
             if (upperRaw === "MENU" || cleanText === "menu") {
+              // [FIXED] Do not show the menu as successful if its page state was not saved.
+              const previousPage = user.currentPage;
               user.currentPage = "MENU";
-              await saveUserToDB(psid, { saveJackpot: false });
+              if (!await saveUserToDB(psid, { saveJackpot: false })) {
+                user.currentPage = previousPage;
+                send(psid, "⚠️ Hindi na-save ang pagbalik sa Menu. Subukan ulit mamaya.");
+                continue;
+              }
               sendMenu(psid);
             } else {
               send(psid, "🔴 Chat ended successfully.", [
@@ -1956,17 +1962,7 @@ ${renderGiftCatalog()}
           user.state = "CHATTING";
           user.activeMatchPsid = null;
 
-          if (!partnerPsid) {
-            Object.assign(user, originalUser);
-            user.pendingMatchPsid = null;
-            await saveUserToDB(psid);
-            send(psid, "😕 Your selected match is no longer available. No unlock coins were deducted. Please refresh Find Your Match and try again.", [
-              { content_type: "text", title: "🔎 Find Match", payload: "FIND MATCH" },
-              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
-            ]);
-            continue;
-          }
-
+          // [FIXED] partnerPsid is already checked above; retain the original state if no partner exists.
           const partner = await loadUserFromDB(partnerPsid);
           if (!partner || partnerPsid === psid) {
             Object.assign(user, originalUser);
