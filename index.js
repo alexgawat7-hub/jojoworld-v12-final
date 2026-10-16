@@ -735,12 +735,15 @@ async function generateLeaderboardCanvas(users) {
       continue;
     }
     const name = getName(item), coins = Math.max(0, Number(item.user.coins) || 0);
-    // [UPGRADED V28] Leaderboard rows also show each player's uploaded profile photo.
-    await drawLeaderboardAvatar(item, 125, y + 33, 24);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans'; ctx.fillText(name, 160, y + 25);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 15px Sans'; ctx.fillText(coins.toLocaleString('en-US') + 'c', 160, y + 48);
-    ctx.fillStyle = '#a8eefa'; ctx.font = '12px Sans'; ctx.fillText('House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)', 320, y + 39);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 500, y + 24);
+    // [FIXED] Keep leaderboard row text clear of the avatar; reserve a dedicated text column.
+    await drawLeaderboardAvatar(item, 92, y + 33, 24);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 16px Sans';
+    let rowName = name;
+    while (ctx.measureText(rowName).width > 220 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
+    ctx.fillText(rowName, 130, y + 25);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 14px Sans'; ctx.fillText(coins.toLocaleString('en-US') + 'c', 130, y + 48);
+    ctx.fillStyle = '#a8eefa'; ctx.font = '12px Sans'; ctx.fillText('House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)', 350, y + 39);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 535, y + 24);
     ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
     ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 49);
