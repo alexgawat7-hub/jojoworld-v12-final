@@ -268,122 +268,55 @@ function drawV28Canvas(title, width, height) {
   return { canvas, ctx };
 }
 async function generateProfileCanvas(user) {
-  // [UPGRADED V28] Visual profile card that displays purchased shop cosmetics in the actual profile.
-  const W = 800, H = 1240, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
+  const W = 800, H = 1320, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
   const effect = String(user.nameEffect || 'none').toLowerCase();
-  const effectColors = {
-    rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
-    sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'],
-    fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'],
-    neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'],
-    dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'],
-    blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0']
-  };
+  const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'] };
   const colors = effectColors[effect] || ['#ffd34f','#ffec9e','#f59e0b'];
   const goldFrame = !!user.goldFrame || String(user.frame || '').toLowerCase().includes('gold');
   const vip = !!user.vip;
-  const bg = ctx.createLinearGradient(0,0,W,H);
-  bg.addColorStop(0,'#050716'); bg.addColorStop(.45,'#121333'); bg.addColorStop(1,'#030914');
+  const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-  for(let i=0;i<150;i++){ctx.globalAlpha=.12+(i%4)*.06;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2.5:1,0,Math.PI*2);ctx.fill();}
+  for(let i=0;i<115;i++){ctx.globalAlpha=.10+(i%3)*.045;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2:1,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
   const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
-  const border=ctx.createLinearGradient(15,0,W-15,H);border.addColorStop(0,colors[0]);border.addColorStop(.5,'#7d5cff');border.addColorStop(1,colors[colors.length-1]);
-  ctx.save();ctx.shadowColor=colors[0];ctx.shadowBlur=28;ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?9:4;rr(18,18,W-36,H-36,30);ctx.stroke();ctx.restore();
-  ctx.strokeStyle=goldFrame?'#fff0a0':'#ffffff';ctx.globalAlpha=.35;ctx.lineWidth=1.2;rr(30,30,W-60,H-60,24);ctx.stroke();ctx.globalAlpha=1;
-  ctx.textAlign='center';ctx.fillStyle='#f4f8ff';ctx.font='bold 24px Sans';ctx.fillText('✦ JOJOWORLD • MY PROFILE ✦',W/2,76);
-  ctx.fillStyle='#91a6c8';ctx.font='16px Sans';ctx.fillText('YOUR IDENTITY • YOUR STYLE • YOUR WORLD',W/2,105);
-  // [ADDED] Main profile display panel.
-  const panel=ctx.createLinearGradient(70,130,730,450);panel.addColorStop(0,'#191934');panel.addColorStop(1,'#080d1d');
-  ctx.fillStyle=panel;rr(55,135,690,330,28);ctx.fill();ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=18;ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?6:2.5;rr(55,135,690,330,28);ctx.stroke();ctx.restore();
-  // [UPGRADED V28] Use uploaded Messenger profile photo when available, clipped inside the medallion.
-  const ax=400,ay=260;
-  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=24;ctx.fillStyle='#0b142b';ctx.beginPath();ctx.arc(ax,ay,86,0,Math.PI*2);ctx.fill();ctx.restore();
+  const panel=(x,y,w,h,accent='#344777')=>{const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#121d3b');g.addColorStop(1,'#080e20');ctx.fillStyle=g;rr(x,y,w,h,22);ctx.fill();ctx.strokeStyle=accent;ctx.lineWidth=2;rr(x,y,w,h,22);ctx.stroke();};
+  const label=(value,x,y,size=16,color='#91a9d3',align='left')=>{ctx.textAlign=align;ctx.fillStyle=color;ctx.font=size+'px Sans';ctx.fillText(value,x,y);};
+  const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 21px Sans';ctx.fillText(value,x,y);};
+  const displayName=String(getDisplayName(user)||user.name||'Jojo Member').slice(0,26);
+  ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 31px Sans';ctx.fillText('JOJOWORLD',W/2,62);
+  ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE  •  YOUR WORLD, YOUR STYLE',W/2,91);
+  // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
+  panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
+  const ax=150, ay=257;
+  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=20;ctx.fillStyle='#091226';ctx.beginPath();ctx.arc(ax,ay,91,0,Math.PI*2);ctx.fill();ctx.restore();
   let photoShown=false;
-  try{
-    let photo=null;
-    // [UPGRADED V28] Prefer compressed photo bytes stored in the user's MongoDB record, not expiring Messenger URLs.
-    if(user.profilePhotoData){
-      photo=await loadImage(Buffer.from(user.profilePhotoData,'base64'));
-    }else if(user.profilePhotoUrl){
-      photo=await loadImage(user.profilePhotoUrl);
-    }
-    if(photo){
-      ctx.save();ctx.beginPath();ctx.arc(ax,ay,78,0,Math.PI*2);ctx.clip();
-      const scale=Math.max(156/photo.width,156/photo.height),pw=photo.width*scale,ph=photo.height*scale;
-      ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;
-    }
-  }catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
-  if(!photoShown){
-    ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.fillText('PROFILE',ax,ay+7);
-  }
-  // [UPGRADED V28] The equipped shop frame is visibly rendered around the avatar.
-  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?24:14;
-  ctx.strokeStyle=goldFrame?'#ffd34f':(String(user.frame||'').toLowerCase().includes('silver')?'#dce8ff':border);
-  ctx.lineWidth=goldFrame?9:6;ctx.beginPath();ctx.arc(ax,ay,84,0,Math.PI*2);ctx.stroke();
-  if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,73,0,Math.PI*2);ctx.stroke();}
-  ctx.restore();
-  const displayName=String(getDisplayName(user)||user.name||'Jojo Member').slice(0,28);
-  let nameFill=colors[0];
-  if(effect==='rainbow'){nameFill=ctx.createLinearGradient(170,0,630,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
-  else if(effect==='sparkle'){nameFill=ctx.createLinearGradient(190,0,610,0);nameFill.addColorStop(0,'#fff2a8');nameFill.addColorStop(.5,'#d5a4ff');nameFill.addColorStop(1,'#ffffff');}
-  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?18:0;ctx.font='bold 31px Sans';ctx.fillText(displayName,400,390);ctx.shadowBlur=0;
-  if(vip){ctx.fillStyle='#ffd34f';ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;rr(300,405,200,38,18);ctx.fill();ctx.restore();ctx.fillStyle='#20152b';ctx.font='bold 17px Sans';ctx.fillText('♛ VIP VERIFIED ✓',400,430);}
-  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 15px Sans';ctx.fillText('✦ GOLD FRAME EQUIPPED ✦',400,vip?456:430);}
-  else if(effect!=='none'){ctx.fillStyle=colors[0];ctx.font='bold 15px Sans';ctx.fillText('✦ '+effect.toUpperCase()+' EFFECT ✦',400,vip?456:430);}
-  // [ADDED] House showcase reflects the player's currently owned house.
-  const house=String(user.house||'none').toLowerCase();
-  const houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}};
-  const hc=houseConfig[house];
-  ctx.fillStyle='#0a1124';rr(90,490,620,170,22);ctx.fill();ctx.strokeStyle=hc?hc.color:'#344567';ctx.lineWidth=2;rr(90,490,620,170,22);ctx.stroke();
-  ctx.textAlign='left';ctx.fillStyle=hc?hc.color:'#a9bdd8';ctx.font='bold 18px Sans';ctx.fillText('🏠 MY HOUSE',120,523);
-  if(hc){
-    ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=15;ctx.fillStyle=hc.color;
-    if(house==='kubo'||house==='bahay'){ctx.beginPath();ctx.moveTo(300,585);ctx.lineTo(365,535);ctx.lineTo(430,585);ctx.closePath();ctx.fill();ctx.fillRect(315,585,100,45);ctx.fillStyle='#1b2440';ctx.fillRect(355,600,22,30);ctx.fillStyle='#a9f5ff';ctx.fillRect(325,595,18,15);ctx.fillRect(387,595,18,15);}
-    else if(house==='mansion'){ctx.fillRect(290,560,150,70);ctx.fillRect(310,540,35,20);ctx.fillRect(385,540,35,20);ctx.beginPath();ctx.moveTo(305,540);ctx.lineTo(327,515);ctx.lineTo(350,540);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(375,540);ctx.lineTo(402,515);ctx.lineTo(428,540);ctx.closePath();ctx.fill();ctx.fillStyle='#1b2440';ctx.fillRect(352,595,28,35);}
-    else{ctx.fillRect(320,525,100,105);ctx.fillStyle='#1b2440';for(let yy=540;yy<600;yy+=25)for(let xx=335;xx<410;xx+=25)ctx.fillRect(xx,yy,13,13);}
-    ctx.restore();ctx.textAlign='center';ctx.fillStyle=hc.color;ctx.font='bold 17px Sans';ctx.fillText(hc.label+' • TIER '+getHouseTier(house),365,645);
-  }else{ctx.textAlign='center';ctx.fillStyle='#a9bdd8';ctx.font='bold 19px Sans';ctx.fillText('No house yet — visit the Shop!',400,580);ctx.font='42px Sans';ctx.fillText('🏡',400,625);}
-  // [ADDED] Stats panels.
-  const stats=[
-    {x:55,label:'💰 COINS',value:String(Number(user.coins)||0)+'c'},
-    {x:300,label:'💎 NET WORTH',value:String(getNetWorth(user))+'c'},
-    {x:545,label:'👀 PROFILE VIEWS',value:String(Number(user.views)||0)}
-  ];
-  stats.forEach(s=>{ctx.fillStyle='#11152d';rr(s.x,690,200,100,18);ctx.fill();ctx.strokeStyle='#4d5b92';ctx.lineWidth=1.5;rr(s.x,690,200,100,18);ctx.stroke();ctx.textAlign='center';ctx.fillStyle='#9fb4d6';ctx.font='bold 14px Sans';ctx.fillText(s.label,s.x+100,720);ctx.fillStyle='#fff2a8';ctx.font='bold 25px Sans';ctx.fillText(s.value,s.x+100,760);});
-  // [UPGRADED V28] Show the user's full profile details inside the visual card.
-  const detailsPanel=(x,y,w,h,title)=>{
-    const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#171b38');g.addColorStop(1,'#080d1c');
-    ctx.fillStyle=g;rr(x,y,w,h,18);ctx.fill();ctx.strokeStyle='#46558b';ctx.lineWidth=1.5;rr(x,y,w,h,18);ctx.stroke();
-    ctx.textAlign='left';ctx.fillStyle='#8cecff';ctx.font='bold 17px Sans';ctx.fillText(title,x+20,y+29);
-  };
-  detailsPanel(55,815,690,210,'👤 PROFILE DETAILS');
-  const detailRows=[
-    ['📍 LOCATION',String(user.location||'Not set')],
-    ['♈ ZODIAC',String(user.zodiac||'Not set 🌟')],
-    ['🎯 GOAL',String(user.relationshipGoal||'Not set')],
-    ['🌟 BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))+'  |  🖼 FRAME: '+String(goldFrame?'💎 Gold Frame':(user.frame||'None'))]
-  ];
-  ctx.font='bold 15px Sans';
-  detailRows.forEach((d,i)=>{
-    const yy=858+i*36;ctx.fillStyle='#9fb4d6';ctx.textAlign='left';ctx.fillText(d[0],78,yy);
-    ctx.fillStyle='#f4f7ff';ctx.textAlign='right';ctx.fillText(d[1].slice(0,48),720,yy);
-  });
-  detailsPanel(55,1040,335,150,'💬 ABOUT ME');
-  ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='15px Sans';
-  canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),75,1080,295,21,4);
-  detailsPanel(410,1040,335,150,'🎁 GIFTS SHOWCASE');
-  const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
-  const giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count));
-  const giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
-  ctx.fillStyle='#fff2a8';ctx.textAlign='left';ctx.font='bold 15px Sans';
-  ctx.fillText('Total Gifts Received: '+giftTotal,430,1080);
-  ctx.fillStyle='#c6d5f0';ctx.font='14px Sans';
-  const showcase=String(user.giftsShowcase||'None yet');
-  canvasText(ctx,giftNames.length?giftNames.join(' • '):(showcase!=='None yet'?showcase:'None yet 🎁'),430,1110,290,20,3);
-  ctx.textAlign='center';ctx.fillStyle='#5af4ff';ctx.font='bold 14px Sans';ctx.fillText('✨ JOJOWORLD • PROFILE & STATS ✨',400,1215);
-  const file=path.join(cacheDir,`profile_${String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')}.png`);
+  try{let photo=null;if(user.profilePhotoData)photo=await loadImage(Buffer.from(user.profilePhotoData,'base64'));else if(user.profilePhotoUrl)photo=await loadImage(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
+  if(!photoShown){ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.textAlign='center';ctx.fillText('PROFILE',ax,ay+8);}
+  ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(String(user.frame||'').toLowerCase().includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}ctx.restore();
+  ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,720,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
+  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.font='bold 29px Sans';ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  if(vip){panel(270,200,180,36,'#b98b2f');ctx.fillStyle='#ffe7a1';ctx.font='bold 16px Sans';ctx.fillText('♛ VIP ELITE',286,224);}
+  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 13px Sans';ctx.fillText('✦ GOLD FRAME EQUIPPED',270,vip?258:224);}
+  label('📍 '+String(user.location||'Location not set').slice(0,32),270,294,17,'#dce8ff');
+  label('♈ '+String(user.zodiac||'Zodiac not set').slice(0,28),270,326,17,'#dce8ff');
+  label('🎯 '+String(user.relationshipGoal||'Goal not set').slice(0,34),270,358,16,'#dce8ff');
+  label('🖼 Frame: '+String(goldFrame?'Gold Frame':(user.frame||'None')).slice(0,24),270,389,14,'#aebfe2');
+  const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
+  stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
+  panel(28,550,744,280,'#3c4d83');heading('PROFILE DETAILS',52,586);
+  const rows=[['NAME & AGE',displayName+(user.age?'  •  '+String(user.age):'')],['LOCATION',String(user.location||'Not set')],['ZODIAC',String(user.zodiac||'Not set 🌟')],['RELATIONSHIP GOAL',String(user.relationshipGoal||'Not set')],['BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))],['EQUIPPED FRAME',String(goldFrame?'💎 Gold Frame':(user.frame||'None'))]];
+  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle='#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
+  // [UPGRADED V28] House showcase kept as its own compact panel.
+  const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
+  panel(28,850,744,145,hc?hc.color:'#344777');heading('MY HOUSE',52,885);
+  if(hc){ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=10;ctx.fillStyle=hc.color;if(house==='kubo'||house==='bahay'){ctx.beginPath();ctx.moveTo(300,955);ctx.lineTo(350,910);ctx.lineTo(400,955);ctx.closePath();ctx.fill();ctx.fillRect(313,955,74,25);ctx.fillStyle='#18223e';ctx.fillRect(344,962,15,18);}else if(house==='mansion'){ctx.fillRect(310,930,100,50);ctx.beginPath();ctx.moveTo(305,930);ctx.lineTo(330,905);ctx.lineTo(355,930);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(365,930);ctx.lineTo(390,905);ctx.lineTo(415,930);ctx.closePath();ctx.fill();ctx.fillStyle='#18223e';ctx.fillRect(350,952,20,28);}else{ctx.fillRect(325,905,70,75);ctx.fillStyle='#18223e';for(let yy=915;yy<960;yy+=20)for(let xx=337;xx<390;xx+=20)ctx.fillRect(xx,yy,11,11);}ctx.restore();label(hc.label+' • TIER '+getHouseTier(house),445,940,18,hc.color);label('Your owned house',445,968,14,'#b7c8e6');}else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
+  panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
+  panel(404,1015,368,220,'#7651a5');heading('GIFTS SHOWCASE',426,1053);
+  const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{},giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count)),giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
+  label('Total received: '+giftTotal,426,1086,15,'#ffe8a0');ctx.fillStyle='#c6d5f0';ctx.textAlign='left';ctx.font='15px Sans';const showcase=String(user.giftsShowcase||'None yet');canvasText(ctx,giftNames.length?giftNames.join(' • '):(showcase!=='None yet'?showcase:'No gifts yet 🎁'),426,1117,320,22,4);
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD  •  PROFILE & STATS',400,1280);
+  const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.png');
   await fsExtra.writeFile(file,canvas.toBuffer('image/png'));return file;
 }
 async function generateShopCanvas() {
