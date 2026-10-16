@@ -1043,7 +1043,7 @@ async function sendImage(id, imagePath, body, quickReplies) {
     // [FIXED] When there is no caption but quick replies are requested, attach them directly to the image message.
     if (!body && quickReplies) imageMessage.quick_replies = quickReplies;
     form.append('message', JSON.stringify(imageMessage));
-    const imageMime = /\\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : 'image/png';
+    const imageMime = /\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : 'image/png';
     form.append('filedata', fs.createReadStream(imagePath), { contentType: imageMime, filename: path.basename(imagePath) });
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
     if (body) await send(id, body, quickReplies);
