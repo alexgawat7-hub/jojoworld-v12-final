@@ -534,6 +534,28 @@ async function generateShopProductPreview(product, user) {
   const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
+// [FIXED] Build leaderboard from persisted MongoDB player records, not only this process's cache.
+async function getLeaderboardUsers() {
+  if (MONGODB_URI && mongoose.connection.readyState === 1) {
+    try {
+      const docs = await UserModel.find({}).select("psid data").lean();
+      const persisted = {};
+      for (const doc of docs) {
+        if (doc && doc.psid && doc.data && typeof doc.data === "object") {
+          persisted[doc.psid] = doc.data;
+          // Keep the local cache aligned with the saved player record.
+          db.users[doc.psid] = doc.data;
+        }
+      }
+      return persisted;
+    } catch (error) {
+      console.error("[FIXED] Could not load full leaderboard from MongoDB:", error.message);
+    }
+  }
+  // Local fallback is used only when MongoDB is not connected.
+  return db.users || {};
+}
+
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   const W = 800, H = 1200;
@@ -1117,7 +1139,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 image commands. Existing textual profile command remains supported below.
         if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
-        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(db.users); await sendImage(psid,img,'🏆 JojoWorld V28 Top 10 Richest • Net Worth'); continue; }
+        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img,'🏆 JojoWorld V28 Top 10 Richest • Net Worth'); continue; }
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
@@ -1920,7 +1942,7 @@ ${renderGiftCatalog()}
         // [UPGRADED V28] Image-only leaderboard: no text caption or text fallback.
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
           try {
-            const leaderboardImage = await generateLeaderboardCanvas(db.users);
+            const leaderboardImage = await generateLeaderboardCanvas(await getLeaderboardUsers());
             const sent = await sendImage(psid, leaderboardImage);
             if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
           } catch (leaderboardError) {
