@@ -349,6 +349,66 @@ function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
   for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
   if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
 }
+// [ADDED V33] Premium plain-text name effects. Canvas paths/text only; no emoji, icon, or box glyphs.
+// [FIXED V33] Keep the premium effect inside its allotted name area to avoid overlapping profile badges/cards.
+function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'left') {
+  const n = String(name || '').toUpperCase();
+  const effect = String(effectKey || '').toLowerCase();
+  if (!['neon', 'fire', 'gold', 'demon', 'ice'].includes(effect) || !n) return false;
+
+  ctx.save();
+  ctx.textAlign = align;
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  let fontSize = 40;
+  ctx.font = 'bold ' + fontSize + 'px Arial Black';
+  while (ctx.measureText(n).width > maxWidth && fontSize > 12) {
+    fontSize -= 1;
+    ctx.font = 'bold ' + fontSize + 'px Arial Black';
+  }
+
+  let fill = '#ffffff';
+  let stroke = '#ffffff';
+  let glow = '#00ffff';
+  if (effect === 'neon') { fill = '#aaffff'; stroke = '#ffffff'; glow = '#00ffff'; }
+  if (effect === 'fire') { fill = '#ff3b12'; stroke = '#8b0000'; glow = '#ff2200'; }
+  if (effect === 'gold') { fill = '#ffd700'; stroke = '#d96b00'; glow = '#ff9900'; }
+  if (effect === 'demon') { fill = '#e60000'; stroke = '#080000'; glow = '#ff0000'; }
+  if (effect === 'ice') { fill = '#ffffff'; stroke = '#168bff'; glow = '#008cff'; }
+
+  ctx.shadowColor = glow;
+  ctx.shadowBlur = effect === 'demon' ? 25 : 20;
+  ctx.fillStyle = fill;
+  ctx.fillText(n, x, y);
+  ctx.shadowBlur = 12;
+  ctx.fillText(n, x, y);
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = effect === 'demon' ? 5 : 3;
+  ctx.strokeStyle = stroke;
+  ctx.strokeText(n, x, y);
+
+  if (effect === 'fire' || effect === 'gold') {
+    const gradient = ctx.createLinearGradient(x, y - fontSize, x, y + 3);
+    if (effect === 'fire') {
+      gradient.addColorStop(0, '#fff700');
+      gradient.addColorStop(0.45, '#ff9900');
+      gradient.addColorStop(1, '#ff1a00');
+    } else {
+      gradient.addColorStop(0, '#fff8b0');
+      gradient.addColorStop(0.35, '#ffd700');
+      gradient.addColorStop(0.7, '#ffb000');
+      gradient.addColorStop(1, '#8c4a00');
+    }
+    ctx.fillStyle = gradient;
+    ctx.fillText(n, x, y);
+  } else {
+    ctx.fillStyle = effect === 'ice' ? '#eaf8ff' : (effect === 'demon' ? '#e60000' : '#bfffff');
+    ctx.fillText(n, x, y);
+  }
+  ctx.restore();
+  return true;
+}
+
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
   // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
@@ -392,7 +452,10 @@ async function generateProfileCanvas(user) {
   let nameFontSize=29;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>405&&nameFontSize>17){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
   const nameWidth=ctx.measureText(displayName).width;
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
-  ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
+  if (!drawPremiumNameEffect(ctx, displayName, 270, 183, vip ? 405 : 450, effect, 'left')) {
+    ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  }
   // [ADDED V32] Effect-specific ornaments are drawn into the actual generated profile, not just the shop preview.
   const effectEnd=Math.min(270+nameWidth,675);
   if(effect==='sparkle'){
@@ -880,7 +943,9 @@ async function generateLeaderboardCanvas(users) {
     green: ['#64f59b','#c2ffd9'], yellow: ['#ffe65b','#fff4b0']
   };
   const drawEffectNameLine = (text, x, y, fontSize, effectKey, maxWidth, baseColor = '#effaff') => {
-    const palette = effectPalette[String(effectKey || '').toLowerCase()];
+    const premiumEffect = String(effectKey || '').toLowerCase();
+    if (drawPremiumNameEffect(ctx, text, x, y, maxWidth, premiumEffect, 'left')) return;
+    const palette = effectPalette[premiumEffect];
     ctx.save();
     ctx.textAlign = 'left';
     ctx.font = 'bold ' + fontSize + 'px Sans';
