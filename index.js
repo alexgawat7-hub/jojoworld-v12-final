@@ -1006,7 +1006,8 @@ async function generateLeaderboardCanvas(users) {
     // Long names shrink smoothly, then use an ellipsis only if they still cannot fit.
     // This prevents names from colliding with the coin row or the fixed NET WORTH column.
     const rowEffect = String(item.user.nameEffect || '').toLowerCase();
-    const nameX = 184, nameY = y + 32, nameMaxWidth = 540;
+    // [FIXED V34] Add a safer left inset so names do not look glued to the card edge/avatar.
+    const nameX = 198, nameY = y + 32, nameMaxWidth = 526;
     let displayRowName = name;
     let rowNameFontSize = 22;
     ctx.textAlign = 'left';
