@@ -287,47 +287,80 @@ async function generateProfileCanvas(user) {
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateLeaderboardCanvas(users) {
-  // [UPGRADED V28] Neon black-and-gold leaderboard based on the requested reference.
+  // [UPGRADED V28] Colorful premium Top 10 leaderboard inspired by the user's reference.
   const canvas = createCanvas(800, 1050), ctx = canvas.getContext('2d');
   const bg = ctx.createLinearGradient(0, 0, 800, 1050);
-  bg.addColorStop(0, '#05030d'); bg.addColorStop(0.55, '#10091e'); bg.addColorStop(1, '#020812');
+  bg.addColorStop(0, '#070514'); bg.addColorStop(0.48, '#100a25'); bg.addColorStop(1, '#020b18');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 1050);
-  for (let i = 0; i < 52; i++) {
-    const x = (i * 137) % 790 + 5, y = (i * 83) % 1035 + 8;
-    ctx.fillStyle = i % 3 === 0 ? '#32eaff' : (i % 3 === 1 ? '#ff39e8' : '#ffd45a');
-    ctx.globalAlpha = 0.25 + (i % 4) * 0.12; ctx.beginPath(); ctx.arc(x, y, i % 5 === 0 ? 2.4 : 1.2, 0, Math.PI * 2); ctx.fill();
+  // [ADDED] Neon particles and diagonal light streaks.
+  for (let i = 0; i < 100; i++) {
+    const x = (i * 137 + 23) % 790 + 5, y = (i * 83 + 11) % 1030 + 5;
+    ctx.fillStyle = ['#35f4ff', '#ff45e8', '#ffd45a', '#b58cff'][i % 4];
+    ctx.globalAlpha = 0.18 + (i % 5) * 0.1; ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.8 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  ctx.strokeStyle = '#29eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 764, 1014);
-  ctx.strokeStyle = '#f638ef'; ctx.lineWidth = 2; ctx.strokeRect(27, 27, 746, 996);
-  ctx.textAlign = 'center'; ctx.shadowColor = '#ffbd39'; ctx.shadowBlur = 22;
-  ctx.fillStyle = '#fff2ad'; ctx.font = 'bold 49px Sans'; ctx.fillText('LEADERBOARD', 400, 83);
-  ctx.fillStyle = '#ffca48'; ctx.font = 'bold 55px Sans'; ctx.fillText('TOP 10', 400, 137);
-  ctx.shadowBlur = 0; ctx.strokeStyle = '#ffcf55'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(58, 157); ctx.lineTo(742, 157); ctx.stroke();
-  const houseNames = { none: 'None', kubo: 'Kubo', bahay: 'Bahay', mansion: 'Mansion', building: 'Building' };
+  for (let i = 0; i < 8; i++) {
+    ctx.strokeStyle = i % 2 ? '#ff36e8' : '#36edff'; ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(i * 105 - 80, 165); ctx.lineTo(i * 105 + 100, 25); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // [UPGRADED V28] Double neon frame.
+  ctx.shadowBlur = 18; ctx.shadowColor = '#31eaff'; ctx.strokeStyle = '#31eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 764, 1014);
+  ctx.shadowColor = '#ff39e8'; ctx.strokeStyle = '#ff39e8'; ctx.lineWidth = 1.5; ctx.strokeRect(28, 28, 744, 994); ctx.shadowBlur = 0;
+  // Vector trophy artwork so the header does not depend on emoji fonts.
+  ctx.save(); ctx.translate(83, 61); ctx.shadowColor = '#ffc94b'; ctx.shadowBlur = 18;
+  ctx.fillStyle = '#ffdc68'; ctx.strokeStyle = '#fff1ae'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-24, -12); ctx.lineTo(-18, 18); ctx.quadraticCurveTo(0, 38, 18, 18); ctx.lineTo(24, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-24, -1, 12, -Math.PI/2, Math.PI/2); ctx.stroke(); ctx.beginPath(); ctx.arc(24, -1, 12, Math.PI/2, -Math.PI/2); ctx.stroke();
+  ctx.fillRect(-5, 25, 10, 12); ctx.fillRect(-17, 37, 34, 6); ctx.restore();
+  ctx.textAlign = 'center'; ctx.shadowColor = '#ffc94b'; ctx.shadowBlur = 22;
+  ctx.fillStyle = '#fff4bd'; ctx.font = 'bold 47px Sans'; ctx.fillText('LEADERBOARD', 430, 72);
+  ctx.fillStyle = '#ffc94b'; ctx.font = 'bold 58px Sans'; ctx.fillText('TOP 10', 430, 130); ctx.shadowBlur = 0;
+  // Decorative gold divider with jewel-like ends.
+  const divider = ctx.createLinearGradient(70, 0, 730, 0);
+  divider.addColorStop(0, '#36efff'); divider.addColorStop(0.28, '#ff4ce7'); divider.addColorStop(0.55, '#ffe16a'); divider.addColorStop(1, '#36efff');
+  ctx.strokeStyle = divider; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(55, 157); ctx.lineTo(745, 157); ctx.stroke();
+  const houseNames = { none: 'No House', kubo: 'Kubo', bahay: 'Bahay', mansion: 'Mansion', building: 'Building' };
   const top = Object.entries(users || {}).map(([id, user]) => ({ id, user, net: getNetWorth(user) })).sort((a, b) => b.net - a.net).slice(0, 10);
-  const medals = ['🥇', '🥈', '🥉'], accents = ['#ffd44f', '#c7d5e6', '#e9a0ff', '#33edff'];
-  if (!top.length) { ctx.fillStyle = '#fff'; ctx.font = 'bold 28px Sans'; ctx.fillText('NO PLAYERS YET', 400, 500); }
-  top.forEach((item, i) => {
-    const y = 176 + i * 85, accent = accents[Math.min(i, 3)];
-    const rowGrad = ctx.createLinearGradient(44, y, 756, y + 78);
-    rowGrad.addColorStop(0, i === 0 ? '#34200a' : '#111a2b'); rowGrad.addColorStop(1, '#080b17');
-    ctx.fillStyle = rowGrad; ctx.fillRect(43, y, 714, 78);
-    ctx.strokeStyle = accent; ctx.lineWidth = i < 3 ? 2.5 : 1.5; ctx.strokeRect(43, y, 714, 78);
-    ctx.textAlign = 'left'; ctx.fillStyle = accent; ctx.font = 'bold 25px Sans'; ctx.fillText(String(i + 1), 55, y + 30);
-    ctx.font = 'bold 29px Sans'; ctx.fillText(medals[i] || '🏅', 78, y + 49);
-    const displayName = getDisplayName(item.user).replace(/\s+/g, ' ').slice(0, 27);
-    ctx.fillStyle = i === 0 ? '#ffe68a' : '#fff'; ctx.font = 'bold 20px Sans'; ctx.fillText(displayName, 132, y + 27);
+  const medals = ['1ST', '2ND', '3RD'];
+  const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#5ce6ff', '#6beaff', '#69d8ff', '#74dfff', '#81e9ff', '#91f0ff'];
+  for (let i = 0; i < 10; i++) {
+    const item = top[i], y = 174 + i * 81, accent = accents[i];
+    const rowGrad = ctx.createLinearGradient(42, y, 758, y + 73);
+    if (i === 0) { rowGrad.addColorStop(0, '#49300b'); rowGrad.addColorStop(0.48, '#24152d'); rowGrad.addColorStop(1, '#0c1729'); }
+    else if (i === 1) { rowGrad.addColorStop(0, '#202b3c'); rowGrad.addColorStop(1, '#0b1426'); }
+    else if (i === 2) { rowGrad.addColorStop(0, '#35133c'); rowGrad.addColorStop(1, '#101326'); }
+    else { rowGrad.addColorStop(0, '#102b3c'); rowGrad.addColorStop(1, '#09111f'); }
+    ctx.fillStyle = rowGrad; ctx.fillRect(42, y, 716, 73);
+    ctx.shadowColor = accent; ctx.shadowBlur = item ? (i < 3 ? 11 : 5) : 0;
+    ctx.strokeStyle = accent; ctx.lineWidth = i < 3 ? 2.5 : 1.3; ctx.strokeRect(42, y, 716, 73); ctx.shadowBlur = 0;
+    // Rank badge.
+    ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(75, y + 36, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 19px Sans'; ctx.fillText(String(i + 1), 75, y + 43);
+    if (!item) {
+      ctx.textAlign = 'left'; ctx.fillStyle = '#8da6bd'; ctx.font = 'bold 18px Sans'; ctx.fillText('OPEN RANK', 118, y + 29);
+      ctx.fillStyle = '#61788e'; ctx.font = '13px Sans'; ctx.fillText('Register and play to claim this spot', 118, y + 50);
+      ctx.textAlign = 'right'; ctx.fillStyle = '#4d7184'; ctx.font = 'bold 11px Sans'; ctx.fillText('AVAILABLE', 740, y + 43);
+      continue;
+    }
+    const name = String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').slice(0, 26);
+    ctx.textAlign = 'left'; ctx.fillStyle = i === 0 ? '#ffe68b' : (i === 2 ? '#ffb4ff' : '#e6fbff');
+    ctx.font = 'bold 18px Sans'; ctx.fillText(name, 116, y + 25);
     const coins = Math.max(0, Number(item.user.coins) || 0);
-    const house = houseNames[String(item.user.house || 'none').toLowerCase()] || String(item.user.house || 'None');
-    ctx.fillStyle = '#c5faff'; ctx.font = 'bold 13px Sans';
-    ctx.fillText(`Coins: ${coins.toLocaleString('en-US')}c | House: ${house} (${getHouseValue(item.user.house).toLocaleString('en-US')}c) | Net: ${item.net.toLocaleString('en-US')}c`, 132, y + 49);
+    const houseKey = String(item.user.house || 'none').toLowerCase();
+    const house = houseNames[houseKey] || String(item.user.house || 'No House');
+    const houseValue = Number(getHouseValue(item.user.house)) || 0;
+    ctx.fillStyle = '#d3f7ff'; ctx.font = 'bold 12px Sans';
+    ctx.fillText('Coins: ' + coins.toLocaleString('en-US') + 'c  |  House: ' + house + ' (' + houseValue.toLocaleString('en-US') + 'c)', 116, y + 46);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 116, y + 63);
     const effect = String(item.user.nameEffect || '').toUpperCase();
-    const tag = effect && effect !== 'NONE' ? effect : (i === 0 ? 'TOP PLAYER' : i === 1 ? 'MYTHIC' : i === 2 ? 'LOVE' : 'RANKED');
-    ctx.textAlign = 'right'; ctx.fillStyle = accent; ctx.font = 'bold 11px Sans'; ctx.fillText(tag.slice(0, 18), 744, y + 69);
-  });
-  ctx.textAlign = 'center'; ctx.fillStyle = '#38efff'; ctx.font = 'bold 17px Sans';
-  ctx.fillText('UPDATED NOW  •  SEASON RANKINGS  •  PLAY TO CLIMB ↑', 400, 1015);
+    const tag = effect && effect !== 'NONE' ? effect.slice(0, 12) : (i === 0 ? 'TOP PLAYER' : i === 1 ? 'MYTHIC' : i === 2 ? 'LOVE' : 'RANKED');
+    ctx.textAlign = 'right'; ctx.fillStyle = accent; ctx.font = 'bold 10px Sans'; ctx.fillText(tag, 742, y + 62);
+  }
+  // [ADDED] Footer panel.
+  ctx.textAlign = 'center'; ctx.shadowColor = '#34efff'; ctx.shadowBlur = 12; ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans';
+  ctx.fillText('UPDATED NOW  •  SEASON RANKINGS  •  PLAY TO CLIMB ↑', 400, 1013); ctx.shadowBlur = 0;
   const file = path.join(cacheDir, 'lb.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 // [ADDED] Messenger attachment upload for generated canvas images.
