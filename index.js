@@ -800,10 +800,10 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
     const houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
     ctx.fillText(houseText, 395, y + 70);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 14px Sans';
-    ctx.fillText('NET WORTH', 744, y + 28);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 20px Sans';
-    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 57);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans';
+    ctx.fillText('NET WORTH', 744, y + 49);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 18px Sans';
+    ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 76);
     ctx.fillStyle = color; ctx.font = 'bold 12px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
     ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 80);
