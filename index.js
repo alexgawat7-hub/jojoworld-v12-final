@@ -363,42 +363,36 @@ async function generateShopCanvas() {
     ctx.restore();
   };
   const card = (x, y, w, h, color, emoji, title, price, subtitle) => {
-    // [UPGRADED V28] Premium rounded glass card, layered neon rim, spotlight and coin-price pill.
+    // [FIXED] Clean vertical layout: logo, title, price and action never overlap.
     const rr = (px, py, pw, ph, radius) => {
       ctx.beginPath(); ctx.moveTo(px + radius, py); ctx.arcTo(px + pw, py, px + pw, py + ph, radius);
       ctx.arcTo(px + pw, py + ph, px, py + ph, radius); ctx.arcTo(px, py + ph, px, py, radius);
       ctx.arcTo(px, py, px + pw, py, radius); ctx.closePath();
     };
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 16; rr(x, y, w, h, 13); ctx.fillStyle = '#080b19'; ctx.fill(); ctx.restore();
-    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#28254a'); g.addColorStop(0.48, '#10172e'); g.addColorStop(1, '#070b18');
-    rr(x, y, w, h, 13); ctx.fillStyle = g; ctx.fill();
-    ctx.save(); rr(x, y, w, h, 13); ctx.clip();
-    const sheen = ctx.createLinearGradient(x, y, x + w, y + h); sheen.addColorStop(0, 'rgba(255,255,255,0.15)'); sheen.addColorStop(0.32, 'rgba(255,255,255,0.015)'); sheen.addColorStop(1, 'rgba(0,0,0,0.18)');
-    ctx.fillStyle = sheen; ctx.fillRect(x, y, w, h);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 10; rr(x, y, w, h, 12); ctx.fillStyle = '#080b19'; ctx.fill(); ctx.restore();
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#211f3c'); g.addColorStop(1, '#080d1a');
+    rr(x, y, w, h, 12); ctx.fillStyle = g; ctx.fill();
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 1.7; rr(x, y, w, h, 12); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1; rr(x + 4, y + 4, w - 8, h - 8, 9); ctx.stroke(); ctx.restore();
+
+    // Separate compact illustration area.
+    const logoY = y + h * 0.25;
+    ctx.save(); ctx.fillStyle = '#050914'; rr(x + 6, y + 6, w - 12, h * 0.39, 8); ctx.fill();
+    ctx.save(); ctx.beginPath(); rr(x + 6, y + 6, w - 12, h * 0.39, 8); ctx.clip();
+    ctx.globalAlpha = 0.35; ctx.fillStyle = color;
+    for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + 13 + ((k * 43) % Math.max(20, w - 26)), y + 12 + ((k * 13) % Math.max(14, h * 0.27)), 1.2, 0, Math.PI * 2); ctx.fill(); }
     ctx.restore();
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.strokeStyle = color; ctx.lineWidth = 2; rr(x, y, w, h, 13); ctx.stroke(); ctx.restore();
-    ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1; rr(x + 4, y + 4, w - 8, h - 8, 10); ctx.stroke(); ctx.restore();
-    const windowH = Math.max(42, h * 0.43);
-    const win = ctx.createLinearGradient(x + 5, y + 5, x + w - 5, y + windowH + 4); win.addColorStop(0, '#050816'); win.addColorStop(1, '#15102b');
-    ctx.fillStyle = win; ctx.fillRect(x + 6, y + 6, w - 12, windowH);
-    ctx.save(); ctx.globalAlpha = 0.45; ctx.fillStyle = color;
-    for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(x + 12 + ((k * 37) % Math.max(20, w - 24)), y + 13 + ((k * 19) % Math.max(18, windowH - 15)), 1.3, 0, Math.PI * 2); ctx.fill(); }
+    drawProductLogo(title, x + w / 2, logoY, Math.min(32, w * 0.21), color);
     ctx.restore();
-    ctx.save(); drawProductLogo(title, x + w / 2, y + windowH * 0.58, Math.min(43, w * 0.26), color); ctx.restore();
-    text(title, x + w / 2, y + h * 0.60, Math.min(15, w * 0.12), '#ffffff');
-    if (subtitle) text(subtitle, x + w / 2, y + h * 0.69, 9, '#9fc8ef', 'center', false);
-    const pillY = y + h * 0.72, pillH = Math.max(17, h * 0.16);
-    rr(x + 8, pillY, w - 16, pillH, pillH / 2); ctx.fillStyle = '#060a16'; ctx.fill(); ctx.strokeStyle = '#6d82a9'; ctx.lineWidth = 0.8; ctx.stroke();
-    const coinX = x + w * 0.30, coinY = pillY + pillH / 2, coinR = Math.min(7, pillH * 0.31);
-    const cg = ctx.createLinearGradient(coinX - coinR, coinY - coinR, coinX + coinR, coinY + coinR); cg.addColorStop(0, '#fff4a3'); cg.addColorStop(0.45, '#ffbd22'); cg.addColorStop(1, '#d47b08');
-    ctx.beginPath(); ctx.arc(coinX, coinY, coinR, 0, Math.PI * 2); ctx.fillStyle = cg; ctx.fill(); ctx.strokeStyle = '#fff0a1'; ctx.lineWidth = 1; ctx.stroke();
-    text(price, x + w * 0.60, pillY + pillH * 0.68, Math.min(15, w * 0.115), '#ffe57a');
-    // Decorative button label only; the actual purchase is handled by Messenger quick replies.
-    const bh = Math.min(25, h * 0.19), by = y + h - bh - 6;
+
+    text(title, x + w / 2, y + h * 0.53, Math.min(14, w * 0.105), '#ffffff');
+    // [FIXED] Price is a dedicated, unobstructed line; no subtitle or pill competes with it.
+    text(price, x + w / 2, y + h * 0.70, Math.min(15, w * 0.115), '#ffe57a');
+    const bh = Math.min(21, h * 0.18), by = y + h - bh - 5;
     const buy = ctx.createLinearGradient(x, by, x, by + bh); buy.addColorStop(0, '#7dffb0'); buy.addColorStop(0.5, '#17d879'); buy.addColorStop(1, '#087b55');
-    rr(x + 8, by, w - 16, bh, bh / 2); ctx.fillStyle = buy; ctx.fill();
-    ctx.save(); ctx.shadowColor = '#35ff9a'; ctx.shadowBlur = 7; ctx.strokeStyle = '#a7ffd0'; ctx.lineWidth = 1; rr(x + 8, by, w - 16, bh, bh / 2); ctx.stroke(); ctx.restore();
-    text('✦ PREVIEW / BUY ✦', x + w / 2, by + bh * 0.69, Math.min(11, w * 0.085), '#042719');
+    rr(x + 7, by, w - 14, bh, bh / 2); ctx.fillStyle = buy; ctx.fill();
+    ctx.save(); ctx.strokeStyle = '#a7ffd0'; ctx.lineWidth = 1; rr(x + 7, by, w - 14, bh, bh / 2); ctx.stroke(); ctx.restore();
+    text('PREVIEW / BUY', x + w / 2, by + bh * 0.69, Math.min(10, w * 0.078), '#042719');
   };
 
   text('♛ JOJOWORLD ♛', 400, 66, 22, '#ffdb70');
@@ -417,7 +411,7 @@ async function generateShopCanvas() {
     ['🌸','BLOSSOM','2,000c','#ffa0dc'], ['🖤','DARK','2,500c','#b99bff'], ['🔴','RED','1,000c','#ff5555'],
     ['🔵','BLUE','1,000c','#59aaff'], ['🟢','GREEN','1,000c','#65f3a2'], ['🟡','YELLOW','1,000c','#ffe45c']
   ];
-  const ew = 224, eh = 112, ex = [52, 288, 524], ey = [431, 550, 669, 788];
+  const ew = 224, eh = 120, ex = [52, 288, 524], ey = [431, 555, 679, 803];
   effects.forEach((e, i) => card(ex[i % 3], ey[Math.floor(i / 3)], ew, eh, e[3], e[0], e[1], e[2], 'NAME EFFECT'));
 
   panel(35, 952, 730, 300, '#55efff', '🏠 HOUSE COLLECTION • UPGRADE YOUR HOME');
