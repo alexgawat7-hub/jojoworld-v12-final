@@ -287,81 +287,131 @@ async function generateProfileCanvas(user) {
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateLeaderboardCanvas(users) {
-  // [UPGRADED V28] Colorful premium Top 10 leaderboard inspired by the user's reference.
-  const canvas = createCanvas(800, 1050), ctx = canvas.getContext('2d');
-  const bg = ctx.createLinearGradient(0, 0, 800, 1050);
-  bg.addColorStop(0, '#070514'); bg.addColorStop(0.48, '#100a25'); bg.addColorStop(1, '#020b18');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 1050);
-  // [ADDED] Neon particles and diagonal light streaks.
-  for (let i = 0; i < 100; i++) {
-    const x = (i * 137 + 23) % 790 + 5, y = (i * 83 + 11) % 1030 + 5;
+  // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
+  const W = 800, H = 1200;
+  const canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#060513'); bg.addColorStop(0.42, '#10102f'); bg.addColorStop(1, '#020b19');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  // [ADDED] Neon stars, light streaks, and premium double frame.
+  for (let i = 0; i < 150; i++) {
+    const x = (i * 137 + 23) % (W - 12) + 6, y = (i * 83 + 11) % (H - 12) + 6;
     ctx.fillStyle = ['#35f4ff', '#ff45e8', '#ffd45a', '#b58cff'][i % 4];
-    ctx.globalAlpha = 0.18 + (i % 5) * 0.1; ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.8 : 1.2, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.12 + (i % 5) * 0.075; ctx.beginPath(); ctx.arc(x, y, i % 8 === 0 ? 2.5 : 1, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  for (let i = 0; i < 8; i++) {
-    ctx.strokeStyle = i % 2 ? '#ff36e8' : '#36edff'; ctx.globalAlpha = 0.4;
-    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(i * 105 - 80, 165); ctx.lineTo(i * 105 + 100, 25); ctx.stroke();
+  for (let i = 0; i < 9; i++) {
+    ctx.strokeStyle = i % 2 ? '#ff36e8' : '#36edff'; ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(i * 100 - 80, 200); ctx.lineTo(i * 100 + 90, 15); ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // [UPGRADED V28] Double neon frame.
-  ctx.shadowBlur = 18; ctx.shadowColor = '#31eaff'; ctx.strokeStyle = '#31eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 764, 1014);
-  ctx.shadowColor = '#ff39e8'; ctx.strokeStyle = '#ff39e8'; ctx.lineWidth = 1.5; ctx.strokeRect(28, 28, 744, 994); ctx.shadowBlur = 0;
-  // Vector trophy artwork so the header does not depend on emoji fonts.
-  ctx.save(); ctx.translate(83, 61); ctx.shadowColor = '#ffc94b'; ctx.shadowBlur = 18;
-  ctx.fillStyle = '#ffdc68'; ctx.strokeStyle = '#fff1ae'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(-24, -12); ctx.lineTo(-18, 18); ctx.quadraticCurveTo(0, 38, 18, 18); ctx.lineTo(24, -12); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.beginPath(); ctx.arc(-24, -1, 12, -Math.PI/2, Math.PI/2); ctx.stroke(); ctx.beginPath(); ctx.arc(24, -1, 12, Math.PI/2, -Math.PI/2); ctx.stroke();
-  ctx.fillRect(-5, 25, 10, 12); ctx.fillRect(-17, 37, 34, 6); ctx.restore();
+  ctx.shadowBlur = 20; ctx.shadowColor = '#31eaff'; ctx.strokeStyle = '#31eaff'; ctx.lineWidth = 4; ctx.strokeRect(16, 16, W - 32, H - 32);
+  ctx.shadowColor = '#ff39e8'; ctx.strokeStyle = '#ff39e8'; ctx.lineWidth = 1.5; ctx.strokeRect(26, 26, W - 52, H - 52); ctx.shadowBlur = 0;
+  // [ADDED] JojoWorld branding and oversized title.
+  ctx.textAlign = 'left'; ctx.shadowColor = '#ffd54a'; ctx.shadowBlur = 12;
+  ctx.fillStyle = '#ffe56d'; ctx.font = 'bold 23px Sans'; ctx.fillText('♛ JojoWorld', 42, 62);
+  ctx.shadowBlur = 0; ctx.fillStyle = '#d8faff'; ctx.font = 'bold 11px Sans'; ctx.fillText('PLAY • CHAT • WIN', 45, 81);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#ff8df1'; ctx.font = 'italic bold 17px Sans'; ctx.fillText('Climb The Rank', 755, 48); ctx.fillText('Be The Best!', 755, 71);
   ctx.textAlign = 'center'; ctx.shadowColor = '#ffc94b'; ctx.shadowBlur = 22;
-  ctx.fillStyle = '#fff4bd'; ctx.font = 'bold 47px Sans'; ctx.fillText('LEADERBOARD', 430, 72);
-  ctx.fillStyle = '#ffc94b'; ctx.font = 'bold 58px Sans'; ctx.fillText('TOP 10', 430, 130); ctx.shadowBlur = 0;
-  // Decorative gold divider with jewel-like ends.
-  const divider = ctx.createLinearGradient(70, 0, 730, 0);
-  divider.addColorStop(0, '#36efff'); divider.addColorStop(0.28, '#ff4ce7'); divider.addColorStop(0.55, '#ffe16a'); divider.addColorStop(1, '#36efff');
-  ctx.strokeStyle = divider; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(55, 157); ctx.lineTo(745, 157); ctx.stroke();
-  const houseNames = { none: 'No House', kubo: 'Kubo', bahay: 'Bahay', mansion: 'Mansion', building: 'Building' };
-  const top = Object.entries(users || {}).map(([id, user]) => ({ id, user, net: getNetWorth(user) })).sort((a, b) => b.net - a.net).slice(0, 10);
-  const medals = ['1ST', '2ND', '3RD'];
-  const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#5ce6ff', '#6beaff', '#69d8ff', '#74dfff', '#81e9ff', '#91f0ff'];
-  for (let i = 0; i < 10; i++) {
-    const item = top[i], y = 174 + i * 81, accent = accents[i];
-    const rowGrad = ctx.createLinearGradient(42, y, 758, y + 73);
-    if (i === 0) { rowGrad.addColorStop(0, '#49300b'); rowGrad.addColorStop(0.48, '#24152d'); rowGrad.addColorStop(1, '#0c1729'); }
-    else if (i === 1) { rowGrad.addColorStop(0, '#202b3c'); rowGrad.addColorStop(1, '#0b1426'); }
-    else if (i === 2) { rowGrad.addColorStop(0, '#35133c'); rowGrad.addColorStop(1, '#101326'); }
-    else { rowGrad.addColorStop(0, '#102b3c'); rowGrad.addColorStop(1, '#09111f'); }
-    ctx.fillStyle = rowGrad; ctx.fillRect(42, y, 716, 73);
-    ctx.shadowColor = accent; ctx.shadowBlur = item ? (i < 3 ? 11 : 5) : 0;
-    ctx.strokeStyle = accent; ctx.lineWidth = i < 3 ? 2.5 : 1.3; ctx.strokeRect(42, y, 716, 73); ctx.shadowBlur = 0;
-    // Rank badge.
-    ctx.fillStyle = accent; ctx.beginPath(); ctx.arc(75, y + 36, 22, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 19px Sans'; ctx.fillText(String(i + 1), 75, y + 43);
+  ctx.fillStyle = '#fff4bd'; ctx.font = 'bold 49px Sans'; ctx.fillText('LEADERBOARD', 400, 112);
+  ctx.fillStyle = '#ffc94b'; ctx.font = 'bold 52px Sans'; ctx.fillText('TOP 10', 400, 164); ctx.shadowBlur = 0;
+  const divider = ctx.createLinearGradient(40, 0, 760, 0);
+  divider.addColorStop(0, '#36efff'); divider.addColorStop(0.32, '#ff4ce7'); divider.addColorStop(0.62, '#ffe16a'); divider.addColorStop(1, '#36efff');
+  ctx.strokeStyle = divider; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(42, 187); ctx.lineTo(758, 187); ctx.stroke();
+
+  const houseNames = { none: 'No House', nohouse: 'No House', kubo: 'Kubo', bahay: 'Bahay', mansion: 'Mansion', building: 'Building' };
+  const top = Object.entries(users || {}).map(([id, user]) => ({ id, user, net: getNetWorth(user) }))
+    .sort((a, b) => b.net - a.net).slice(0, 10);
+  const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff'];
+  const getName = item => String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').slice(0, 19);
+  const getHouse = item => {
+    const key = String(item.user.house || 'none').toLowerCase();
+    return houseNames[key] || String(item.user.house || 'No House');
+  };
+  const getHouseWorth = item => Number(getHouseValue(item.user.house)) || 0;
+  const drawMedal = (x, y, rank, color, radius) => {
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 15; ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 2; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#111127'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(radius * 0.9) + 'px Sans';
+    ctx.fillText(String(rank), x, y + radius * 0.32); ctx.restore();
+  };
+  const drawPodium = (item, rank, x, y, w, h, color, featured) => {
+    const grad = ctx.createLinearGradient(x, y, x + w, y + h);
+    grad.addColorStop(0, featured ? '#68400b' : (rank === 2 ? '#25334b' : '#471746'));
+    grad.addColorStop(0.5, featured ? '#21152b' : '#11152b'); grad.addColorStop(1, '#071321');
+    ctx.fillStyle = grad; ctx.fillRect(x, y, w, h);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = featured ? 24 : 13; ctx.strokeStyle = color; ctx.lineWidth = featured ? 3 : 2;
+    ctx.strokeRect(x, y, w, h); ctx.restore();
+    ctx.textAlign = 'center'; ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 12;
+    ctx.font = 'bold ' + (featured ? 24 : 20) + 'px Sans'; ctx.fillText(rank === 1 ? '♛ #1 CHAMPION' : '#' + rank, x + w / 2, y + 29); ctx.shadowBlur = 0;
+    drawMedal(x + w / 2, y + 62, rank, color, featured ? 25 : 20);
     if (!item) {
-      ctx.textAlign = 'left'; ctx.fillStyle = '#8da6bd'; ctx.font = 'bold 18px Sans'; ctx.fillText('OPEN RANK', 118, y + 29);
-      ctx.fillStyle = '#61788e'; ctx.font = '13px Sans'; ctx.fillText('Register and play to claim this spot', 118, y + 50);
-      ctx.textAlign = 'right'; ctx.fillStyle = '#4d7184'; ctx.font = 'bold 11px Sans'; ctx.fillText('AVAILABLE', 740, y + 43);
+      ctx.fillStyle = '#9eb5cc'; ctx.font = 'bold 16px Sans'; ctx.fillText('OPEN RANK', x + w / 2, y + 105);
+      ctx.fillStyle = '#6e849b'; ctx.font = '11px Sans'; ctx.fillText('Play to claim this spot', x + w / 2, y + 126);
+      return;
+    }
+    const name = getName(item);
+    ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff'; ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
+    ctx.fillText(name, x + w / 2, y + 103);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
+    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + 'c', x + w / 2, y + 128);
+    ctx.fillStyle = '#d4f6ff'; ctx.font = '11px Sans'; ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 151);
+    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 168);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 188);
+    ctx.fillStyle = color; ctx.font = 'bold 10px Sans';
+    ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
+  };
+
+  // [UPGRADED V28] A real podium layout for the top three, with the champion centered.
+  drawPodium(top[1], 2, 38, 218, 222, 282, '#b8d8ff', false);
+  drawPodium(top[0], 1, 270, 201, 260, 299, '#ffd34f', true);
+  drawPodium(top[2], 3, 540, 218, 222, 282, '#ff83e9', false);
+
+  // [UPGRADED V28] Compact, readable neon cards for ranks 4–10.
+  for (let rank = 4; rank <= 10; rank++) {
+    const i = rank - 1, item = top[i], y = 535 + (rank - 4) * 76, color = accents[i];
+    const grad = ctx.createLinearGradient(38, y, 762, y + 65);
+    grad.addColorStop(0, rank % 2 === 0 ? '#092843' : '#21113c'); grad.addColorStop(1, '#080f24');
+    ctx.fillStyle = grad; ctx.fillRect(38, y, 724, 66);
+    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 8; ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.strokeRect(38, y, 724, 66); ctx.restore();
+    // [ADDED] Faceted-style rank badge.
+    ctx.fillStyle = color; ctx.beginPath();
+    for (let p = 0; p < 10; p++) {
+      const angle = -Math.PI / 2 + p * Math.PI / 5, rad = p % 2 === 0 ? 25 : 20;
+      const px = 78 + Math.cos(angle) * rad, py = y + 33 + Math.sin(angle) * rad;
+      if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#101020'; ctx.textAlign = 'center'; ctx.font = 'bold 22px Sans'; ctx.fillText(String(rank), 78, y + 41);
+    if (!item) {
+      ctx.textAlign = 'left'; ctx.fillStyle = '#a9c2d8'; ctx.font = 'bold 17px Sans'; ctx.fillText('OPEN RANK', 119, y + 28);
+      ctx.fillStyle = '#7189a0'; ctx.font = '12px Sans'; ctx.fillText('Register and play to claim this spot', 119, y + 48);
+      ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 12px Sans'; ctx.fillText('AVAILABLE', 744, y + 39);
       continue;
     }
-    const name = String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').slice(0, 26);
-    ctx.textAlign = 'left'; ctx.fillStyle = i === 0 ? '#ffe68b' : (i === 2 ? '#ffb4ff' : '#e6fbff');
-    ctx.font = 'bold 18px Sans'; ctx.fillText(name, 116, y + 25);
-    const coins = Math.max(0, Number(item.user.coins) || 0);
-    const houseKey = String(item.user.house || 'none').toLowerCase();
-    const house = houseNames[houseKey] || String(item.user.house || 'No House');
-    const houseValue = Number(getHouseValue(item.user.house)) || 0;
-    ctx.fillStyle = '#d3f7ff'; ctx.font = 'bold 12px Sans';
-    ctx.fillText('Coins: ' + coins.toLocaleString('en-US') + 'c  |  House: ' + house + ' (' + houseValue.toLocaleString('en-US') + 'c)', 116, y + 46);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 116, y + 63);
+    const name = getName(item), coins = Math.max(0, Number(item.user.coins) || 0);
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 17px Sans'; ctx.fillText(name, 119, y + 25);
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 15px Sans'; ctx.fillText(coins.toLocaleString('en-US') + 'c', 119, y + 48);
+    ctx.fillStyle = '#a8eefa'; ctx.font = '12px Sans'; ctx.fillText('House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)', 290, y + 39);
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans'; ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', 500, y + 24);
+    ctx.textAlign = 'right'; ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
-    const tag = effect && effect !== 'NONE' ? effect.slice(0, 12) : (i === 0 ? 'TOP PLAYER' : i === 1 ? 'MYTHIC' : i === 2 ? 'LOVE' : 'RANKED');
-    ctx.textAlign = 'right'; ctx.fillStyle = accent; ctx.font = 'bold 10px Sans'; ctx.fillText(tag, 742, y + 62);
+    ctx.fillText(effect && effect !== 'NONE' ? effect.slice(0, 12) : 'RANKED PLAYER', 744, y + 49);
   }
-  // [ADDED] Footer panel.
-  ctx.textAlign = 'center'; ctx.shadowColor = '#34efff'; ctx.shadowBlur = 12; ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans';
-  ctx.fillText('UPDATED NOW  •  SEASON RANKINGS  •  PLAY TO CLIMB ↑', 400, 1013); ctx.shadowBlur = 0;
-  const file = path.join(cacheDir, 'lb.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+
+  // [UPGRADED V28] Bright season footer and climb-to-the-top callout.
+  const footerY = 1088;
+  ctx.fillStyle = '#090d28'; ctx.fillRect(38, footerY, 724, 62);
+  ctx.strokeStyle = divider; ctx.lineWidth = 2; ctx.strokeRect(38, footerY, 724, 62);
+  ctx.textAlign = 'center'; ctx.shadowColor = '#34efff'; ctx.shadowBlur = 12;
+  ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans'; ctx.fillText('UPDATED NOW', 150, footerY + 26);
+  ctx.shadowColor = '#ffd34f'; ctx.fillStyle = '#ffe16a'; ctx.fillText('SEASON RANKINGS', 400, footerY + 26);
+  ctx.shadowColor = '#ff45e8'; ctx.fillStyle = '#ff8df1'; ctx.fillText('PLAY TO CLIMB ↑', 630, footerY + 26);
+  ctx.shadowBlur = 0; ctx.fillStyle = '#9cb6d2'; ctx.font = '11px Sans'; ctx.fillText('JOJOWORLD • YOUR NEXT LEVEL STARTS HERE', 400, footerY + 47);
+  const file = path.join(cacheDir, 'lb.png');
+  await fsExtra.writeFile(file, canvas.toBuffer('image/png'));
+  return file;
 }
 // [ADDED] Messenger attachment upload for generated canvas images.
 async function sendImage(id, imagePath, body) {
