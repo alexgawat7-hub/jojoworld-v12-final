@@ -954,7 +954,12 @@ async function send(id, text, qr = null) {
     await new Promise(resolve => setTimeout(resolve, 350));
 
     const body = { recipient: { id }, message: { text } };
-    if (qr) body.message.quick_replies = qr;
+    // [ADDED V35] Never leave a text-only page without navigation: add Main Menu when no quick replies exist.
+    const quickReplies = Array.isArray(qr) ? [...qr] : [];
+    if (quickReplies.length === 0) {
+      quickReplies.push({ content_type: "text", title: "↩️ Main Menu", payload: "MENU" });
+    }
+    body.message.quick_replies = quickReplies;
 
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
     return true;
