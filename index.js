@@ -309,13 +309,66 @@ async function generateShopCanvas() {
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 12; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore();
     text(title, x + 18, y + 31, 21, color, 'left');
   };
+  // [FIXED] Draw product logos with Canvas paths instead of emoji glyphs, which may be missing on Render.
+  const drawProductLogo = (title, cx, cy, size, color) => {
+    const name = String(title || '').toUpperCase();
+    ctx.save(); ctx.translate(cx, cy); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(2, size * 0.075);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = color; ctx.shadowBlur = 12;
+    const star = (outer, inner, points = 5, rotation = -Math.PI / 2) => {
+      ctx.beginPath();
+      for (let i = 0; i < points * 2; i++) {
+        const a = rotation + i * Math.PI / points, r = i % 2 === 0 ? outer : inner;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill();
+    };
+    if (name.includes('VIP') || name.includes('BADGE')) {
+      ctx.beginPath(); ctx.moveTo(-size*.48,-size*.36); ctx.lineTo(-size*.22,-size*.22); ctx.lineTo(0,-size*.48); ctx.lineTo(size*.22,-size*.22); ctx.lineTo(size*.48,-size*.36); ctx.lineTo(size*.38,size*.18); ctx.lineTo(0,size*.46); ctx.lineTo(-size*.38,size*.18); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#21152d'; ctx.font = 'bold ' + Math.round(size*.44) + 'px Sans'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('V',0,0);
+    } else if (name.includes('FRAME')) {
+      ctx.strokeRect(-size*.42,-size*.42,size*.84,size*.84); ctx.lineWidth=size*.09; ctx.strokeRect(-size*.27,-size*.27,size*.54,size*.54);
+      ctx.beginPath(); ctx.moveTo(-size*.42,-size*.12); ctx.lineTo(-size*.12,-size*.42); ctx.moveTo(size*.12,size*.42); ctx.lineTo(size*.42,size*.12); ctx.stroke();
+    } else if (name.includes('RAINBOW')) {
+      const colors=['#ff5050','#ffae42','#ffed57','#53ef85','#48cfff','#a77bff','#ff65d5'];
+      colors.forEach((c,i)=>{ctx.strokeStyle=c;ctx.lineWidth=size*.10;ctx.beginPath();ctx.arc(0,size*.18,size*(.48-i*.055),Math.PI,Math.PI*2);ctx.stroke();});
+    } else if (name.includes('SPARKLE')) {
+      star(size*.46,size*.12,8); ctx.beginPath();ctx.arc(size*.35,-size*.35,size*.09,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(-size*.36,size*.26,size*.07,0,Math.PI*2);ctx.fill();
+    } else if (name.includes('HEART')) {
+      ctx.beginPath();ctx.moveTo(0,size*.42);ctx.bezierCurveTo(-size*.12,size*.28,-size*.52,-size*.02,-size*.42,-size*.27);ctx.bezierCurveTo(-size*.34,-size*.49,-size*.08,-size*.46,0,-size*.25);ctx.bezierCurveTo(size*.12,-size*.48,size*.4,-size*.47,size*.44,-size*.24);ctx.bezierCurveTo(size*.5,-size*.02,size*.12,size*.31,0,size*.42);ctx.fill();
+    } else if (name.includes('FIRE')) {
+      ctx.beginPath();ctx.moveTo(0,size*.48);ctx.bezierCurveTo(-size*.4,size*.26,-size*.42,-size*.05,-size*.12,-size*.27);ctx.lineTo(-size*.05,-size*.02);ctx.bezierCurveTo(size*.02,-size*.34,size*.26,-size*.4,size*.2,-size*.5);ctx.bezierCurveTo(size*.55,-size*.08,size*.4,size*.31,0,size*.48);ctx.fill();
+      ctx.fillStyle='#fff0a1';ctx.beginPath();ctx.moveTo(0,size*.3);ctx.bezierCurveTo(-size*.16,size*.1,-size*.05,-size*.05,size*.07,-size*.13);ctx.bezierCurveTo(size*.18,size*.05,size*.16,size*.19,0,size*.3);ctx.fill();
+    } else if (name.includes('ICE')) {
+      for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*size*.08,Math.sin(a)*size*.08);ctx.lineTo(Math.cos(a)*size*.46,Math.sin(a)*size*.46);ctx.moveTo(Math.cos(a)*size*.30,Math.sin(a)*size*.30);ctx.lineTo(Math.cos(a-.28)*size*.19,Math.sin(a-.28)*size*.19);ctx.moveTo(Math.cos(a)*size*.30,Math.sin(a)*size*.30);ctx.lineTo(Math.cos(a+.28)*size*.19,Math.sin(a+.28)*size*.19);ctx.stroke();}
+    } else if (name.includes('NEON')) {
+      ctx.beginPath();ctx.moveTo(size*.12,-size*.5);ctx.lineTo(-size*.28,size*.06);ctx.lineTo(-size*.02,size*.06);ctx.lineTo(-size*.16,size*.48);ctx.lineTo(size*.31,-size*.12);ctx.lineTo(size*.04,-size*.12);ctx.closePath();ctx.fill();
+    } else if (name.includes('BLOSSOM')) {
+      for(let i=0;i<5;i++){ctx.save();ctx.rotate(i*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-size*.24,size*.14,size*.25,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+      ctx.fillStyle='#ffe56e';ctx.beginPath();ctx.arc(0,0,size*.12,0,Math.PI*2);ctx.fill();
+    } else if (name.includes('DARK')) {
+      ctx.beginPath();ctx.arc(0,0,size*.38,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.arc(size*.18,-size*.15,size*.34,0,Math.PI*2);ctx.fill();ctx.globalCompositeOperation='source-over';
+      ctx.strokeStyle=color;ctx.beginPath();ctx.arc(0,0,size*.38,0,Math.PI*2);ctx.stroke();
+    } else if (name.includes('RED') || name.includes('BLUE') || name.includes('GREEN') || name.includes('YELLOW')) {
+      ctx.beginPath();ctx.arc(0,0,size*.36,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffffff';ctx.lineWidth=size*.045;ctx.stroke();
+    } else if (name.includes('KUBO') || name.includes('BAHAY') || name.includes('MANSION') || name.includes('BUILDING')) {
+      ctx.beginPath();ctx.moveTo(-size*.46,-size*.02);ctx.lineTo(0,-size*.42);ctx.lineTo(size*.46,-size*.02);ctx.closePath();ctx.fill();ctx.fillRect(-size*.34,-size*.02,size*.68,size*.42);
+      ctx.fillStyle='#071426';ctx.fillRect(-size*.08,size*.16,size*.16,size*.24);
+      if(name.includes('BUILDING')){ctx.fillStyle='#071426';for(let yy=-size*.25;yy<size*.20;yy+=size*.18)for(let xx=-size*.23;xx<size*.25;xx+=size*.18)ctx.fillRect(xx,yy,size*.08,size*.09);}
+      if(name.includes('MANSION')){ctx.fillStyle=color;ctx.fillRect(-size*.40,-size*.26,size*.15,size*.20);ctx.fillRect(size*.25,-size*.26,size*.15,size*.20);}
+    } else {
+      ctx.beginPath();ctx.moveTo(0,-size*.46);ctx.lineTo(size*.4,0);ctx.lineTo(0,size*.46);ctx.lineTo(-size*.4,0);ctx.closePath();ctx.fill();
+    }
+    ctx.restore();
+  };
   const card = (x, y, w, h, color, emoji, title, price, subtitle) => {
     const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#17172e'); g.addColorStop(1, '#080d1a');
     ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
     ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 11; ctx.strokeStyle = color; ctx.lineWidth = 1.7; ctx.strokeRect(x, y, w, h); ctx.restore();
     // [ADDED] Item illustration window makes the item itself the visual focus.
     ctx.fillStyle = '#050914'; ctx.fillRect(x + 7, y + 7, w - 14, Math.max(44, h * 0.43));
-    ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 18; text(emoji, x + w / 2, y + h * 0.36, Math.min(42, w * 0.28), color); ctx.restore();
+    ctx.save(); drawProductLogo(title, x + w / 2, y + h * 0.29, Math.min(39, w * 0.24), color); ctx.restore();
     text(title, x + w / 2, y + h * 0.60, Math.min(15, w * 0.12), '#f3f7ff');
     text(price, x + w / 2, y + h * 0.76, Math.min(16, w * 0.13), '#ffe16b');
     // Bright visual BUY label; Messenger quick replies below the image perform the actual action.
