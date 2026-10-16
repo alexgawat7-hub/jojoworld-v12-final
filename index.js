@@ -11,6 +11,7 @@ const path = require('path');
 const fsExtra = require('fs-extra');
 const mongoose = require('mongoose');
 const axios = require('axios');
+const crypto = require('crypto');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
@@ -18,6 +19,38 @@ const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/
 // [ADDED] V28 cache directory for generated profile and leaderboard images.
 const cacheDir = path.join(__dirname, 'cache');
 fsExtra.ensureDirSync(cacheDir);
+
+// Reuse decoded profile photos across profile and leaderboard renders.
+// This avoids repeatedly decoding the same base64 photo or downloading the same URL.
+const decodedProfileImageCache = new Map();
+const DECODED_PROFILE_IMAGE_CACHE_LIMIT = 80;
+async function loadCachedProfileImage(source, cacheKey) {
+  const existing = decodedProfileImageCache.get(cacheKey);
+  if (existing) {
+    // Refresh insertion order so frequently used photos remain cached.
+    decodedProfileImageCache.delete(cacheKey);
+    decodedProfileImageCache.set(cacheKey, existing);
+    return existing;
+  }
+  const pending = loadImage(source);
+  decodedProfileImageCache.set(cacheKey, pending);
+  while (decodedProfileImageCache.size > DECODED_PROFILE_IMAGE_CACHE_LIMIT) {
+    decodedProfileImageCache.delete(decodedProfileImageCache.keys().next().value);
+  }
+  try {
+    return await pending;
+  } catch (error) {
+    if (decodedProfileImageCache.get(cacheKey) === pending) decodedProfileImageCache.delete(cacheKey);
+    throw error;
+  }
+}
+function loadCachedProfilePhotoData(base64Data) {
+  const hash = crypto.createHash('sha1').update(base64Data).digest('hex');
+  return loadCachedProfileImage(Buffer.from(base64Data, 'base64'), 'data:' + hash);
+}
+function loadCachedProfilePhotoUrl(url) {
+  return loadCachedProfileImage(url, 'url:' + String(url));
+}
 const app = express();
 
 // Body-parser rawBody configuration para sa PayMongo Webhook HMAC signature
@@ -345,7 +378,7 @@ async function generateProfileCanvas(user) {
   const ax=150, ay=257;
   ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=20;ctx.fillStyle='#091226';ctx.beginPath();ctx.arc(ax,ay,91,0,Math.PI*2);ctx.fill();ctx.restore();
   let photoShown=false;
-  try{let photo=null;if(user.profilePhotoData)photo=await loadImage(Buffer.from(user.profilePhotoData,'base64'));else if(user.profilePhotoUrl)photo=await loadImage(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
+  try{let photo=null;if(user.profilePhotoData)photo=await loadCachedProfilePhotoData(user.profilePhotoData);else if(user.profilePhotoUrl)photo=await loadCachedProfilePhotoUrl(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
   if(!photoShown){ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.textAlign='center';ctx.fillText('PROFILE',ax,ay+8);}
   ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(frameKey.includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
@@ -898,8 +931,8 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillStyle = '#172344'; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
     let avatar = null;
     try {
-      if (item && item.user && item.user.profilePhotoData) avatar = await loadImage(Buffer.from(item.user.profilePhotoData, 'base64'));
-      else if (item && item.user && item.user.profilePhotoUrl) avatar = await loadImage(item.user.profilePhotoUrl);
+      if (item && item.user && item.user.profilePhotoData) avatar = await loadCachedProfilePhotoData(item.user.profilePhotoData);
+      else if (item && item.user && item.user.profilePhotoUrl) avatar = await loadCachedProfilePhotoUrl(item.user.profilePhotoUrl);
     } catch (e) { console.warn('[LEADERBOARD PHOTO] Could not load profile photo:', e.message); }
     if (avatar) {
       ctx.save(); ctx.beginPath(); ctx.arc(x, y, radius - 3, 0, Math.PI * 2); ctx.clip();
@@ -1071,7 +1104,7 @@ async function sendImage(id, imagePath, body, quickReplies) {
     form.append('message', JSON.stringify(imageMessage));
     const imageMime = /\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : 'image/png';
     form.append('filedata', fs.createReadStream(imagePath), { contentType: imageMime, filename: path.basename(imagePath) });
-    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
+    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders(), timeout: 15000 });
     if (body) await send(id, body, quickReplies);
     return true;
   } catch (e) { console.error('Canvas image send failed:', e.response?.data?.error?.message || e.message); return false; }
@@ -1094,7 +1127,7 @@ async function send(id, text, qr = null) {
     }
     body.message.quick_replies = quickReplies;
 
-    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body);
+    await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, body, { timeout: 15000 });
     return true;
   } catch (e) {
     console.error(`Messenger send failed (PSID: ${id}):`, e.response?.data?.error?.message || e.message);
