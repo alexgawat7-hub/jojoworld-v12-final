@@ -86,8 +86,8 @@ const ProcessedMessengerMessageModel = mongoose.models.JProcessedMessengerMessag
   mongoose.model('JProcessedMessengerMessage', ProcessedMessengerMessageSchema);
 const processedMessengerMessages = new Set();
 
-// Serialize Messenger webhook handling in this process to reduce concurrent wallet races.
-let messengerWebhookQueue = Promise.resolve();
+// Serialize commands per Messenger user, while allowing different users to be processed concurrently.
+const messengerUserQueues = new Map();
 
 let db = { users: {}, jackpotPool: 1500 };
 
@@ -1327,12 +1327,7 @@ app.post('/webhook', async (req, res) => {
     return res.sendStatus(503);
   }
 
-  let releaseWebhookQueue;
-  const previousWebhook = messengerWebhookQueue;
-  messengerWebhookQueue = new Promise(resolve => { releaseWebhookQueue = resolve; });
-  await previousWebhook;
-
-  // [ADDED] Track the message currently being processed so a thrown error can release its deduplication reservation.
+  // Track the message currently being processed so a thrown error can release its deduplication reservation.
   let activeWebhookMessageId = null;
   try {
     const body = req.body;
@@ -1362,6 +1357,14 @@ app.post('/webhook', async (req, res) => {
         }
         const psid = String(ev.sender.id);
 
+        // Keep commands from the same user ordered, but do not make unrelated users wait
+        // for slow image generation or database work from another user's request.
+        const previousUserQueue = messengerUserQueues.get(psid) || Promise.resolve();
+        let releaseUserQueue;
+        const currentUserQueue = new Promise(resolve => { releaseUserQueue = resolve; });
+        messengerUserQueues.set(psid, currentUserQueue);
+        await previousUserQueue;
+        try {
         // CHECK REFERRAL PARAMETER ON START
         let referralParam = null;
         if (ev.postback && ev.postback.referral) {
@@ -2602,6 +2605,12 @@ ${renderGiftCatalog()}
 
         // DEFAULT FALLBACK -> MAIN MENU
         sendMenu(psid);
+        } finally {
+          releaseUserQueue();
+          if (messengerUserQueues.get(psid) === currentUserQueue) {
+            messengerUserQueues.delete(psid);
+          }
+        }
       }
     }
   } catch (e) {
@@ -2619,8 +2628,6 @@ ${renderGiftCatalog()}
       }
     }
     return res.sendStatus(500);
-  } finally {
-    releaseWebhookQueue();
   }
   return res.sendStatus(200);
 });
