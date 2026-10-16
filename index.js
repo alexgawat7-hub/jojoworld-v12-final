@@ -1070,12 +1070,13 @@ async function generateLeaderboardCanvas(users) {
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
     await drawLeaderboardAvatar(item, 125, y + 44, 39); // [UPGRADED V28] Much bigger Top 4–10 profile photos.
-    // [FIXED V33] Every Top 4–10 name starts at the same x/y position and stays on one line.
-    // Long names shrink smoothly, then use an ellipsis only if they still cannot fit.
-    // This prevents names from colliding with the coin row or the fixed NET WORTH column.
+    // [FIXED V35] Ranks 4–10 use one fixed, left-aligned name column on every row.
+    // Keep the name just outside the avatar edge; Top 1–3 podium alignment is unchanged.
+    // Long names shrink and then ellipsize within the same column.
     const rowEffect = String(item.user.nameEffect || '').toLowerCase();
-    // [FIXED V34] Add a safer left inset so names do not look glued to the card edge/avatar.
-    const nameX = 198, nameY = y + 32, nameMaxWidth = 526;
+    const rank4to10NameX = 170, nameY = y + 32, nameMaxWidth = 560;
+    const nameX = rank4to10NameX;
+    ctx.textAlign = 'left';
     let displayRowName = name;
     let rowNameFontSize = 22;
     ctx.textAlign = 'left';
