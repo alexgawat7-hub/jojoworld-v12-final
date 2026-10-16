@@ -268,23 +268,71 @@ function drawV28Canvas(title, width, height) {
   return { canvas, ctx };
 }
 async function generateProfileCanvas(user) {
-  const { canvas, ctx } = drawV28Canvas('JOJOWORLD V28 • PROFILE', 800, 850);
-  const rows = [
-    ['DISPLAY NAME', getDisplayName(user).slice(0, 35)],
-    ['WEALTH', `Coins: ${Number(user.coins) || 0}  |  House value: ${getHouseValue(user.house)}`],
-    ['NET WORTH', String(getNetWorth(user))], ['HOUSE TIER', `${String(user.house || 'none').toUpperCase()} • Tier ${getHouseTier(user.house)}`],
-    ['VIEWS / GIFTS / SCATTER WINS', `${user.views || 0} / ${user.giftsCount || Object.values(user.giftsReceived || {}).reduce((a,b)=>a+(Number(b)||0),0)} / ${user.scatterWins || 0}`],
-    ['IDENTITY', `${user.location || 'Nueva Ecija'} • ${user.zodiac || 'Not set'} • Age ${user.age || 25}`],
-    ['GOAL', user.relationshipGoal || 'Serious Relationship'], ['BIO', user.bio || 'Hello JojoWorld V28!'],
-    ['FLEX', `${user.nameEffect || 'none'} • VIP: ${user.vip ? 'YES' : 'NO'} • Gold Frame: ${user.goldFrame ? 'YES' : 'NO'}`]
+  // [UPGRADED V28] Visual profile card that displays purchased shop cosmetics in the actual profile.
+  const W = 800, H = 1000, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  const effect = String(user.nameEffect || 'none').toLowerCase();
+  const effectColors = {
+    rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
+    sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'],
+    fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'],
+    neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'],
+    dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'],
+    blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0']
+  };
+  const colors = effectColors[effect] || ['#ffd34f','#ffec9e','#f59e0b'];
+  const goldFrame = !!user.goldFrame || String(user.frame || '').toLowerCase().includes('gold');
+  const vip = !!user.vip;
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#050716'); bg.addColorStop(.45,'#121333'); bg.addColorStop(1,'#030914');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<150;i++){ctx.globalAlpha=.12+(i%4)*.06;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2.5:1,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+  const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
+  const border=ctx.createLinearGradient(15,0,W-15,H);border.addColorStop(0,colors[0]);border.addColorStop(.5,'#7d5cff');border.addColorStop(1,colors[colors.length-1]);
+  ctx.save();ctx.shadowColor=colors[0];ctx.shadowBlur=28;ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?9:4;rr(18,18,W-36,H-36,30);ctx.stroke();ctx.restore();
+  ctx.strokeStyle=goldFrame?'#fff0a0':'#ffffff';ctx.globalAlpha=.35;ctx.lineWidth=1.2;rr(30,30,W-60,H-60,24);ctx.stroke();ctx.globalAlpha=1;
+  ctx.textAlign='center';ctx.fillStyle='#f4f8ff';ctx.font='bold 24px Sans';ctx.fillText('✦ JOJOWORLD • MY PROFILE ✦',W/2,76);
+  ctx.fillStyle='#91a6c8';ctx.font='16px Sans';ctx.fillText('YOUR IDENTITY • YOUR STYLE • YOUR WORLD',W/2,105);
+  // [ADDED] Main profile display panel.
+  const panel=ctx.createLinearGradient(70,130,730,450);panel.addColorStop(0,'#191934');panel.addColorStop(1,'#080d1d');
+  ctx.fillStyle=panel;rr(55,135,690,330,28);ctx.fill();ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=18;ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?6:2.5;rr(55,135,690,330,28);ctx.stroke();ctx.restore();
+  // Avatar medallion uses a stylized silhouette so profile rendering works without external photos.
+  const ax=400,ay=260;ctx.save();ctx.shadowColor=colors[0];ctx.shadowBlur=24;ctx.fillStyle='#0b142b';ctx.beginPath();ctx.arc(ax,ay,86,0,Math.PI*2);ctx.fill();ctx.strokeStyle=goldFrame?'#ffd34f':border;ctx.lineWidth=goldFrame?8:5;ctx.stroke();ctx.restore();
+  ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.fillText('PROFILE',ax,ay+7);
+  const displayName=String(getDisplayName(user)||user.name||'Jojo Member').slice(0,28);
+  let nameFill=colors[0];
+  if(effect==='rainbow'){nameFill=ctx.createLinearGradient(170,0,630,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
+  else if(effect==='sparkle'){nameFill=ctx.createLinearGradient(190,0,610,0);nameFill.addColorStop(0,'#fff2a8');nameFill.addColorStop(.5,'#d5a4ff');nameFill.addColorStop(1,'#ffffff');}
+  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?18:0;ctx.font='bold 31px Sans';ctx.fillText(displayName,400,390);ctx.shadowBlur=0;
+  if(vip){ctx.fillStyle='#ffd34f';ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;rr(300,405,200,38,18);ctx.fill();ctx.restore();ctx.fillStyle='#20152b';ctx.font='bold 17px Sans';ctx.fillText('♛ VIP VERIFIED ✓',400,430);}
+  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 15px Sans';ctx.fillText('✦ GOLD FRAME EQUIPPED ✦',400,vip?456:430);}
+  else if(effect!=='none'){ctx.fillStyle=colors[0];ctx.font='bold 15px Sans';ctx.fillText('✦ '+effect.toUpperCase()+' EFFECT ✦',400,vip?456:430);}
+  // [ADDED] House showcase reflects the player's currently owned house.
+  const house=String(user.house||'none').toLowerCase();
+  const houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}};
+  const hc=houseConfig[house];
+  ctx.fillStyle='#0a1124';rr(90,490,620,170,22);ctx.fill();ctx.strokeStyle=hc?hc.color:'#344567';ctx.lineWidth=2;rr(90,490,620,170,22);ctx.stroke();
+  ctx.textAlign='left';ctx.fillStyle=hc?hc.color:'#a9bdd8';ctx.font='bold 18px Sans';ctx.fillText('🏠 MY HOUSE',120,523);
+  if(hc){
+    ctx.save();ctx.shadowColor=hc.color;ctx.shadowBlur=15;ctx.fillStyle=hc.color;
+    if(house==='kubo'||house==='bahay'){ctx.beginPath();ctx.moveTo(300,585);ctx.lineTo(365,535);ctx.lineTo(430,585);ctx.closePath();ctx.fill();ctx.fillRect(315,585,100,45);ctx.fillStyle='#1b2440';ctx.fillRect(355,600,22,30);ctx.fillStyle='#a9f5ff';ctx.fillRect(325,595,18,15);ctx.fillRect(387,595,18,15);}
+    else if(house==='mansion'){ctx.fillRect(290,560,150,70);ctx.fillRect(310,540,35,20);ctx.fillRect(385,540,35,20);ctx.beginPath();ctx.moveTo(305,540);ctx.lineTo(327,515);ctx.lineTo(350,540);ctx.closePath();ctx.fill();ctx.beginPath();ctx.moveTo(375,540);ctx.lineTo(402,515);ctx.lineTo(428,540);ctx.closePath();ctx.fill();ctx.fillStyle='#1b2440';ctx.fillRect(352,595,28,35);}
+    else{ctx.fillRect(320,525,100,105);ctx.fillStyle='#1b2440';for(let yy=540;yy<600;yy+=25)for(let xx=335;xx<410;xx+=25)ctx.fillRect(xx,yy,13,13);}
+    ctx.restore();ctx.textAlign='center';ctx.fillStyle=hc.color;ctx.font='bold 17px Sans';ctx.fillText(hc.label+' • TIER '+getHouseTier(house),365,645);
+  }else{ctx.textAlign='center';ctx.fillStyle='#a9bdd8';ctx.font='bold 19px Sans';ctx.fillText('No house yet — visit the Shop!',400,580);ctx.font='42px Sans';ctx.fillText('🏡',400,625);}
+  // [ADDED] Stats panels.
+  const stats=[
+    {x:55,label:'💰 COINS',value:String(Number(user.coins)||0)+'c'},
+    {x:300,label:'💎 NET WORTH',value:String(getNetWorth(user))+'c'},
+    {x:545,label:'👀 PROFILE VIEWS',value:String(Number(user.views)||0)}
   ];
-  let y = 122;
-  for (const [label, value] of rows) {
-    ctx.fillStyle = '#FFD700'; ctx.font = 'bold 19px Sans'; ctx.fillText(label, 38, y);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '20px Sans'; canvasText(ctx, value, 38, y + 28, 710, 25, label === 'BIO' ? 3 : 2); y += label === 'BIO' ? 84 : 72;
-  }
-  const file = path.join(cacheDir, `profile_${String(user.id || user.psid || 'user').replace(/[^a-zA-Z0-9_-]/g, '')}.png`);
-  await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+  stats.forEach(s=>{ctx.fillStyle='#11152d';rr(s.x,690,200,100,18);ctx.fill();ctx.strokeStyle='#4d5b92';ctx.lineWidth=1.5;rr(s.x,690,200,100,18);ctx.stroke();ctx.textAlign='center';ctx.fillStyle='#9fb4d6';ctx.font='bold 14px Sans';ctx.fillText(s.label,s.x+100,720);ctx.fillStyle='#fff2a8';ctx.font='bold 25px Sans';ctx.fillText(s.value,s.x+100,760);});
+  ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='bold 17px Sans';ctx.fillText('ABOUT ME',75,835);
+  ctx.fillStyle='#a9bdd8';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),75,865,650,22,3);
+  ctx.textAlign='center';ctx.fillStyle='#5af4ff';ctx.font='bold 14px Sans';ctx.fillText('SHOP ITEMS APPEAR HERE AFTER PURCHASE',400,955);
+  const file=path.join(cacheDir,`profile_${String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')}.png`);
+  await fsExtra.writeFile(file,canvas.toBuffer('image/png'));return file;
 }
 async function generateShopCanvas() {
   // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
