@@ -384,8 +384,8 @@ function canvasText(ctx, text, x, y, maxWidth, lineHeight = 26, maxLines = 3) {
   for (const word of words) { const test = line ? `${line} ${word}` : word; if (ctx.measureText(test).width > maxWidth && line) { ctx.fillText(line, x, y + lines * lineHeight); lines++; line = word; if (lines >= maxLines) break; } else line = test; }
   if (lines < maxLines && line) ctx.fillText(line, x, y + lines * lineHeight);
 }
-// [UPGRADED V34] Render every shop name effect as plain uppercase text only.
-// No decorative glyphs, emoji, Unicode symbols, or text-background boxes are added to the name.
+// [UPGRADED V35] Render name effects as vivid gradient text with a clean outline and subtle effect-colored light particles.
+// Never draw a background box or plate behind the name; shop preview and applied profile share this renderer.
 function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'left') {
   const n = String(name || '').toUpperCase();
   const effect = String(effectKey || '').toLowerCase();
@@ -867,6 +867,7 @@ async function generateShopProductPreview(product, user) {
     ctx.globalAlpha = 0.15 + (i % 4) * 0.08; ctx.fillStyle = [item.color, '#ff49e9', '#4af5ff'][i % 3];
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
+  ctx.globalAlpha = 1;
   const isNameEffectPreview = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key);
   // Name-effect previews intentionally have no surrounding box: only the name receives the cosmetic.
   const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
