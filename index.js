@@ -1870,7 +1870,6 @@ A new user joined using your link! 🎁
               { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
               { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
               { content_type: "text", title: "📸 Change Photo", payload: "SET_PROFILE_PHOTO" },
-              { content_type: "text", title: "🛍️ Visit Shop", payload: "SHOP" },
               { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
             ]);
           } catch (canvasError) {
