@@ -448,6 +448,9 @@ async function generateProfileCanvas(user) {
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
 }
 async function generateShopCanvas() {
+  // Reuse the static shop poster after its first render to keep repeat SHOP commands fast.
+  const file = path.join(cacheDir, 'shop.jpg');
+  if (fs.existsSync(file)) return file;
   // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
   // Smooth visual mode: standard 800x1480 output keeps the full shop layout while reducing render cost.
   const W = 800, H = 1480, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
@@ -628,7 +631,7 @@ async function generateShopCanvas() {
   text('COINS CHECKED • CONFIRM BEFORE PURCHASE', 400, 1320, 13, '#b6c9e4');
   text('MORE STYLE • MORE STATUS • MORE JOJOWORLD', 400, 1370, 15, '#ff8ff1');
   text('BE LEGENDARY!', 400, 1417, 27, '#ffe16b');
-  const file = path.join(cacheDir, 'shop.jpg'); await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
+  await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
 }
 async function generateShopProductPreview(product, user) {
   // [UPGRADED V28] Preview the selected item applied to a cloned profile before any coins are charged.
@@ -2525,7 +2528,7 @@ ${renderGiftCatalog()}
           }
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
-          await sendImage(psid, shopImage, "💎✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 𝐒𝐇𝐎𝐏 ✨💎\n👑 Choose your upgrade below 👑", [
+          await sendImage(psid, shopImage, null, [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
             { content_type: "text", title: "👑 Royalty Frame 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
