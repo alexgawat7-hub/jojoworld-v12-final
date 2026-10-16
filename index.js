@@ -969,6 +969,7 @@ app.post('/paymongo-webhook', async (req, res) => {
     }
 
     let newBalance;
+    let committedUserData;
     const session = await mongoose.startSession();
     try {
       await session.withTransaction(async () => {
@@ -1000,9 +1001,10 @@ app.post('/paymongo-webhook', async (req, res) => {
           { session }
         );
 
-        // Refresh the in-memory cache only after the database transaction commits.
-        db.users[psid] = updatedUser;
+        committedUserData = updatedUser;
       });
+      // [FIXED] Update the in-memory cache only after the transaction successfully commits.
+      if (committedUserData) db.users[psid] = committedUserData;
     } catch (paymentError) {
       if (paymentError.code === 11000) {
         // Already processed or being handled by another delivery; do not credit twice.
