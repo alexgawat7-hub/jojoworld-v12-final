@@ -1706,9 +1706,15 @@ A new user joined using your link! 🎁
             let partner = await loadUserFromDB(user.activeMatchPsid);
             if (partner && partner.state === "CHATTING") {
               try {
-                const delivered = await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`);
+                const delivered = await send(user.activeMatchPsid, `💬 ${user.name}: ${rawText}`, [
+                  { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+                  { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+                ]);
                 if (!delivered) throw new Error("Messenger could not deliver the chat message");
-                await send(psid, `✉️ Message sent!`, [{ content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }]);
+                await send(psid, `✉️ Message sent!`, [
+                  { content_type: "text", title: "🎁 Send Gift", payload: "SEND_GIFT_MENU" },
+                  { content_type: "text", title: "🔴 End Chat", payload: "END_CHAT" }
+                ]);
               } catch (err) {
                 user.state = "IDLE";
                 user.activeMatchPsid = null;
