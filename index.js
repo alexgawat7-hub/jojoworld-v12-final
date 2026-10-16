@@ -16,6 +16,21 @@ const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
 
+// [GLOBAL TEXT CLEANER] Remove private-use icon glyphs and unsupported symbols
+// before dynamic user text is drawn on Canvas, for every account.
+function cleanText(text) {
+  if (!text) return "";
+  return text.toString()
+    .replace(/[\uE000-\uF8FF]/g, "")
+    .replace(/[^\x00-\x7F]/g, "")
+    .replace(/[^\w\s\-\.]/g, "")
+    .trim();
+}
+function cleanName(name) {
+  const cleaned = cleanText(name);
+  return cleaned.toUpperCase() || "JOJO MEMBER";
+}
+
 // [ADDED] V28 cache directory for generated profile and leaderboard images.
 const cacheDir = path.join(__dirname, 'cache');
 fsExtra.ensureDirSync(cacheDir);
@@ -321,7 +336,7 @@ function getNetWorth(user) { return Math.max(0, Number(user.coins) || 0) + getHo
 // Canvas identity text must remain separate from cosmetic badges and name effects.
 function getPlainDisplayName(user) {
   const raw = String(user?.name || 'Jojo Member');
-  return raw.replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase() || 'JOJO MEMBER';
+  return cleanName(raw.replace(/\s+/g, ' '));
 }
 function getDisplayName(user) {
   const badges = [];
@@ -479,17 +494,20 @@ async function generateProfileCanvas(user) {
     const badgeGrad=ctx.createLinearGradient(270,200,520,245);badgeGrad.addColorStop(0,'#fff1a1');badgeGrad.addColorStop(.48,'#ffc72f');badgeGrad.addColorStop(1,'#b96c08');
     ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;ctx.fillStyle=badgeGrad;rr(270,200,258,46,14);ctx.fill();ctx.strokeStyle='#fff0a0';ctx.lineWidth=2;rr(270,200,258,46,14);ctx.stroke();ctx.shadowBlur=0;
     ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('✓  VERIFIED VIP ELITE',285,229);ctx.restore();
-    ctx.save();ctx.textAlign='left';ctx.fillStyle='#ffdf70';ctx.font='bold 11px Sans';ctx.fillText('✦ OFFICIAL JOJOWORLD MEMBER ✦',270,263);ctx.restore();
   }
-  if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 13px Sans';ctx.fillText(royalFrame?'♛ ROYALTY FRAME EQUIPPED':'✦ GOLD FRAME EQUIPPED',270,vip?278:224);}
-  label('📍 '+String(user.location||'Location not set').slice(0,32),270,294,17,'#dce8ff');
-  label('♈ '+String(user.zodiac||'Zodiac not set').slice(0,28),270,326,17,'#dce8ff');
-  label('🎯 '+String(user.relationshipGoal||'Goal not set').slice(0,34),270,358,16,'#dce8ff');
-  label('🖼 Frame: '+String(royalFrame?'Royalty Frame':(goldFrame?'Gold Frame':(user.frame||'None'))).slice(0,24),270,389,14,'#aebfe2');
+  // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
+  // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
   stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
   panel(28,550,744,280,'#3c4d83');heading('PROFILE DETAILS',52,586);
-  const rows=[['NAME & AGE',displayName+(user.age?'  •  '+String(user.age):'')],['LOCATION',String(user.location||'Not set')],['ZODIAC',String(user.zodiac||'Not set 🌟')],['RELATIONSHIP GOAL',String(user.relationshipGoal||'Not set')],['BADGE',String(user.badge||(vip?'VIP Elite':'Newbie'))],['EQUIPPED FRAME',String(royalFrame?'👑 Royalty Frame':(goldFrame?'💎 Gold Frame':(user.frame||'None')))]];
+  const rows=[
+    ['NAME & AGE',cleanName(displayName)+(user.age?'  '+cleanText(user.age):'')],
+    ['LOCATION',cleanText(user.location||'Not set')],
+    ['ZODIAC',cleanText(user.zodiac||'Not set')],
+    ['RELATIONSHIP GOAL',cleanText(user.relationshipGoal||'Not set')],
+    ['BADGE',cleanText(user.badge||(vip?'VIP Elite':'Newbie'))],
+    ['EQUIPPED FRAME',cleanText(royalFrame?'Royalty Frame':(goldFrame?'Gold Frame':(user.frame||'None')))]
+  ];
   rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle='#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'…';ctx.fillText(val,746,yy);});
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
@@ -504,7 +522,7 @@ async function generateProfileCanvas(user) {
     label(hc.label+' • TIER '+getHouseTier(house),445,940,18,hc.color);
     label('✓ OWNED • PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
   }else{label('No house purchased yet — visit the Shop!',52,940,17,'#b7c8e6');}
-  panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,String(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
+  panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,cleanText(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
   panel(404,1015,368,220,'#d6a84b');heading('🎁 GIFTS SHOWCASE',426,1053);
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
   const giftCatalogForProfile={
@@ -905,7 +923,7 @@ async function generateLeaderboardCanvas(users) {
     .sort((a, b) => b.net - a.net).slice(0, 10);
   const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff'];
   // [FIXED] Preserve the complete displayed player name; sizing is handled per card so names are not cut at 19 characters.
-  const getName = item => getPlainDisplayName(item.user).slice(0, 26);
+  const getName = item => cleanName(item.user && item.user.name).slice(0, 26);
   // [UPGRADED V28] Render purchased name effects as real colors/glow in leaderboard text.
   const effectPalette = {
     rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
