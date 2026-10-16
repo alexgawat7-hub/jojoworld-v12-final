@@ -292,7 +292,7 @@ async function generateProfileCanvas(user) {
   const frameKey = String(user.frame || '').toLowerCase();
   const royalFrame = !!user.royalFrame || frameKey.includes('royal');
   const goldFrame = royalFrame || !!user.goldFrame || frameKey.includes('gold');
-  const vip = !!user.vip;
+  // [FIXED V31] Show the purchased VIP badge even if an older saved account only has its badge label.\n  const vip = !!user.vip || String(user.badge || '').toLowerCase().includes('vip');
   const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
   ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
   for(let i=0;i<115;i++){ctx.globalAlpha=.10+(i%3)*.045;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2:1,0,Math.PI*2);ctx.fill();}
@@ -314,17 +314,23 @@ async function generateProfileCanvas(user) {
   ctx.save();ctx.shadowColor=goldFrame?'#ffd34f':colors[0];ctx.shadowBlur=goldFrame?22:12;ctx.strokeStyle=goldFrame?'#ffd34f':(frameKey.includes('silver')?'#dce8ff':colors[0]);ctx.lineWidth=goldFrame?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
-  ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,720,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
-  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.font='bold 29px Sans';ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
-  // [UPGRADED V30] Prominent verified VIP emblem drawn with Canvas paths (no emoji-font dependency).
+  ctx.textAlign='left';let nameFill=colors[0];if(effect==='rainbow'){nameFill=ctx.createLinearGradient(280,0,650,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
+  // [FIXED V31] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
+  let nameFontSize=29;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>405&&nameFontSize>17){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
+  ctx.fillStyle=nameFill;ctx.shadowColor=colors[0];ctx.shadowBlur=effect!=='none'?12:0;ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+  // [UPGRADED V31] Large fixed-position verified shield on the RIGHT side of the profile identity card.
+  // It is rendered directly into the profile image whenever the user owns the VIP shop item.
   if(vip){
-    const vx=Math.min(720,Math.max(470,ctx.measureText(displayName).width+286)), vy=171;
-    ctx.save();ctx.translate(vx,vy);ctx.shadowColor='#ffd34f';ctx.shadowBlur=18;
-    const shield=()=>{ctx.beginPath();ctx.moveTo(0,-19);ctx.lineTo(18,-12);ctx.lineTo(16,5);ctx.quadraticCurveTo(10,17,0,22);ctx.quadraticCurveTo(-10,17,-16,5);ctx.lineTo(-18,-12);ctx.closePath();};
-    const gold=ctx.createLinearGradient(-18,-18,18,20);gold.addColorStop(0,'#fff6b0');gold.addColorStop(.42,'#ffc629');gold.addColorStop(1,'#b66a08');ctx.fillStyle=gold;shield();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff4bd';ctx.lineWidth=2;shield();ctx.stroke();
-    ctx.strokeStyle='#fff';ctx.lineWidth=3.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-8,1);ctx.lineTo(-2,7);ctx.lineTo(9,-6);ctx.stroke();ctx.restore();
-    panel(270,200,236,42,'#ffd34f');ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=10;ctx.fillStyle='#fff0a3';ctx.font='bold 16px Sans';ctx.textAlign='left';ctx.fillText('VERIFIED  •  VIP ELITE',284,226);ctx.restore();
-    ctx.save();ctx.textAlign='left';ctx.fillStyle='#ffdf70';ctx.font='bold 11px Sans';ctx.fillText('✦ OFFICIAL JOJOWORLD MEMBER ✦',270,257);ctx.restore();
+    ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
+    const shield=()=>{ctx.beginPath();ctx.moveTo(0,-27);ctx.lineTo(23,-17);ctx.lineTo(21,7);ctx.quadraticCurveTo(13,23,0,30);ctx.quadraticCurveTo(-13,23,-21,7);ctx.lineTo(-23,-17);ctx.closePath();};
+    const gold=ctx.createLinearGradient(-23,-27,23,30);gold.addColorStop(0,'#fffbd0');gold.addColorStop(.38,'#ffd447');gold.addColorStop(.72,'#f4a900');gold.addColorStop(1,'#a95b05');ctx.fillStyle=gold;shield();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff8cf';ctx.lineWidth=2.5;shield();ctx.stroke();
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
+    ctx.restore();
+    // [FIXED V31] Prominent, readable ownership label below the name.
+    const badgeGrad=ctx.createLinearGradient(270,200,520,245);badgeGrad.addColorStop(0,'#fff1a1');badgeGrad.addColorStop(.48,'#ffc72f');badgeGrad.addColorStop(1,'#b96c08');
+    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;ctx.fillStyle=badgeGrad;rr(270,200,258,46,14);ctx.fill();ctx.strokeStyle='#fff0a0';ctx.lineWidth=2;rr(270,200,258,46,14);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('✓  VERIFIED VIP ELITE',285,229);ctx.restore();
+    ctx.save();ctx.textAlign='left';ctx.fillStyle='#ffdf70';ctx.font='bold 11px Sans';ctx.fillText('✦ OFFICIAL JOJOWORLD MEMBER ✦',270,263);ctx.restore();
   }
   if(goldFrame){ctx.fillStyle='#ffe8a0';ctx.font='bold 13px Sans';ctx.fillText(royalFrame?'♛ ROYALTY FRAME EQUIPPED':'✦ GOLD FRAME EQUIPPED',270,vip?278:224);}
   label('📍 '+String(user.location||'Location not set').slice(0,32),270,294,17,'#dce8ff');
