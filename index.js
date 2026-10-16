@@ -1670,20 +1670,21 @@ ${renderGiftCatalog()}
           }
 
           const originalUser = JSON.parse(JSON.stringify(user));
-          user.coins -= 20;
-          user.state = "CHATTING";
-          user.activeMatchPsid = null;
-
+          const unlockCutoff = Date.now() - 15 * 60 * 1000;
+          const pendingCandidatePsid = user.pendingMatchPsid || null;
           let partnerPsid = null;
+
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
             try {
-              // Atomically reserve an idle partner so two users cannot select the same row.
+              // [UPGRADED V28] Atomically reserve only a recently active, eligible, idle partner.
               const candidateFilter = {
-                psid: user.pendingMatchPsid ? user.pendingMatchPsid : { $ne: psid },
+                psid: pendingCandidatePsid ? pendingCandidatePsid : { $ne: psid },
                 "data.state": "IDLE",
-                "data.activeMatchPsid": null
+                "data.activeMatchPsid": null,
+                "data.age": { $gte: 18, $lte: 99 },
+                "data.lastActive": { $gte: unlockCutoff }
               };
-              if (!user.pendingMatchPsid) candidateFilter.psid = { $ne: psid };
+              if (!pendingCandidatePsid) candidateFilter.psid = { $ne: psid };
               const matchDoc = await UserModel.findOneAndUpdate(
                 candidateFilter,
                 { $set: { "data.state": "CHATTING", "data.activeMatchPsid": psid } },
@@ -1694,21 +1695,37 @@ ${renderGiftCatalog()}
               console.error("Matchmaking query error:", e.message);
             }
           } else if (!MONGODB_URI) {
-            partnerPsid = user.pendingMatchPsid
-              ? (db.users[user.pendingMatchPsid]?.state === "IDLE" && !db.users[user.pendingMatchPsid]?.activeMatchPsid ? user.pendingMatchPsid : null)
-              : (Object.keys(db.users).find(pId =>
-                  pId !== psid &&
-                  db.users[pId]?.state === "IDLE" &&
-                  !db.users[pId]?.activeMatchPsid &&
-                  Number(db.users[pId]?.lastActive || 0) >= Date.now() - 15 * 60 * 1000
-                ) || null);
+            const eligible = pId => {
+              const candidateUser = db.users[pId];
+              return pId !== psid &&
+                candidateUser?.state === "IDLE" &&
+                !candidateUser?.activeMatchPsid &&
+                Number(candidateUser?.age) >= 18 &&
+                Number(candidateUser?.age) <= 99 &&
+                Number(candidateUser?.lastActive || 0) >= unlockCutoff;
+            };
+            partnerPsid = pendingCandidatePsid
+              ? (eligible(pendingCandidatePsid) ? pendingCandidatePsid : null)
+              : (Object.keys(db.users).find(eligible) || null);
           }
+
+          if (!partnerPsid) {
+            send(psid, "😕 Your selected match is no longer available. No unlock coins were deducted. Please refresh Find Your Match and try again.", [
+              { content_type: "text", title: "🔄 Refresh Matches", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+            continue;
+          }
+
+          user.coins -= 20;
+          user.state = "CHATTING";
+          user.activeMatchPsid = null;
 
           if (!partnerPsid) {
             Object.assign(user, originalUser);
             user.pendingMatchPsid = null;
             await saveUserToDB(psid);
-            send(psid, "😕 Wala pang available na totoong match ngayon. Walang coins na ikakaltas. Subukan ulit mamaya.", [
+            send(psid, "😕 Your selected match is no longer available. No unlock coins were deducted. Please refresh Find Your Match and try again.", [
               { content_type: "text", title: "🔎 Find Match", payload: "FIND MATCH" },
               { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
             ]);
@@ -1731,7 +1748,7 @@ ${renderGiftCatalog()}
               );
             }
             await saveUserToDB(psid);
-            send(psid, "⚠️ Hindi ma-confirm ang match. Walang coins na ikakaltas; subukan ulit mamaya.");
+            send(psid, "⚠️ We could not confirm this match. No unlock coins were deducted. Please try again.");
             continue;
           }
 
@@ -1754,7 +1771,7 @@ ${renderGiftCatalog()}
             }
             await saveUserToDB(partnerPsid);
             await saveUserToDB(psid);
-            send(psid, "⚠️ Hindi ma-save ang chat connection. Walang coins na ikakaltas; subukan ulit mamaya.");
+            send(psid, "⚠️ We could not save the chat connection. No unlock coins were deducted. Please try again.");
             continue;
           }
 
