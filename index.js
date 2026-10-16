@@ -611,7 +611,7 @@ async function getLeaderboardUsers() {
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   // [UPGRADED V28] Taller leaderboard canvas for larger, more readable Top 10 cards on mobile.
-  const W = 800, H = 1500, RENDER_SCALE = 1.25;
+  const W = 800, H = 1500, RENDER_SCALE = 1.5; // [FIXED] Higher output resolution for sharper mobile display.
   const canvas = createCanvas(Math.round(W * RENDER_SCALE), Math.round(H * RENDER_SCALE)), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -699,21 +699,21 @@ async function generateLeaderboardCanvas(users) {
     }
     // [FIXED] Podium content uses separate vertical zones: medal, avatar, name, and stats never overlap.
     // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
-    await drawLeaderboardAvatar(item, x + w / 2, y + 108, featured ? 27 : 25);
+    await drawLeaderboardAvatar(item, x + w / 2, y + 108, featured ? 36 : 32); // [UPGRADED V28] Larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
-    ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
+    ctx.font = 'bold ' + (featured ? 21 : 19) + 'px Sans';
     let podiumName = name;
     while (ctx.measureText(podiumName).width > w - 24 && podiumName.length > 5) podiumName = podiumName.slice(0, -2) + '…';
     ctx.fillText(podiumName, x + w / 2, y + 151);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 17 : 15) + 'px Sans';
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 20 : 18) + 'px Sans';
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 176);
-    ctx.fillStyle = '#d4f6ff'; ctx.font = '11px Sans';
+    ctx.fillStyle = '#d4f6ff'; ctx.font = '14px Sans';
     ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 197);
     ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 215);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 12px Sans';
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
     ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 235);
-    ctx.fillStyle = color; ctx.font = 'bold 10px Sans';
+    ctx.fillStyle = color; ctx.font = 'bold 13px Sans';
     ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
   };
 
@@ -749,19 +749,19 @@ async function generateLeaderboardCanvas(users) {
     // [FIXED] Stable leaderboard grid: avatar, player/coins, house, and net worth have separate columns.
     // [UPGRADED V28] Larger row avatar; player text starts farther right to avoid overlap.
     // [UPGRADED V28] Larger row avatar and readable name/coin/house/net-worth fields.
-    await drawLeaderboardAvatar(item, 122, y + 40, 29);
-    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 19px Sans';
+    await drawLeaderboardAvatar(item, 122, y + 40, 34); // [UPGRADED V28] Bigger Top 4–10 profile photos.
+    ctx.textAlign = 'left'; ctx.fillStyle = '#effaff'; ctx.font = 'bold 23px Sans';
     let rowName = name;
     while (ctx.measureText(rowName).width > 195 && rowName.length > 5) rowName = rowName.slice(0, -2) + '…';
     ctx.fillText(rowName, 160, y + 30);
-    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 16px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 160, y + 58);
-    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 13px Sans';
+    ctx.fillStyle = '#ffd85e'; ctx.font = 'bold 19px Sans'; ctx.fillText(coins.toLocaleString('en-US') + ' coins', 160, y + 58);
+    ctx.fillStyle = '#a8eefa'; ctx.font = 'bold 15px Sans';
     let houseText = 'House: ' + getHouse(item) + ' (' + getHouseWorth(item).toLocaleString('en-US') + 'c)';
     while (ctx.measureText(houseText).width > 165 && houseText.length > 8) houseText = houseText.slice(0, -2) + '…';
     ctx.fillText(houseText, 380, y + 48);
-    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 13px Sans';
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 15px Sans';
     ctx.fillText('NET WORTH', 744, y + 27);
-    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 17px Sans';
+    ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 19px Sans';
     ctx.fillText(item.net.toLocaleString('en-US') + 'c', 744, y + 52);
     ctx.fillStyle = color; ctx.font = 'bold 11px Sans';
     const effect = String(item.user.nameEffect || '').toUpperCase();
@@ -1310,7 +1310,7 @@ A new user joined using your link! 🎁
         }
         // [ADDED] V28 image commands. Existing textual profile command remains supported below.
         if (['ME','MY','PROFILE IMAGE'].includes(upperRaw.trim())) { user.views=(user.views||0)+1; if (!await saveUserToDB(psid)) { user.views--; send(psid,'⚠️ Hindi na-save ang profile view.'); continue; } const img=await generateProfileCanvas({...user,id:psid}); await sendImage(psid,img,`${getDisplayName(user)} • Black & Gold Profile`); continue; }
-        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img,'🏆 JojoWorld V28 Top 10 Richest • Net Worth'); continue; }
+        if (['LB','TOP','LEADERBOARD IMAGE'].includes(upperRaw.trim())) { const img=await generateLeaderboardCanvas(await getLeaderboardUsers()); await sendImage(psid,img); send(psid, 'Pindutin ang Exit para bumalik sa menu.', [{ content_type: 'text', title: '🚪 Exit', payload: 'MENU' }]); continue; } // [FIXED] No extra leaderboard heading caption.
 
         // ================= ACTIVE CHAT STATE LOOP (1-ON-1 RELAY) =================
         if (user.state === "CHATTING" && !upperRaw.startsWith("GIFT_") && upperRaw !== "SEND_GIFT_MENU") {
@@ -2189,7 +2189,7 @@ ${renderGiftCatalog()}
             else {
               // [ADDED] Dedicated leaderboard exit action, separate from the image itself.
               // [FIXED] Remove the unrelated leaderboard heading text; keep only a simple Exit action.
-              send(psid, '↩️', [
+              send(psid, 'Pindutin ang Exit para bumalik sa menu.', [
                 { content_type: 'text', title: '🚪 Exit', payload: 'MENU' }
               ]);
             }
