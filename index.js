@@ -318,6 +318,11 @@ function drawHouseArt(ctx, house, x, y, w, h) {
   ctx.restore();
 }
 function getNetWorth(user) { return Math.max(0, Number(user.coins) || 0) + getHouseValue(user.house); }
+// Canvas identity text must remain separate from cosmetic badges and name effects.
+function getPlainDisplayName(user) {
+  const raw = String(user?.name || 'Jojo Member');
+  return raw.replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase() || 'JOJO MEMBER';
+}
 function getDisplayName(user) {
   const badges = [];
   if (HOUSE_CONFIG[user.house]?.badge) badges.push(HOUSE_CONFIG[user.house].badge);
@@ -436,7 +441,7 @@ async function generateProfileCanvas(user) {
   const panel=(x,y,w,h,accent='#344777')=>{const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#121d3b');g.addColorStop(1,'#080e20');ctx.fillStyle=g;rr(x,y,w,h,22);ctx.fill();ctx.strokeStyle=accent;ctx.lineWidth=2;rr(x,y,w,h,22);ctx.stroke();};
   const label=(value,x,y,size=16,color='#91a9d3',align='left')=>{ctx.textAlign=align;ctx.fillStyle=color;ctx.font=size+'px Sans';ctx.fillText(value,x,y);};
   const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 21px Sans';ctx.fillText(value,x,y);};
-  const displayName=String(getDisplayName(user)||user.name||'Jojo Member').slice(0,26);
+  const displayName = getPlainDisplayName(user).slice(0, 26);
   ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 31px Sans';ctx.fillText('JOJOWORLD',W/2,62);
   ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE  •  YOUR WORLD, YOUR STYLE',W/2,91);
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
@@ -787,7 +792,7 @@ async function generateShopProductPreview(product, user) {
     }
     ctx.shadowBlur = 0;
   } else {
-    const displayName = String(getDisplayName(previewUser) || previewUser.name || 'Jojo Member').slice(0, 25);
+    const displayName = getPlainDisplayName(previewUser).slice(0, 25);
     // [UPGRADED V35] Show the exact purchased-style name treatment in Shop Preview.
     // The effect is applied to the name itself only: no surrounding symbols, lines, ornaments, or text boxes.
     const previewEffect = String(previewUser.nameEffect || key || 'none').toLowerCase();
@@ -900,7 +905,7 @@ async function generateLeaderboardCanvas(users) {
     .sort((a, b) => b.net - a.net).slice(0, 10);
   const accents = ['#ffd34f', '#dce8ff', '#ff8af4', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff', '#e64cff', '#3ceeff'];
   // [FIXED] Preserve the complete displayed player name; sizing is handled per card so names are not cut at 19 characters.
-  const getName = item => String(getDisplayName(item.user) || item.user.name || 'Player').replace(/\s+/g, ' ').trim();
+  const getName = item => getPlainDisplayName(item.user).slice(0, 26);
   // [UPGRADED V28] Render purchased name effects as real colors/glow in leaderboard text.
   const effectPalette = {
     rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
