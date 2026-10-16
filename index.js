@@ -2439,7 +2439,7 @@ ${renderGiftCatalog()}
           user.currentPage = "SHOP";
           // [FIXED] Do not show the category when the page state cannot be saved.
           if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
-          send(psid, "💎 JOJOWORLD SHOP\n✨ NAME EFFECTS — VERIFIED STYLE\n━━━━━━━━━━━━━━━━━━━━\n🌈 RAINBOW [RARE] — 5,000c\n✨ SPARKLE [MYTHIC] — 10,000c\n💖 HEART [LOVE] — 2,500c\n🔥 FIRE [HOT] — 2,500c\n❄️ ICE [COLD] — 2,500c\n⚡ NEON [NEON] — 3,000c\n🌸 BLOSSOM [CUTE] — 2,000c\n🖤 DARK [DARK] — 2,500c\n🔴 RED • 🔵 BLUE • 🟢 GREEN • 🟡 YELLOW — 1,000c each\n\nTap an item below to buy it. One name effect can be active at a time; use UNEQUIP before buying another.", [
+          send(psid, "💎 JOJOWORLD SHOP — NAME EFFECTS\nPumili ng effect sa mga button sa ibaba para makita ang visual at bumili.", [
             { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
             { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
             { content_type: "text", title: "💖 Heart 2,500c", payload: "PREVIEW_heart" },
