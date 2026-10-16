@@ -385,7 +385,9 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
     yellow: ['#fff4b0','#ffe65b']
   };
   const palette = palettes[effect] || ['#ffffff', '#dbeafe'];
-  const gradient = ctx.createLinearGradient(x, y - fontSize, x + Math.max(1, maxWidth), y + 2);
+  const gradientStartX = align === 'center' ? x - Math.max(1, maxWidth) / 2 : x;
+  const gradientEndX = align === 'center' ? x + Math.max(1, maxWidth) / 2 : x + Math.max(1, maxWidth);
+  const gradient = ctx.createLinearGradient(gradientStartX, y - fontSize, gradientEndX, y + 2);
   palette.forEach((color, index) => gradient.addColorStop(index / Math.max(1, palette.length - 1), color));
 
   const glowColors = {
@@ -786,31 +788,18 @@ async function generateShopProductPreview(product, user) {
     ctx.shadowBlur = 0;
   } else {
     const displayName = String(getDisplayName(previewUser) || previewUser.name || 'Jojo Member').slice(0, 25);
-    // [UPGRADED V32] Shop preview uses the same effect palette and matching glow as the generated Visual Profile.
-    const previewPalettes = {
-      rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
-      sparkle:['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'],
-      fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'],
-      blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'],
-      red:['#ff5252','#ff9b9b'],blue:['#54a8ff','#a6d8ff'],green:['#64f59b','#c2ffd9'],yellow:['#ffe65b','#fff4b0']
-    };
-    const previewPalette=previewPalettes[key];
-    if(previewPalette&&previewPalette.length>1){const g=ctx.createLinearGradient(170,0,630,0);previewPalette.forEach((c,i)=>g.addColorStop(i/(previewPalette.length-1),c));ctx.fillStyle=g;}
-    else ctx.fillStyle=item.color;
-    ctx.shadowColor=key==='sparkle'?'#d7a4ff':item.color;ctx.shadowBlur=key==='sparkle'||key==='neon'?34:24;ctx.font='bold 34px Sans';ctx.fillText(displayName,400,385);ctx.shadowBlur=0;
-    // [ADDED V32] Show a different visual signature for each effect before purchase.
-    if(key==='heart'){ctx.fillStyle='#ff80c7';ctx.font='bold 20px Sans';ctx.fillText('♥',535,359);ctx.fillText('♥',260,399);}
-    else if(key==='fire'){ctx.strokeStyle='#ff8a3d';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(220,410);ctx.quadraticCurveTo(400,430,580,410);ctx.stroke();ctx.fillStyle='#ffe36a';ctx.font='bold 18px Sans';ctx.fillText('✦',300,355);ctx.fillText('✦',500,355);}
-    else if(key==='ice'){ctx.fillStyle='#d8fbff';ctx.font='bold 19px Sans';ctx.fillText('✧',275,360);ctx.fillText('✧',525,405);}
-    else if(key==='neon'){ctx.strokeStyle='#45ffff';ctx.shadowColor='#ff4fe1';ctx.shadowBlur=22;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(210,415);ctx.lineTo(590,415);ctx.stroke();ctx.shadowBlur=0;}
-    else if(key==='blossom'){ctx.fillStyle='#ff9cdb';ctx.font='bold 18px Sans';ctx.fillText('✿',265,359);ctx.fillText('✿',535,406);}
-    else if(key==='dark'){ctx.strokeStyle='#9b7cff';ctx.shadowColor='#5c4b8a';ctx.shadowBlur=16;ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(400,383,215,45,0,0,Math.PI*2);ctx.stroke();ctx.shadowBlur=0;}
-    else if(['red','blue','green','yellow'].includes(key)){ctx.strokeStyle=item.color;ctx.shadowColor=item.color;ctx.shadowBlur=14;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(235,415);ctx.lineTo(565,415);ctx.stroke();ctx.shadowBlur=0;}
-    if (key === 'sparkle') {
-      // Static preview glints make the real visual style obvious before purchase.
-      const sparkleStar = (sx,sy,r) => { ctx.save(); ctx.translate(sx,sy); ctx.shadowColor='#fff4b0'; ctx.shadowBlur=18; ctx.fillStyle='#fffbe9'; ctx.beginPath(); ctx.moveTo(0,-r); ctx.quadraticCurveTo(r*.16,-r*.16,r,0); ctx.quadraticCurveTo(r*.16,r*.16,0,r); ctx.quadraticCurveTo(-r*.16,r*.16,-r,0); ctx.quadraticCurveTo(-r*.16,-r*.16,0,-r); ctx.fill(); ctx.restore(); };
-      sparkleStar(220,345,13); sparkleStar(566,350,9); sparkleStar(290,411,7); sparkleStar(515,407,11); sparkleStar(375,332,5);
-      ctx.save(); ctx.globalAlpha=.6; ctx.strokeStyle='#d7a4ff'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(185,420); ctx.quadraticCurveTo(400,438,615,418); ctx.stroke(); ctx.restore();
+    // [UPGRADED V35] Show the exact purchased-style name treatment in Shop Preview.
+    // The effect is applied to the name itself only: no surrounding symbols, lines, ornaments, or text boxes.
+    const previewEffect = String(previewUser.nameEffect || key || 'none').toLowerCase();
+    if (!drawPremiumNameEffect(ctx, displayName, 400, 385, 500, previewEffect, 'center')) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 34px Arial Black';
+      ctx.fillStyle = item.color;
+      ctx.shadowColor = item.color;
+      ctx.shadowBlur = 18;
+      ctx.fillText(displayName.toUpperCase(), 400, 385);
+      ctx.restore();
     }
     ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
     if (key === 'vip') {
