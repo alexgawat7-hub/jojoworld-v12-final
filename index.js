@@ -699,20 +699,20 @@ async function generateLeaderboardCanvas(users) {
     }
     // [FIXED] Podium content uses separate vertical zones: medal, avatar, name, and stats never overlap.
     // [UPGRADED V28] Larger, clearly separated profile photo for flex visibility.
-    await drawLeaderboardAvatar(item, x + w / 2, y + 126, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
+    await drawLeaderboardAvatar(item, x + w / 2, y + 135, featured ? 49 : 44); // [UPGRADED V28] Significantly larger podium profile photos.
     const name = getName(item);
     ctx.fillStyle = featured ? '#fff0a4' : '#eff8ff';
     ctx.font = 'bold ' + (featured ? 26 : 23) + 'px Sans'; // [UPGRADED V28] Larger podium player names.
     let podiumName = name;
     while (ctx.measureText(podiumName).width > w - 24 && podiumName.length > 5) podiumName = podiumName.slice(0, -2) + '…';
-    ctx.fillText(podiumName, x + w / 2, y + 184);
+    ctx.fillText(podiumName, x + w / 2, y + 191);
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
-    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 213);
+    ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 219);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
-    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 240);
-    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 263);
+    ctx.fillText('House: ' + getHouse(item), x + w / 2, y + 245);
+    ctx.fillText('Value: ' + getHouseWorth(item).toLocaleString('en-US') + 'c', x + w / 2, y + 267);
     ctx.fillStyle = '#ffe08a'; ctx.font = 'bold 18px Sans'; // [UPGRADED V28] Larger net-worth flex stat.
-    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 286);
+    ctx.fillText('NET WORTH: ' + item.net.toLocaleString('en-US') + 'c', x + w / 2, y + 291);
     ctx.fillStyle = color; ctx.font = 'bold 14px Sans';
     ctx.fillText(rank === 1 ? '★ TOP PLAYER ★' : (rank === 2 ? 'ELITE PLAYER' : 'RISING STAR'), x + w / 2, y + h - 12);
   };
