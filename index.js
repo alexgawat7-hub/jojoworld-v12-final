@@ -1428,7 +1428,7 @@ ${renderGiftCatalog()}
           send(psid, `🛍️ JOJOWORLD V28 FULL SHOP
 ━━━━━━━━━━━━━━━━━━━━
 👑 PROFILE UPGRADES
-[1] VIP Verified Badge — 200c (type: BUY_VIP)
+[1] VIP Verified Badge — 1,000c (type: BUY_VIP)
 [2] Gold Profile Frame — 150c (type: BUY_FRAME)
 
 🏠 HOUSE COLLECTION
@@ -1447,7 +1447,7 @@ EFFECT blossom — 2,000c
 EFFECT red / blue / green / yellow — 1,000c each
 
 💡 Type the exact command shown beside the item to purchase.`, [
-            { content_type: "text", title: "👑 VIP Badge (200c)", payload: "BUY_VIP" },
+            { content_type: "text", title: "👑 VIP Badge (1,000c)", payload: "BUY_VIP" },
             { content_type: "text", title: "💎 Gold Frame (150c)", payload: "BUY_FRAME" },
             { content_type: "text", title: "↩️ Menu", payload: "MENU" }
           ]);          continue;
@@ -1456,11 +1456,11 @@ EFFECT red / blue / green / yellow — 1,000c each
         if (upperRaw === "BUY_VIP") {
           // [FIXED] Duplicate VIP validation happens before deducting coins.
           if (user.vip || user.badge === "👑 VIP Elite") { send(psid, "❌ Meron ka na VIP boss!"); continue; }
-          if (user.coins < 200) {
-            send(psid, `❌ Not enough coins! VIP Badge costs 200 coins.`);
+          if (user.coins < 1000) {
+            send(psid, `❌ Not enough coins! VIP Badge costs 1,000 coins.`);
           } else {
             const previousVipState = { coins: user.coins, badge: user.badge, vip: user.vip };
-            user.coins -= 200;
+            user.coins -= 1000;
             user.vip = true;
             user.badge = "👑 VIP Elite";
             if (!await saveUserToDB(psid)) {
