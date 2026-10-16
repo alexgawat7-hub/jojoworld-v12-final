@@ -434,8 +434,9 @@ async function generateProfileCanvas(user) {
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{},giftNames=Object.entries(received).filter(([name,count])=>Number(count)>0).map(([name,count])=>String(name)+' x'+Number(count)),giftTotal=Math.max(Number(user.giftsCount)||0,Object.values(received).reduce((sum,count)=>sum+(Number(count)||0),0));
   label('Total received: '+giftTotal,426,1086,15,'#ffe8a0');ctx.fillStyle='#c6d5f0';ctx.textAlign='left';ctx.font='15px Sans';const showcase=String(user.giftsShowcase||'None yet');canvasText(ctx,giftNames.length?giftNames.join(' • '):(showcase!=='None yet'?showcase:'No gifts yet 🎁'),426,1117,320,22,4);
   ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD  •  PROFILE & STATS',400,1280);
-  const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.png');
-  await fsExtra.writeFile(file,canvas.toBuffer('image/png'));return file;
+  const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
+  // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
+  await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
 }
 async function generateShopCanvas() {
   // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
@@ -597,7 +598,7 @@ async function generateShopCanvas() {
   text('COINS CHECKED • CONFIRM BEFORE PURCHASE', 400, 1320, 13, '#b6c9e4');
   text('MORE STYLE • MORE STATUS • MORE JOJOWORLD', 400, 1370, 15, '#ff8ff1');
   text('BE LEGENDARY!', 400, 1417, 27, '#ffe16b');
-  const file = path.join(cacheDir, 'shop.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+  const file = path.join(cacheDir, 'shop.jpg'); await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
 }
 async function generateShopProductPreview(product, user) {
   // [UPGRADED V28] Preview the selected item applied to a cloned profile before any coins are charged.
@@ -717,8 +718,8 @@ async function generateShopProductPreview(product, user) {
   ctx.save(); ctx.shadowColor = '#ffbf3f'; ctx.shadowBlur = 22; ctx.fillStyle = ctaGrad; roundRect(175,790,450,52,20); ctx.fill(); ctx.restore();
   ctx.fillStyle = '#17112b'; ctx.font = 'bold 18px Sans'; ctx.fillText('✦ PREVIEW NOW  •  BUY WHEN READY ✦', 400, 822);
   ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('See how it looks on your profile before you buy', 400, 865);
-  const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
-  await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+  const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.jpg');
+  await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
 }
 // [ADDED] [UPGRADED V28] Brief leaderboard data cache avoids a full MongoDB scan on rapid repeat taps.
 let leaderboardUsersCache = { users: null, createdAt: 0 };
@@ -1027,8 +1028,8 @@ async function generateLeaderboardCanvas(users) {
   ctx.shadowColor = '#ffd34f'; ctx.fillStyle = '#ffe16a'; ctx.fillText('SEASON RANKINGS', 400, footerY + 26);
   ctx.shadowColor = '#ff45e8'; ctx.fillStyle = '#ff8df1'; ctx.fillText('PLAY TO CLIMB ↑', 630, footerY + 26);
   ctx.shadowBlur = 0; ctx.fillStyle = '#9cb6d2'; ctx.font = '11px Sans'; ctx.fillText('JOJOWORLD • YOUR NEXT LEVEL STARTS HERE', 400, footerY + 47);
-  const file = path.join(cacheDir, 'lb.png');
-  await fsExtra.writeFile(file, canvas.toBuffer('image/png'));
+  const file = path.join(cacheDir, 'lb.jpg');
+  await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 }));
   leaderboardImageCache = { file, createdAt: Date.now() }; // [ADDED] Cache completed leaderboard render for rapid repeat requests.
   return file;
 }
@@ -1042,7 +1043,8 @@ async function sendImage(id, imagePath, body, quickReplies) {
     // [FIXED] When there is no caption but quick replies are requested, attach them directly to the image message.
     if (!body && quickReplies) imageMessage.quick_replies = quickReplies;
     form.append('message', JSON.stringify(imageMessage));
-    form.append('filedata', fs.createReadStream(imagePath), { contentType: 'image/png', filename: path.basename(imagePath) });
+    const imageMime = /\\.jpe?g$/i.test(imagePath) ? 'image/jpeg' : 'image/png';
+    form.append('filedata', fs.createReadStream(imagePath), { contentType: imageMime, filename: path.basename(imagePath) });
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
     if (body) await send(id, body, quickReplies);
     return true;
