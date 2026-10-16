@@ -715,9 +715,7 @@ A new user joined using your link! 🎁
           continue;
         }
 
-        // [ADDED] V28 daily house tax check on incoming commands; save tax/downgrade changes.
-        const houseTaxNotice = user ? checkHouseTax(user) : null;
-        if (houseTaxNotice) { await saveUserToDB(psid, { saveJackpot: false }); send(psid, houseTaxNotice); }
+        // [FIXED] Reuse the daily house tax check performed earlier in this message handler.
 
         // [ADDED] [FIXED] V28 registration/name validation: "register Your Name".
         if (upperRaw.startsWith('REGISTER ')) {
