@@ -608,6 +608,7 @@ async function getLeaderboardUsers() {
           db.users[doc.psid] = doc.data;
         }
       }
+      leaderboardUsersCache = { users: combined, createdAt: Date.now() }; // [FIXED] Cache MongoDB results too, avoiding repeated full scans.
       return combined;
     } catch (error) {
       console.error("[UPGRADED] Could not fully load leaderboard from MongoDB; using merged cache:", error.message);
