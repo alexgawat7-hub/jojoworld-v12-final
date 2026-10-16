@@ -518,12 +518,22 @@ async function generateProfileCanvas(user) {
     ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
     const shield=()=>{ctx.beginPath();ctx.moveTo(0,-27);ctx.lineTo(23,-17);ctx.lineTo(21,7);ctx.quadraticCurveTo(13,23,0,30);ctx.quadraticCurveTo(-13,23,-21,7);ctx.lineTo(-23,-17);ctx.closePath();};
     const gold=ctx.createLinearGradient(-23,-27,23,30);gold.addColorStop(0,'#fffbd0');gold.addColorStop(.38,'#ffd447');gold.addColorStop(.72,'#f4a900');gold.addColorStop(1,'#a95b05');ctx.fillStyle=gold;shield();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff8cf';ctx.lineWidth=2.5;shield();ctx.stroke();
+    // Royal crown topper, gem studs, and a double outline make the purchased badge feel elite.
+    ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;ctx.fillStyle='#f6b900';ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.8;
+    ctx.beginPath();ctx.moveTo(-18,-25);ctx.lineTo(-16,-40);ctx.lineTo(-7,-31);ctx.lineTo(0,-44);ctx.lineTo(8,-31);ctx.lineTo(17,-40);ctx.lineTo(19,-25);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillStyle='#64eaff';ctx.beginPath();ctx.arc(0,-35,3,0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;ctx.strokeStyle='#9b5a08';ctx.lineWidth=1.5;shield();ctx.stroke();
+    ctx.fillStyle='#fff5c2';for(const gx of [-15,15]){ctx.beginPath();ctx.arc(gx,-9,2.2,0,Math.PI*2);ctx.fill();}
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
-    // [FIXED V31] Prominent, readable ownership label below the name.
-    const badgeGrad=ctx.createLinearGradient(270,200,520,245);badgeGrad.addColorStop(0,'#fff1a1');badgeGrad.addColorStop(.48,'#ffc72f');badgeGrad.addColorStop(1,'#b96c08');
-    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;ctx.fillStyle=badgeGrad;rr(270,200,258,46,14);ctx.fill();ctx.strokeStyle='#fff0a0';ctx.lineWidth=2;rr(270,200,258,46,14);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('VERIFIED VIP ELITE',285,229);ctx.restore();
+    // Royal black-and-gold nameplate: shown only when the account owns the VIP badge.
+    const badgeGrad=ctx.createLinearGradient(270,198,535,248);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
+    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=20;
+    ctx.fillStyle='#080b17';rr(265,196,270,52,15);ctx.fill();
+    ctx.strokeStyle=badgeGrad;ctx.lineWidth=3;rr(265,196,270,52,15);ctx.stroke();
+    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,202,258,40,11);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=badgeGrad;ctx.font='bold 16px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,219);
+    ctx.fillStyle='#fff4c2';ctx.font='bold 10px Sans';ctx.fillText('VIP ELITE MEMBER',400,235);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
   const effectLabel = effect !== 'none' ? effect.replace(/[^a-z0-9 ]/g,' ').toUpperCase() : 'DEFAULT';
@@ -910,8 +920,17 @@ async function generateShopProductPreview(product, user) {
       const shield = () => { ctx.beginPath(); ctx.moveTo(0,-30); ctx.lineTo(25,-19); ctx.lineTo(23,8); ctx.quadraticCurveTo(14,25,0,33); ctx.quadraticCurveTo(-14,25,-23,8); ctx.lineTo(-25,-19); ctx.closePath(); };
       const gold = ctx.createLinearGradient(-25,-30,25,33); gold.addColorStop(0,'#fffbd0'); gold.addColorStop(.38,'#ffd447'); gold.addColorStop(.72,'#f4a900'); gold.addColorStop(1,'#a95b05');
       ctx.fillStyle = gold; shield(); ctx.fill(); ctx.shadowBlur = 0; ctx.strokeStyle = '#fff8cf'; ctx.lineWidth = 2.5; shield(); ctx.stroke();
-      ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(-11,1); ctx.lineTo(-3,10); ctx.lineTo(13,-10); ctx.stroke(); ctx.restore();
-      ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('VERIFIED VIP ELITE', 400, 600);
+      // Matching royalty crown and gem accents, identical gold palette to the live profile badge.
+      ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;ctx.fillStyle='#f6b900';ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.8;
+      ctx.beginPath();ctx.moveTo(-19,-28);ctx.lineTo(-17,-44);ctx.lineTo(-8,-34);ctx.lineTo(0,-48);ctx.lineTo(8,-34);ctx.lineTo(17,-44);ctx.lineTo(19,-28);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#64eaff';ctx.beginPath();ctx.arc(0,-38,3,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;ctx.strokeStyle='#9b5a08';ctx.lineWidth=1.5;shield();ctx.stroke();
+      ctx.fillStyle='#fff5c2';for(const gx of [-16,16]){ctx.beginPath();ctx.arc(gx,-9,2.3,0,Math.PI*2);ctx.fill();}
+      ctx.strokeStyle='#ffffff';ctx.lineWidth=5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-11,1);ctx.lineTo(-3,10);ctx.lineTo(13,-10);ctx.stroke();ctx.restore();
+      const royalPlate=ctx.createLinearGradient(250,620,550,690);royalPlate.addColorStop(0,'#fffbd0');royalPlate.addColorStop(.22,'#ffd447');royalPlate.addColorStop(.5,'#f4a900');royalPlate.addColorStop(.78,'#a95b05');royalPlate.addColorStop(1,'#fff0a0');
+      ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=20;ctx.fillStyle='#080b17';roundRect(245,615,310,72,18);ctx.fill();ctx.strokeStyle=royalPlate;ctx.lineWidth=3;roundRect(245,615,310,72,18);ctx.stroke();ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;roundRect(252,622,296,58,13);ctx.stroke();ctx.shadowBlur=0;
+      ctx.fillStyle=royalPlate;ctx.font='bold 21px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,647);
+      ctx.fillStyle='#fff4c2';ctx.font='bold 13px Sans';ctx.fillText('VIP ELITE MEMBER',400,670);ctx.restore();
     } else {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
     }
