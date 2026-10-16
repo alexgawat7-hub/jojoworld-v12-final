@@ -482,6 +482,22 @@ async function generateProfileCanvas(user) {
   try{let photo=null;if(user.profilePhotoData)photo=await loadCachedProfilePhotoData(user.profilePhotoData);else if(user.profilePhotoUrl)photo=await loadCachedProfilePhotoUrl(user.profilePhotoUrl);if(photo){ctx.save();ctx.beginPath();ctx.arc(ax,ay,81,0,Math.PI*2);ctx.clip();const scale=Math.max(162/photo.width,162/photo.height),pw=photo.width*scale,ph=photo.height*scale;ctx.drawImage(photo,ax-pw/2,ay-ph/2,pw,ph);ctx.restore();photoShown=true;}}catch(photoError){console.warn('[PROFILE PHOTO] Could not load uploaded photo:',photoError.message);}
   if(!photoShown){ctx.fillStyle='#263c62';ctx.beginPath();ctx.arc(ax,ay-22,28,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ax,ay+42,48,36,0,Math.PI,Math.PI*2);ctx.fill();ctx.fillStyle='#d9e8fa';ctx.font='bold 13px Sans';ctx.textAlign='center';ctx.fillText('PROFILE',ax,ay+8);}
   ctx.save();ctx.shadowColor=frameGlow;ctx.shadowBlur=frameName!=='None'?25:12;ctx.strokeStyle=frameName!=='None'?frameColor:colors[0];ctx.lineWidth=frameName!=='None'?9:5;ctx.beginPath();ctx.arc(ax,ay,87,0,Math.PI*2);ctx.stroke();if(goldFrame||royalFrame){ctx.strokeStyle='#fff2b3';ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}if(diamondFrame||neonFrame){ctx.strokeStyle=frameColor;ctx.lineWidth=2;ctx.beginPath();ctx.arc(ax,ay,77,0,Math.PI*2);ctx.stroke();}
+  // [PROFILE FLEX BOOST] Make every equipped frame visibly premium, not just a thin avatar ring.
+  if(frameStyle.equipped){
+    ctx.save();ctx.shadowColor=frameGlow;ctx.shadowBlur=13;ctx.fillStyle=frameColor;ctx.strokeStyle=frameColor;ctx.lineWidth=2;
+    for(let j=0;j<16;j++){
+      const a=-Math.PI/2+j*Math.PI/8, r=96, px=ax+Math.cos(a)*r, py=ay+Math.sin(a)*r;
+      ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/4);
+      if(royalFrame){ /* The Royalty frame has its own larger crown and jewel treatment below. */ }
+      else if(diamondFrame){ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(4,0);ctx.lineTo(0,5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();}
+      else if(neonFrame){ctx.beginPath();ctx.moveTo(-3,-4);ctx.lineTo(3,4);ctx.moveTo(3,-4);ctx.lineTo(-3,4);ctx.stroke();}
+      else if(goldFrame){ctx.beginPath();ctx.arc(0,0,j%4===0?4:2.2,0,Math.PI*2);ctx.fill();}
+      else {ctx.beginPath();ctx.arc(0,0,j%4===0?3.2:1.8,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+    ctx.globalAlpha=.13;ctx.fillStyle=frameColor;ctx.beginPath();ctx.arc(ax,ay,116,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
   // [UPGRADED V32] Every purchased name effect gets a distinct gradient, glow and matching visual accent in the generated Visual Profile.
@@ -510,6 +526,17 @@ async function generateProfileCanvas(user) {
     ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=15;ctx.fillStyle=badgeGrad;rr(270,200,258,46,14);ctx.fill();ctx.strokeStyle='#fff0a0';ctx.lineWidth=2;rr(270,200,258,46,14);ctx.stroke();ctx.shadowBlur=0;
     ctx.fillStyle='#241600';ctx.font='bold 17px Sans';ctx.textAlign='left';ctx.fillText('VERIFIED VIP ELITE',285,229);ctx.restore();
   }
+  // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
+  const effectLabel = effect !== 'none' ? effect.replace(/[^a-z0-9 ]/g,' ').toUpperCase() : 'DEFAULT';
+  const frameLabel = frameName.toUpperCase();
+  const chip = (x,y,w,textValue,color) => {
+    ctx.save();ctx.shadowColor=color;ctx.shadowBlur=10;
+    const grad=ctx.createLinearGradient(x,y,x+w,y+30);grad.addColorStop(0,'#182849');grad.addColorStop(1,'#080f22');
+    ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
+    ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
+  };
+  chip(270,267,210,'NAME FX: '+effectLabel,effect==='none'?'#9fb4d6':(effectGlow[effect]||colors[0]));
+  chip(490,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
