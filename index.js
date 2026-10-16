@@ -286,6 +286,56 @@ async function generateProfileCanvas(user) {
   const file = path.join(cacheDir, `profile_${String(user.id || user.psid || 'user').replace(/[^a-zA-Z0-9_-]/g, '')}.png`);
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
+async function generateShopCanvas() {
+  // [UPGRADED V28] Premium neon shop poster based on the user's sample.
+  const W = 800, H = 1100, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#060511'); bg.addColorStop(0.5, '#10102b'); bg.addColorStop(1, '#020b18');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 110; i++) {
+    const x = (i * 131 + 29) % (W - 8) + 4, y = (i * 79 + 17) % (H - 8) + 4;
+    ctx.fillStyle = ['#39efff', '#ff48e9', '#ffd75b', '#a77bff'][i % 4];
+    ctx.globalAlpha = 0.12 + (i % 4) * 0.08; ctx.beginPath(); ctx.arc(x, y, i % 7 === 0 ? 2.4 : 1, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 20; ctx.strokeStyle = '#35eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, W - 36, H - 36);
+  ctx.shadowColor = '#ec48ff'; ctx.strokeStyle = '#ec48ff'; ctx.lineWidth = 1.5; ctx.strokeRect(29, 29, W - 58, H - 58); ctx.shadowBlur = 0;
+  ctx.textAlign = 'center'; ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 16; ctx.fillStyle = '#65ffff'; ctx.font = 'bold 43px Sans'; ctx.fillText('JOJOWORLD SHOP', 400, 82);
+  ctx.shadowBlur = 0; ctx.fillStyle = '#ff8ff1'; ctx.font = 'bold 22px Sans'; ctx.fillText('💎 PREMIUM PROFILE UPGRADES', 400, 121);
+  const panel = (x, y, w, h, color, title) => {
+    const g = ctx.createLinearGradient(x, y, x + w, y + h); g.addColorStop(0, '#15132c'); g.addColorStop(1, '#080f1d');
+    ctx.fillStyle = g; ctx.fillRect(x, y, w, h); ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 9; ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.strokeRect(x, y, w, h); ctx.restore();
+    ctx.textAlign = 'left'; ctx.fillStyle = color; ctx.font = 'bold 22px Sans'; ctx.fillText(title, x + 18, y + 32);
+  };
+  const line = (x, y, title, price, color = '#eafaff') => {
+    ctx.textAlign = 'left'; ctx.fillStyle = color; ctx.font = 'bold 18px Sans'; ctx.fillText(title, x, y);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#ffe16b'; ctx.font = 'bold 18px Sans'; ctx.fillText(price, 742, y);
+  };
+  panel(48, 151, 704, 130, '#ff59e8', '👑 PROFILE UPGRADES');
+  line(72, 218, '👑 VIP Verified Badge', '1,000c');
+  line(72, 253, '✨ Gold Profile Frame', '150c');
+  panel(48, 300, 704, 438, '#5bffff', '💎 NAME EFFECTS');
+  ctx.fillStyle = '#aebed9'; ctx.font = '15px Sans'; ctx.textAlign = 'left'; ctx.fillText('LEGENDARY • 8 PREMIUM STYLES', 72, 365);
+  line(72, 405, '🌈 Rainbow [RARE]', '5,000c');
+  line(72, 445, '✨ Sparkle [MYTHIC]', '10,000c');
+  line(72, 485, '💖 Heart [LOVE]', '2,500c');
+  line(72, 525, '🔥 Fire [HOT]', '2,500c');
+  line(72, 565, '❄️ Ice [COLD]', '2,500c');
+  ctx.strokeStyle = '#5bffff'; ctx.globalAlpha = 0.65; ctx.beginPath(); ctx.moveTo(72, 586); ctx.lineTo(728, 586); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = '#ff8ff1'; ctx.textAlign = 'left'; ctx.font = 'bold 15px Sans'; ctx.fillText('EPIC • NEON COLLECTION', 72, 616);
+  line(72, 653, '⚡ Neon [NEON]', '3,000c');
+  line(72, 691, '🌸 Blossom • 🖤 Dark', '2,000c / 2,500c');
+  ctx.fillStyle = '#aebed9'; ctx.font = '14px Sans'; ctx.textAlign = 'left'; ctx.fillText('🔴 Red • 🔵 Blue • 🟢 Green • 🟡 Yellow — 1,000c each', 72, 720);
+  panel(48, 757, 704, 220, '#a77bff', '🏠 HOUSE COLLECTION');
+  line(72, 819, '🛖 Kubo', '1,500c');
+  line(72, 858, '🏡 Bahay  • requires Kubo', '5,000c');
+  line(72, 897, '🏰 Mansion • requires Bahay', '15,000c');
+  line(72, 936, '🏢 Building • requires Mansion', '40,000c');
+  ctx.textAlign = 'center'; ctx.shadowColor = '#35eaff'; ctx.shadowBlur = 12; ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 19px Sans';
+  ctx.fillText('CHOOSE AN ITEM BELOW TO BUY', 400, 1024); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#aebed9'; ctx.font = '13px Sans'; ctx.fillText('Coins are checked • purchases save to your profile', 400, 1050);
+  const file = path.join(cacheDir, 'shop.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
+}
 async function generateLeaderboardCanvas(users) {
   // [UPGRADED V28] Premium JojoWorld leaderboard: gold Top 1 podium + neon Top 2/3 + ranks 4-10.
   const W = 800, H = 1200;
@@ -414,7 +464,7 @@ async function generateLeaderboardCanvas(users) {
   return file;
 }
 // [ADDED] Messenger attachment upload for generated canvas images.
-async function sendImage(id, imagePath, body) {
+async function sendImage(id, imagePath, body, quickReplies) {
   if (!PAGE_TOKEN || !id) return false;
   try {
     const FormData = require('form-data'); const form = new FormData();
@@ -422,7 +472,7 @@ async function sendImage(id, imagePath, body) {
     form.append('message', JSON.stringify({ attachment: { type: 'image', payload: { is_reusable: false } } }));
     form.append('filedata', fs.createReadStream(imagePath), { contentType: 'image/png', filename: path.basename(imagePath) });
     await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_TOKEN}`, form, { headers: form.getHeaders() });
-    if (body) await send(id, body);
+    if (body) await send(id, body, quickReplies);
     return true;
   } catch (e) { console.error('Canvas image send failed:', e.response?.data?.error?.message || e.message); return false; }
 }
@@ -1573,8 +1623,9 @@ ${renderGiftCatalog()}
         }
 
         if (cleanText === "shop" || upperRaw === "SHOP") {
-          // [UPGRADED V28] Shop front page; purchase buttons lead to validated existing buy handlers.
-          send(psid, "🛍️ JOJOWORLD SHOP\n💎 VERIFIED • NEON • PREMIUM\n━━━━━━━━━━━━━━━━━━━━\n👑 PROFILE UPGRADES\n[1] 👑 VIP Verified Badge — 1,000c\n[2] ✨ Gold Profile Frame — 150c\n\n💎 NAME EFFECTS\n🌈 Rainbow 5,000c • ✨ Sparkle 10,000c\n💖 Heart / 🔥 Fire / ❄️ Ice 2,500c each\n⚡ Neon 3,000c • 🌸 Blossom 2,000c\n🖤 Dark 2,500c • 🔴🔵🟢🟡 Colors 1,000c each\n\n🏠 HOUSE COLLECTION\n🛖 Kubo 1,500c • 🏡 Bahay 5,000c\n🏰 Mansion 15,000c • 🏢 Building 40,000c\n\nTap a category or item button below to continue. Purchases check your coins and save to your profile.", [
+          // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
+          const shopImage = await generateShopCanvas();
+          await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
             { content_type: "text", title: "👑 VIP Badge 1,000c", payload: "BUY_VIP" },
             { content_type: "text", title: "✨ Gold Frame 150c", payload: "BUY_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
