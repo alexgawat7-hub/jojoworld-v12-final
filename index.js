@@ -31,6 +31,21 @@ function cleanName(name) {
   return cleaned.toUpperCase() || "JOJO MEMBER";
 }
 
+// [GLOBAL COSMETIC SOURCE OF TRUTH] Profile and leaderboard use the same saved frame state and colors.
+function getEquippedFrameStyle(user = {}) {
+  const frameName = cleanText(user.equippedFrame || user.frame || (user.royalFrame ? 'Royalty Frame' : (user.goldFrame ? 'Gold Frame' : 'None'))) || 'None';
+  const frameKey = frameName.toLowerCase();
+  const royal = !!user.royalFrame || frameKey.includes('royal');
+  const gold = !royal && (!!user.goldFrame || frameKey.includes('gold'));
+  const diamond = frameKey.includes('diamond');
+  const neon = frameKey.includes('neon');
+  const silver = frameKey.includes('silver');
+  const equipped = frameKey !== 'none' || royal || gold || diamond || neon || silver;
+  const color = royal || gold ? '#ffd34f' : diamond ? '#00ffff' : neon ? '#ff00ff' : silver ? '#dce8ff' : '#65eaff';
+  const glow = royal || gold ? 'rgba(255,215,0,0.85)' : diamond ? 'rgba(0,255,255,0.85)' : neon ? 'rgba(255,0,255,0.85)' : silver ? 'rgba(220,232,255,0.75)' : '#65eaff';
+  return { frameName, frameKey, royal, gold, diamond, neon, silver, equipped, color, glow };
+}
+
 // [ADDED] V28 cache directory for generated profile and leaderboard images.
 const cacheDir = path.join(__dirname, 'cache');
 fsExtra.ensureDirSync(cacheDir);
@@ -443,16 +458,9 @@ async function generateProfileCanvas(user) {
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'] };
   const colors = effectColors[effect] || ['#ffd34f','#ffec9e','#f59e0b'];
-  // [GLOBAL PROFILE FRAME EFFECTS] Read the actually equipped/owned frame; never grant a cosmetic by default.
-  const frameName = cleanText(user.equippedFrame || user.frame || (user.royalFrame ? 'Royalty Frame' : (user.goldFrame ? 'Gold Frame' : 'None'))) || 'None';
-  const frameKey = frameName.toLowerCase();
-  const royalFrame = !!user.royalFrame || frameKey.includes('royal');
-  const goldFrame = !royalFrame && (!!user.goldFrame || frameKey.includes('gold'));
-  const diamondFrame = frameKey.includes('diamond');
-  const neonFrame = frameKey.includes('neon');
-  const silverFrame = frameKey.includes('silver');
-  const frameColor = royalFrame || goldFrame ? '#ffd34f' : diamondFrame ? '#00ffff' : neonFrame ? '#ff00ff' : silverFrame ? '#dce8ff' : '#4656a0';
-  const frameGlow = royalFrame || goldFrame ? 'rgba(255,215,0,0.85)' : diamondFrame ? 'rgba(0,255,255,0.85)' : neonFrame ? 'rgba(255,0,255,0.85)' : silverFrame ? 'rgba(220,232,255,0.75)' : colors[0];
+  // [GLOBAL PROFILE FRAME EFFECTS] Shared frame state used by the leaderboard too.
+  const frameStyle = getEquippedFrameStyle(user);
+  const { frameName, frameKey, royal: royalFrame, gold: goldFrame, diamond: diamondFrame, neon: neonFrame, silver: silverFrame, color: frameColor, glow: frameGlow } = frameStyle;
   // [FIXED V31] Show the purchased VIP badge even if an older saved account only has its badge label.
   const vip = !!user.vip || String(user.badge || '').toLowerCase().includes('vip');
   const bg = ctx.createLinearGradient(0,0,W,H); bg.addColorStop(0,'#050716'); bg.addColorStop(.5,'#111630'); bg.addColorStop(1,'#030914');
@@ -1003,8 +1011,21 @@ async function generateLeaderboardCanvas(users) {
       const initials = String(item && item.user ? getDisplayName(item.user) || item.user.name || 'JW' : 'JW').trim().split(/\s+/).slice(0,2).map(v=>v[0]||'').join('').toUpperCase();
       ctx.fillStyle = '#d9e8ff'; ctx.font = 'bold ' + Math.round(radius * .8) + 'px Sans'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(initials || 'JW', x, y); ctx.textBaseline = 'alphabetic';
     }
-    ctx.strokeStyle = item && item.user && (item.user.goldFrame || String(item.user.frame || '').toLowerCase().includes('gold')) ? '#ffd34f' : '#65eaff';
-    ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    // [GLOBAL COSMETIC SYNC] Match the Visual Profile frame color and glow exactly.
+    const frameStyle = getEquippedFrameStyle(item && item.user ? item.user : {});
+    ctx.shadowColor = frameStyle.glow;
+    ctx.shadowBlur = frameStyle.equipped ? 18 : 0;
+    ctx.strokeStyle = frameStyle.color;
+    ctx.lineWidth = frameStyle.equipped ? 5 : 3;
+    ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    if (frameStyle.gold || frameStyle.royal) {
+      ctx.shadowBlur = 8; ctx.strokeStyle = '#fff2b3'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, radius - 5, 0, Math.PI * 2); ctx.stroke();
+    } else if (frameStyle.diamond || frameStyle.neon) {
+      ctx.shadowBlur = 8; ctx.strokeStyle = frameStyle.color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, radius - 5, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
   };
   const drawPodium = async (item, rank, x, y, w, h, color, featured) => {
     const grad = ctx.createLinearGradient(x, y, x + w, y + h);
