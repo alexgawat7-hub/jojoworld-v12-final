@@ -1048,14 +1048,18 @@ app.post('/webhook', async (req, res) => {
   messengerWebhookQueue = new Promise(resolve => { releaseWebhookQueue = resolve; });
   await previousWebhook;
 
+  // [ADDED] Track the message currently being processed so a thrown error can release its deduplication reservation.
+  let activeWebhookMessageId = null;
   try {
     const body = req.body;
     if (!body || body.object !== 'page' || !Array.isArray(body.entry)) return res.sendStatus(200);
 
     for (const entry of body.entry) {
       for (const ev of (Array.isArray(entry.messaging) ? entry.messaging : [])) {
+        activeWebhookMessageId = null;
         if (!ev || !ev.sender || !ev.sender.id || (!ev.message && !ev.postback)) continue;
         const messageId = ev.message && ev.message.mid ? String(ev.message.mid) : null;
+        activeWebhookMessageId = messageId;
         if (messageId) {
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
             try {
@@ -2299,10 +2303,23 @@ ${renderGiftCatalog()}
     }
   } catch (e) {
     console.error("Messenger webhook processing error:", e.message);
+    // [FIXED] Do not acknowledge a failed webhook as successful; release the current message reservation so Meta can retry.
+    if (activeWebhookMessageId) {
+      if (MONGODB_URI && mongoose.connection.readyState === 1) {
+        try {
+          await ProcessedMessengerMessageModel.deleteOne({ messageId: activeWebhookMessageId });
+        } catch (releaseError) {
+          console.error("[FIXED] Could not release failed Messenger message reservation:", releaseError.message);
+        }
+      } else {
+        processedMessengerMessages.delete(activeWebhookMessageId);
+      }
+    }
+    return res.sendStatus(500);
   } finally {
     releaseWebhookQueue();
   }
-  res.sendStatus(200);
+  return res.sendStatus(200);
 });
 
 app.get('/', (req, res) => res.status(200).json({
