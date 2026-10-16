@@ -287,10 +287,47 @@ async function generateProfileCanvas(user) {
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateLeaderboardCanvas(users) {
-  const { canvas, ctx } = drawV28Canvas('JOJOWORLD V28 • TOP 10 RICHEST', 800, 1050);
-  const top = Object.entries(users || {}).map(([id,u])=>({id,user:u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
-  let y = 132;
-  top.forEach((item, i) => { const medal = ['🥇','🥈','🥉'][i] || `#${i+1}`; ctx.fillStyle = i < 3 ? '#FFD700' : '#FFFFFF'; ctx.font = 'bold 21px Sans'; ctx.fillText(`${medal} ${String(item.user.name || 'Jojo Member').slice(0,24)}`, 38, y); ctx.fillStyle = '#FFFFFF'; ctx.font = '18px Sans'; ctx.fillText(`Coins ${Number(item.user.coins)||0} • House ${getHouseValue(item.user.house)} • Net ${item.net}`, 60, y+29); y += 82; });
+  // [UPGRADED V28] Neon black-and-gold leaderboard based on the requested reference.
+  const canvas = createCanvas(800, 1050), ctx = canvas.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, 800, 1050);
+  bg.addColorStop(0, '#05030d'); bg.addColorStop(0.55, '#10091e'); bg.addColorStop(1, '#020812');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, 800, 1050);
+  for (let i = 0; i < 52; i++) {
+    const x = (i * 137) % 790 + 5, y = (i * 83) % 1035 + 8;
+    ctx.fillStyle = i % 3 === 0 ? '#32eaff' : (i % 3 === 1 ? '#ff39e8' : '#ffd45a');
+    ctx.globalAlpha = 0.25 + (i % 4) * 0.12; ctx.beginPath(); ctx.arc(x, y, i % 5 === 0 ? 2.4 : 1.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = '#29eaff'; ctx.lineWidth = 4; ctx.strokeRect(18, 18, 764, 1014);
+  ctx.strokeStyle = '#f638ef'; ctx.lineWidth = 2; ctx.strokeRect(27, 27, 746, 996);
+  ctx.textAlign = 'center'; ctx.shadowColor = '#ffbd39'; ctx.shadowBlur = 22;
+  ctx.fillStyle = '#fff2ad'; ctx.font = 'bold 49px Sans'; ctx.fillText('LEADERBOARD', 400, 83);
+  ctx.fillStyle = '#ffca48'; ctx.font = 'bold 55px Sans'; ctx.fillText('TOP 10', 400, 137);
+  ctx.shadowBlur = 0; ctx.strokeStyle = '#ffcf55'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(58, 157); ctx.lineTo(742, 157); ctx.stroke();
+  const houseNames = { none: 'None', kubo: 'Kubo', bahay: 'Bahay', mansion: 'Mansion', building: 'Building' };
+  const top = Object.entries(users || {}).map(([id, user]) => ({ id, user, net: getNetWorth(user) })).sort((a, b) => b.net - a.net).slice(0, 10);
+  const medals = ['🥇', '🥈', '🥉'], accents = ['#ffd44f', '#c7d5e6', '#e9a0ff', '#33edff'];
+  if (!top.length) { ctx.fillStyle = '#fff'; ctx.font = 'bold 28px Sans'; ctx.fillText('NO PLAYERS YET', 400, 500); }
+  top.forEach((item, i) => {
+    const y = 176 + i * 85, accent = accents[Math.min(i, 3)];
+    const rowGrad = ctx.createLinearGradient(44, y, 756, y + 78);
+    rowGrad.addColorStop(0, i === 0 ? '#34200a' : '#111a2b'); rowGrad.addColorStop(1, '#080b17');
+    ctx.fillStyle = rowGrad; ctx.fillRect(43, y, 714, 78);
+    ctx.strokeStyle = accent; ctx.lineWidth = i < 3 ? 2.5 : 1.5; ctx.strokeRect(43, y, 714, 78);
+    ctx.textAlign = 'left'; ctx.fillStyle = accent; ctx.font = 'bold 25px Sans'; ctx.fillText(String(i + 1), 55, y + 30);
+    ctx.font = 'bold 29px Sans'; ctx.fillText(medals[i] || '🏅', 78, y + 49);
+    const displayName = getDisplayName(item.user).replace(/\s+/g, ' ').slice(0, 27);
+    ctx.fillStyle = i === 0 ? '#ffe68a' : '#fff'; ctx.font = 'bold 20px Sans'; ctx.fillText(displayName, 132, y + 27);
+    const coins = Math.max(0, Number(item.user.coins) || 0);
+    const house = houseNames[String(item.user.house || 'none').toLowerCase()] || String(item.user.house || 'None');
+    ctx.fillStyle = '#c5faff'; ctx.font = 'bold 13px Sans';
+    ctx.fillText(`Coins: ${coins.toLocaleString('en-US')}c | House: ${house} (${getHouseValue(item.user.house).toLocaleString('en-US')}c) | Net: ${item.net.toLocaleString('en-US')}c`, 132, y + 49);
+    const effect = String(item.user.nameEffect || '').toUpperCase();
+    const tag = effect && effect !== 'NONE' ? effect : (i === 0 ? 'TOP PLAYER' : i === 1 ? 'MYTHIC' : i === 2 ? 'LOVE' : 'RANKED');
+    ctx.textAlign = 'right'; ctx.fillStyle = accent; ctx.font = 'bold 11px Sans'; ctx.fillText(tag.slice(0, 18), 744, y + 69);
+  });
+  ctx.textAlign = 'center'; ctx.fillStyle = '#38efff'; ctx.font = 'bold 17px Sans';
+  ctx.fillText('UPDATED NOW  •  SEASON RANKINGS  •  PLAY TO CLIMB ↑', 400, 1015);
   const file = path.join(cacheDir, 'lb.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 // [ADDED] Messenger attachment upload for generated canvas images.
@@ -1497,16 +1534,17 @@ EFFECT red / blue / green / yellow — 1,000c each
           continue;
         }
 
-        // LEADERBOARD
+        // [UPGRADED V28] Render and send the visual Top 10 leaderboard.
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
-          // [UPGRADED V28] Real leaderboard ordering by liquid coins + house value.
           const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
-          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net} net worth`).join("\n");
-          send(psid, `🏆 JOJOWORLD V28 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: 🏆 ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`, [
-            { content_type: "text", title: "🎰 Spin Scatter Slot", payload: "SPIN" },
-            { content_type: "text", title: "💰 Top Up", payload: "TOP UP" },
-            { content_type: "text", title: "↩️ Menu", payload: "MENU" }
-          ]);
+          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net.toLocaleString('en-US')} net worth`).join("\n");
+          try {
+            const leaderboardImage = await generateLeaderboardCanvas(db.users);
+            await sendImage(psid, leaderboardImage, `🏆 JOJOWORLD V28 TOP 10 LEADERBOARD\n🔥 Global Jackpot Pool: ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`);
+          } catch (leaderboardError) {
+            console.error('[FIXED] Leaderboard canvas failed:', leaderboardError.message);
+            await send(psid, `🏆 JOJOWORLD V28 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`);
+          }
           continue;
         }
 
