@@ -1509,8 +1509,11 @@ A new user joined using your link! 🎁
           await saveUserToDB(psid, { saveJackpot: false });
           try {
             const profileImage = await generateProfileCanvas({ ...user, id: psid });
-            await sendImage(psid, profileImage, `✨ JOJOWORLD VISUAL PROFILE • ${getDisplayName(user)} ✨\nYour equipped shop items are displayed on your profile.`, [
+            await sendImage(psid, profileImage, `✨ JOJOWORLD VISUAL PROFILE • ${getDisplayName(user)} ✨\nYour equipped shop items are displayed on your profile.\nUse the quick buttons below to edit your Zodiac, Relationship Goal, or profile photo.`, [
               { content_type: "text", title: "✏️ Edit Profile", payload: "EDIT_PROFILE_MENU" },
+              { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
+              { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
+              { content_type: "text", title: "📸 Change Photo", payload: "SET_PROFILE_PHOTO" },
               { content_type: "text", title: "🛍️ Visit Shop", payload: "SHOP" },
               { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
             ]);
@@ -1528,6 +1531,9 @@ A new user joined using your link! 🎁
             { content_type: "text", title: "✏️ Name & Age", payload: "REQ_EDIT_NAME_AGE" },
             { content_type: "text", title: "📍 Location", payload: "REQ_EDIT_LOCATION" },
             { content_type: "text", title: "💬 Bio", payload: "REQ_EDIT_BIO" },
+            { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
+            { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
+            { content_type: "text", title: "📸 Change Photo", payload: "SET_PROFILE_PHOTO" },
             { content_type: "text", title: "↩️ Profile", payload: "PROFILE" }
           ]);
           continue;
@@ -1552,6 +1558,15 @@ A new user joined using your link! 🎁
             send(psid, `💬 Enter your new Bio message:`);
           }
           await saveUserToDB(psid);
+          continue;
+        }
+
+        // [FIXED] Restore a clear profile-photo action; users upload by sending an image in this Messenger chat.
+        if (upperRaw === "SET_PROFILE_PHOTO") {
+          send(psid, "📸 CHANGE PROFILE PHOTO\n━━━━━━━━━━━━━━━━━━━━\nI-send mo rito sa chat ang picture na gusto mong gawing profile photo. Piliin ang photo sa Messenger at pindutin ang Send. Awtomatikong ise-save ito sa account mo at ipapakita sa Visual Profile kasama ang frame na naka-equip sa Shop.", [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
+            { content_type: "text", title: "↩️ Back to Edit", payload: "EDIT_PROFILE_MENU" }
+          ]);
           continue;
         }
 
