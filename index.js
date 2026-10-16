@@ -937,15 +937,18 @@ async function generateLeaderboardCanvas(users) {
     red: ['#ff5252','#ff9b9b'], blue: ['#54a8ff','#a6d8ff'],
     green: ['#64f59b','#c2ffd9'], yellow: ['#ffe65b','#fff4b0']
   };
-  const drawEffectNameLine = (text, x, y, fontSize, effectKey, maxWidth, baseColor = '#effaff') => {
+  // [FIXED V36] Support centered names on Top 1–3 cards and fixed left alignment on ranks 4–10.
+  const drawEffectNameLine = (text, x, y, fontSize, effectKey, maxWidth, baseColor = '#effaff', align = 'left') => {
     const premiumEffect = String(effectKey || '').toLowerCase();
-    if (drawPremiumNameEffect(ctx, text, x, y, maxWidth, premiumEffect, 'left')) return;
+    if (drawPremiumNameEffect(ctx, text, x, y, maxWidth, premiumEffect, align)) return;
     const palette = effectPalette[premiumEffect];
     ctx.save();
-    ctx.textAlign = 'left';
+    ctx.textAlign = align;
     ctx.font = 'bold ' + fontSize + 'px Sans';
     if (palette && palette.length > 1) {
-      const gradient = ctx.createLinearGradient(x, 0, x + Math.max(80, maxWidth), 0);
+      const gradientStart = align === 'center' ? x - Math.max(80, maxWidth) / 2 : x;
+      const gradientEnd = align === 'center' ? x + Math.max(80, maxWidth) / 2 : x + Math.max(80, maxWidth);
+      const gradient = ctx.createLinearGradient(gradientStart, 0, gradientEnd, 0);
       palette.forEach((color, index) => gradient.addColorStop(index / (palette.length - 1), color));
       ctx.fillStyle = gradient;
       ctx.shadowColor = palette[Math.min(1, palette.length - 1)];
@@ -961,7 +964,6 @@ async function generateLeaderboardCanvas(users) {
     ctx.fillText(text, x, y);
     // [UPGRADED V34] Name effects use text styling only; no extra glyphs or ornaments.
     ctx.restore();
-
   };
   const getHouse = item => {
     const key = String(item.user.house || 'none').toLowerCase();
@@ -1042,8 +1044,10 @@ async function generateLeaderboardCanvas(users) {
         ctx.font = 'bold ' + podiumFontSize + 'px Sans';
       }
     }
-    drawEffectNameLine(podiumLines[0] || name, x + 9, y + 198, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff');
-    if (podiumLines[1]) drawEffectNameLine(podiumLines[1], x + 9, y + 216, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff');
+    // [FIXED V36] Top 1–3 player names are centered on each card's actual midpoint.
+    const podiumCenterX = x + w / 2;
+    drawEffectNameLine(podiumLines[0] || name, podiumCenterX, y + 198, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff', 'center');
+    if (podiumLines[1]) drawEffectNameLine(podiumLines[1], podiumCenterX, y + 216, podiumFontSize, podiumEffect, w - 18, featured ? '#fff0a4' : '#eff8ff', 'center');
     ctx.fillStyle = '#ffd85e'; ctx.font = 'bold ' + (featured ? 23 : 21) + 'px Sans'; // [UPGRADED V28] Larger coin flex stats.
     ctx.fillText((Math.max(0, Number(item.user.coins) || 0)).toLocaleString('en-US') + ' coins', x + w / 2, y + 239);
     ctx.fillStyle = '#d4f6ff'; ctx.font = '17px Sans'; // [UPGRADED V28] Larger house and property stats.
@@ -1092,7 +1096,7 @@ async function generateLeaderboardCanvas(users) {
     // Keep the name just outside the avatar edge; Top 1–3 podium alignment is unchanged.
     // Long names shrink and then ellipsize within the same column.
     const rowEffect = String(item.user.nameEffect || '').toLowerCase();
-    const rank4to10NameX = 170, nameY = y + 32, nameMaxWidth = 560;
+    const rank4to10NameX = 170, nameY = y + 32, nameMaxWidth = 470; // [FIXED V36] Fixed name column stops before the right-side net-worth column.
     const nameX = rank4to10NameX;
     ctx.textAlign = 'left';
     let displayRowName = name;
