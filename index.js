@@ -1302,6 +1302,7 @@ A new user joined using your link! 🎁
 
         // MAIN MENU ROUTING
         if (cleanText === "menu" || upperRaw === "MENU") {
+          user.currentPage = "MENU";
           user.state = "IDLE";
           user.activeMatchPsid = null;
           await saveUserToDB(psid);
@@ -1423,8 +1424,26 @@ Choose an action below:`, [
           continue;
         }
 
-        // FIND MATCH: only show a real, recently active account.
+        // [FIXED] FIND MATCH opens its own page first; it never pairs users by itself.
         if (cleanText === "find match" || upperRaw === "FIND MATCH") {
+          user.currentPage = "FIND_MATCH";
+          await saveUserToDB(psid);
+          send(psid, "💘 FIND MATCH\\n━━━━━━━━━━━━━━━━━━━━\\nNasa Find Match page ka na. Pindutin ang Search Match para maghanap ng available na kausap. Hindi magsisimula ang matching mula sa Shop o ibang page.", [
+            { content_type: "text", title: "🔎 Search Match (10c)", payload: "SEARCH_MATCH" },
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+          ]);
+          continue;
+        }
+
+        // [FIXED] Search/matching runs only after explicit confirmation on the Find Match page.
+        if (upperRaw === "SEARCH_MATCH" || cleanText === "search match") {
+          if (user.currentPage !== "FIND_MATCH") {
+            send(psid, "⛔ Hindi nagsimula ang matching dahil wala ka sa Find Match page. Buksan muna ang Find Match mula sa menu.", [
+              { content_type: "text", title: "💘 Open Find Match", payload: "FIND MATCH" },
+              { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+            ]);
+            continue;
+          }
           const searchCutoff = Date.now() - 15 * 60 * 1000;
           let candidate = null;
           if (MONGODB_URI && mongoose.connection.readyState === 1) {
@@ -1809,6 +1828,7 @@ ${renderGiftCatalog()}
         // [UPGRADED V28] Messenger shop with category buttons and direct purchase quick replies.
         // Messenger quick replies support up to 13 items, so the catalog is split into categories.
         if (upperRaw === 'SHOP_EFFECTS') {
+          user.currentPage = "SHOP"; await saveUserToDB(psid);
           send(psid, "💎 JOJOWORLD SHOP\n✨ NAME EFFECTS — VERIFIED STYLE\n━━━━━━━━━━━━━━━━━━━━\n🌈 RAINBOW [RARE] — 5,000c\n✨ SPARKLE [MYTHIC] — 10,000c\n💖 HEART [LOVE] — 2,500c\n🔥 FIRE [HOT] — 2,500c\n❄️ ICE [COLD] — 2,500c\n⚡ NEON [NEON] — 3,000c\n🌸 BLOSSOM [CUTE] — 2,000c\n🖤 DARK [DARK] — 2,500c\n🔴 RED • 🔵 BLUE • 🟢 GREEN • 🟡 YELLOW — 1,000c each\n\nTap an item below to buy it. One name effect can be active at a time; use UNEQUIP before buying another.", [
             { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
             { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
@@ -1828,6 +1848,7 @@ ${renderGiftCatalog()}
         }
 
         if (upperRaw === 'SHOP_HOUSES') {
+          user.currentPage = "SHOP"; await saveUserToDB(psid);
           send(psid, "🏠 JOJOWORLD HOUSE SHOP\n━━━━━━━━━━━━━━━━━━━━\n[13] 🛖 Kubo — 1,500c\n[14] 🏡 Bahay — 5,000c (requires Kubo)\n[15] 🏰 Mansion — 15,000c (requires Bahay)\n[16] 🏢 Building — 40,000c (requires Mansion)\n\nHouse upgrades must be purchased in order. Tap the house you want below; your balance and requirements will be checked before any coins are deducted.", [
             { content_type: "text", title: "🛖 Kubo 1,500c", payload: "PREVIEW_HOUSE_KUBO" },
             { content_type: "text", title: "🏡 Bahay 5,000c", payload: "PREVIEW_HOUSE_BAHAY" },
@@ -1839,6 +1860,8 @@ ${renderGiftCatalog()}
         }
 
         if (cleanText === "shop" || upperRaw === "SHOP") {
+          user.currentPage = "SHOP";
+          await saveUserToDB(psid);
           // [UPGRADED V28] Send a generated neon shop poster plus live Messenger purchase/category buttons.
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, "🛍️ JOJOWORLD SHOP\nTap a button below to buy an upgrade or open a product category. Purchases check your coins and save to your profile.", [
