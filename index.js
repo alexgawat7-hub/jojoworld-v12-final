@@ -455,8 +455,8 @@ async function generateShopCanvas() {
   const file = path.join(cacheDir, 'shop.png'); await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
 async function generateShopProductPreview(product, user) {
-  // [ADDED] [UPGRADED V28] Show a visual product preview before charging coins.
-  const W = 800, H = 900, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
+  // [UPGRADED V28] Preview the selected item applied to a cloned profile before any coins are charged.
+  const key = String(product || '').toLowerCase();
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
     frame: { title: 'GOLD PROFILE FRAME', price: '150 COINS', color: '#ffd34f', emoji: '💎', subtitle: 'PREMIUM GOLD PROFILE BORDER' },
@@ -477,7 +477,14 @@ async function generateShopProductPreview(product, user) {
     mansion: { title: 'MANSION HOUSE', price: '15,000 COINS', color: '#d9a5ff', emoji: '🏰', subtitle: 'PREMIUM • REQUIRES BAHAY' },
     building: { title: 'BUILDING HOUSE', price: '40,000 COINS', color: '#ffd34f', emoji: '🏢', subtitle: 'ELITE • REQUIRES MANSION' }
   };
-  const item = cfg[String(product || '').toLowerCase()] || cfg.vip;
+  const item = cfg[key] || cfg.vip;
+  const previewUser = { ...user, coins: Number(user.coins) || 0, id: 'preview-' + String(user.id || user.psid || 'member') + '-' + key };
+  if (key === 'vip') { previewUser.vip = true; previewUser.badge = '👑 VIP Elite'; }
+  else if (key === 'frame') { previewUser.goldFrame = true; previewUser.frame = '💎 Gold Frame'; }
+  else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key)) previewUser.nameEffect = key;
+  else if (['kubo','bahay','mansion','building'].includes(key)) previewUser.house = key;
+
+  const W = 800, H = 900, canvas = createCanvas(W, H), ctx = canvas.getContext('2d');
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#050510'); bg.addColorStop(0.5, '#11102b'); bg.addColorStop(1, '#030a17');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
@@ -487,41 +494,44 @@ async function generateShopProductPreview(product, user) {
   }
   ctx.globalAlpha = 1; ctx.shadowColor = item.color; ctx.shadowBlur = 24; ctx.strokeStyle = item.color; ctx.lineWidth = 4; ctx.strokeRect(18, 18, W - 36, H - 36);
   ctx.shadowColor = '#f54de8'; ctx.strokeStyle = '#f54de8'; ctx.lineWidth = 1.5; ctx.strokeRect(29, 29, W - 58, H - 58); ctx.shadowBlur = 0;
-  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('JOJOWORLD • ITEM PREVIEW', 400, 78);
-  ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15; ctx.font = 'bold 32px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
-  // [ADDED] Product card mockup: the player can inspect the look before purchase.
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('JOJOWORLD • APPLIED LOOK PREVIEW', 400, 78);
+  ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15; ctx.font = 'bold 30px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
   const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(1, '#080d1c');
-  ctx.fillStyle = gx; ctx.fillRect(105, 195, 590, 440); ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.strokeStyle = item.color; ctx.lineWidth = 3; ctx.strokeRect(105, 195, 590, 440); ctx.restore();
-  ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY PREVIEW', 400, 240);
-  if (['kubo','bahay','mansion','building'].includes(String(product).toLowerCase())) {
-    // Stylized house/building illustration, deliberately drawn as preview art.
+  ctx.fillStyle = gx; ctx.fillRect(105, 195, 590, 440);
+  ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.strokeStyle = (key === 'frame' || previewUser.goldFrame) ? '#ffd34f' : item.color; ctx.lineWidth = (key === 'frame' || previewUser.goldFrame) ? 7 : 3; ctx.strokeRect(105, 195, 590, 440); ctx.restore();
+  ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY AFTER APPLY', 400, 240);
+
+  if (['kubo','bahay','mansion','building'].includes(key)) {
     ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15;
-    if (product === 'kubo') {
-      ctx.beginPath(); ctx.moveTo(260, 405); ctx.lineTo(400, 300); ctx.lineTo(540, 405); ctx.closePath(); ctx.fill();
-      ctx.fillRect(285, 405, 230, 125); ctx.fillStyle = '#39251b'; ctx.fillRect(375, 445, 55, 85); ctx.fillStyle = '#9af7ff'; ctx.fillRect(315, 435, 38, 35); ctx.fillRect(447, 435, 38, 35);
-    } else if (product === 'bahay') {
-      ctx.beginPath(); ctx.moveTo(250, 405); ctx.lineTo(400, 290); ctx.lineTo(550, 405); ctx.closePath(); ctx.fill();
-      ctx.fillRect(275, 405, 250, 140); ctx.fillStyle = '#302044'; ctx.fillRect(375, 465, 55, 80); ctx.fillStyle = '#8cf7ff'; ctx.fillRect(305, 435, 45, 45); ctx.fillRect(450, 435, 45, 45);
-    } else if (product === 'mansion') {
-      ctx.fillRect(240, 365, 320, 180); ctx.fillRect(280, 305, 75, 60); ctx.fillRect(445, 305, 75, 60); ctx.beginPath(); ctx.moveTo(265, 305); ctx.lineTo(317, 255); ctx.lineTo(370, 305); ctx.closePath(); ctx.fill(); ctx.beginPath(); ctx.moveTo(430, 305); ctx.lineTo(482, 255); ctx.lineTo(535, 305); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#25203b'; ctx.fillRect(370, 445, 60, 100);
+    if (key === 'kubo') {
+      ctx.beginPath(); ctx.moveTo(260,405); ctx.lineTo(400,300); ctx.lineTo(540,405); ctx.closePath(); ctx.fill();
+      ctx.fillRect(285,405,230,125); ctx.fillStyle='#39251b'; ctx.fillRect(375,445,55,85); ctx.fillStyle='#9af7ff'; ctx.fillRect(315,435,38,35); ctx.fillRect(447,435,38,35);
+    } else if (key === 'bahay') {
+      ctx.beginPath(); ctx.moveTo(250,405); ctx.lineTo(400,290); ctx.lineTo(550,405); ctx.closePath(); ctx.fill();
+      ctx.fillRect(275,405,250,140); ctx.fillStyle='#302044'; ctx.fillRect(375,465,55,80); ctx.fillStyle='#8cf7ff'; ctx.fillRect(305,435,45,45); ctx.fillRect(450,435,45,45);
+    } else if (key === 'mansion') {
+      ctx.fillRect(240,365,320,180); ctx.fillRect(280,305,75,60); ctx.fillRect(445,305,75,60);
+      ctx.beginPath(); ctx.moveTo(265,305); ctx.lineTo(317,255); ctx.lineTo(370,305); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(430,305); ctx.lineTo(482,255); ctx.lineTo(535,305); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#25203b'; ctx.fillRect(370,445,60,100);
     } else {
-      ctx.fillRect(270, 270, 260, 275); ctx.fillStyle = '#25203b';
-      for (let yy = 300; yy < 480; yy += 55) for (let xx = 295; xx < 500; xx += 55) ctx.fillRect(xx, yy, 28, 30);
-      ctx.fillStyle = item.color; ctx.fillRect(370, 485, 60, 60);
+      ctx.fillRect(270,270,260,275); ctx.fillStyle='#25203b';
+      for (let yy=300; yy<480; yy+=55) for (let xx=295; xx<500; xx+=55) ctx.fillRect(xx,yy,28,30);
+      ctx.fillStyle=item.color; ctx.fillRect(370,485,60,60);
     }
     ctx.shadowBlur = 0;
   } else {
-    const name = String(getDisplayName(user) || user.name || 'Jojo Member').slice(0, 24);
-    // Effect appearance preview on a sample profile name; actual Messenger text styling may vary.
-    if (product === 'rainbow') {
-      const g = ctx.createLinearGradient(170, 0, 630, 0); ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'].forEach((c,i)=>g.addColorStop(i/6,c)); ctx.fillStyle = g;
+    const displayName = String(getDisplayName(previewUser) || previewUser.name || 'Jojo Member').slice(0, 25);
+    if (key === 'rainbow') {
+      const g = ctx.createLinearGradient(170, 0, 630, 0);
+      ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'].forEach((c,i)=>g.addColorStop(i/6,c));
+      ctx.fillStyle = g;
     } else ctx.fillStyle = item.color;
-    ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 42px Sans'; ctx.fillText(name, 400, 390); ctx.shadowBlur = 0;
-    ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 490);
-    if (product === 'vip') {
+    ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 34px Sans'; ctx.fillText(displayName, 400, 385); ctx.shadowBlur = 0;
+    ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
+    if (key === 'vip') {
       ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 22px Sans'; ctx.fillText('👑 VIP ELITE  ✓', 400, 555);
-    } else if (product === 'frame') {
-      ctx.strokeStyle = '#ffd34f'; ctx.lineWidth = 5; ctx.strokeRect(155, 270, 490, 270);
+    } else if (key === 'frame') {
       ctx.fillStyle = '#ffe47c'; ctx.font = 'bold 18px Sans'; ctx.fillText('GOLD FRAME • PROFILE BORDER', 400, 585);
     } else {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
@@ -530,7 +540,7 @@ async function generateShopProductPreview(product, user) {
   ctx.fillStyle = item.color; ctx.font = 'bold 24px Sans'; ctx.fillText(item.price, 400, 710);
   ctx.fillStyle = '#d9e8fa'; ctx.font = '17px Sans'; ctx.fillText(item.subtitle, 400, 752);
   ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans'; ctx.fillText('PREVIEW FIRST • BUY ONLY WHEN READY', 400, 815);
-  ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('This is a visual sample of the item appearance', 400, 842);
+  ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('Preview uses your profile display-name and item settings', 400, 842);
   const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
