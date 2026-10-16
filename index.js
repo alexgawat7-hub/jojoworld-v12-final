@@ -1532,16 +1532,14 @@ EFFECT red / blue / green / yellow — 1,000c each
           continue;
         }
 
-        // [UPGRADED V28] Render and send the visual Top 10 leaderboard.
+        // [UPGRADED V28] Image-only leaderboard: no text caption or text fallback.
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
-          const realTop = Object.entries(db.users).map(([id,u]) => ({id,u,net:getNetWorth(u)})).sort((a,b)=>b.net-a.net).slice(0,10);
-          const realLines = realTop.map((x,i)=>`${["🥇","🥈","🥉"][i] || `#${i+1}`} ${getDisplayName(x.u)} — ${x.net.toLocaleString('en-US')} net worth`).join("\n");
           try {
             const leaderboardImage = await generateLeaderboardCanvas(db.users);
-            await sendImage(psid, leaderboardImage, `🏆 JOJOWORLD V28 TOP 10 LEADERBOARD\n🔥 Global Jackpot Pool: ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`);
+            const sent = await sendImage(psid, leaderboardImage);
+            if (!sent) console.error('[FIXED] Leaderboard image could not be sent; check Messenger API logs.');
           } catch (leaderboardError) {
             console.error('[FIXED] Leaderboard canvas failed:', leaderboardError.message);
-            await send(psid, `🏆 JOJOWORLD V28 LEADERBOARD\n━━━━━━━━━━━━━━━━━━━━\n🔥 Global Jackpot Pool: ${db.jackpotPool} Coins\n\n${realLines || "No users yet"}`);
           }
           continue;
         }
