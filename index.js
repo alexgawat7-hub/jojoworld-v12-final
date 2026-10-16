@@ -404,52 +404,90 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   }
 
   const palettes = {
-    neon: ['#eaffff','#00ffff','#8afcff'],
-    fire: ['#fff700','#ff9900','#ff1a00'],
-    gold: ['#fff8b0','#ffd700','#ffb000','#8c4a00'],
-    demon: ['#ff4a4a','#e60000','#8b0000'],
-    ice: ['#ffffff','#eaf8ff','#78caff'],
+    neon: ['#ffffff','#baffff','#00ffff','#63f7ff'],
+    fire: ['#fffbd1','#fff000','#ff9b16','#ff3100','#9e0800'],
+    gold: ['#fffbd0','#ffe15a','#ffb000','#9b4d00'],
+    demon: ['#ffb0b0','#ff2424','#a50000','#210000'],
+    ice: ['#ffffff','#eafaff','#9beaff','#329cff'],
     rainbow: ['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'],
-    sparkle: ['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'],
-    heart: ['#ffd5ed','#ff62b5','#ff9bd6'],
-    blossom: ['#ff9cdb','#ffd4ed','#ff70a6'],
-    dark: ['#e5dcff','#9b7cff','#5c4b8a'],
-    red: ['#ff9b9b','#ff5252'],
-    blue: ['#a6d8ff','#54a8ff'],
-    green: ['#c2ffd9','#64f59b'],
-    yellow: ['#fff4b0','#ffe65b']
+    sparkle: ['#ffffff','#fff2a8','#e6b7ff','#ffffff','#8feaff'],
+    heart: ['#fff0fa','#ff62b5','#ff9bd6'],
+    blossom: ['#fff0f8','#ff9cdb','#ff70a6'],
+    dark: ['#f2eaff','#b29aff','#5c4b8a','#211533'],
+    red: ['#ffd0d0','#ff5252','#a90000'],
+    blue: ['#ffffff','#a6d8ff','#54a8ff','#2457d6'],
+    green: ['#f0fff6','#c2ffd9','#64f59b','#168b57'],
+    yellow: ['#fffde0','#fff4b0','#ffe65b','#ffae18']
   };
   const palette = palettes[effect] || ['#ffffff', '#dbeafe'];
-  const gradientStartX = align === 'center' ? x - Math.max(1, maxWidth) / 2 : x;
-  const gradientEndX = align === 'center' ? x + Math.max(1, maxWidth) / 2 : x + Math.max(1, maxWidth);
+  const textWidth = Math.min(maxWidth, ctx.measureText(n).width);
+  const textLeft = align === 'center' ? x - textWidth / 2 : align === 'right' ? x - textWidth : x;
+  const gradientStartX = textLeft;
+  const gradientEndX = textLeft + Math.max(1, textWidth);
   const gradient = ctx.createLinearGradient(gradientStartX, y - fontSize, gradientEndX, y + 2);
   palette.forEach((color, index) => gradient.addColorStop(index / Math.max(1, palette.length - 1), color));
 
   const glowColors = {
-    neon:'#00ffff', fire:'#ff2200', gold:'#ff9900', demon:'#ff0000', ice:'#008cff',
+    neon:'#00ffff', fire:'#ff4a00', gold:'#ffbf22', demon:'#ff0000', ice:'#42baff',
     rainbow:'#ff70dd', sparkle:'#d7a4ff', heart:'#ff62b5', blossom:'#ff70a6',
     dark:'#9b7cff', red:'#ff5252', blue:'#54a8ff', green:'#64f59b', yellow:'#ffe65b'
   };
+  // Layered bloom + bright face + crisp outline gives the name depth without drawing any box or plate.
   ctx.shadowColor = glowColors[effect] || palette[0];
-  ctx.shadowBlur = effect === 'demon' ? 22 : 16;
+  ctx.shadowBlur = effect === 'demon' || effect === 'neon' || effect === 'fire' ? 25 : 18;
   ctx.fillStyle = gradient;
   ctx.fillText(n, x, y);
-  ctx.shadowBlur = 9;
+  ctx.shadowBlur = 10;
   ctx.fillText(n, x, y);
   ctx.shadowBlur = 0;
-  ctx.lineWidth = effect === 'demon' ? 4 : 2.5;
-  ctx.strokeStyle = effect === 'demon' ? '#080000' :
+  ctx.lineWidth = effect === 'demon' || effect === 'fire' ? 3.5 : 1.8;
+  ctx.strokeStyle = effect === 'demon' ? '#210000' :
     effect === 'ice' ? '#168bff' :
-    effect === 'gold' ? '#d96b00' :
-    effect === 'fire' ? '#8b0000' :
+    effect === 'gold' ? '#9b4d00' :
+    effect === 'fire' ? '#a91d00' :
     effect === 'neon' ? '#ffffff' : (glowColors[effect] || palette[0]);
   ctx.strokeText(n, x, y);
   ctx.fillStyle = gradient;
   ctx.fillText(n, x, y);
+
+  // Small effect-specific light particles sit outside the letters; no rectangles or background shapes.
+  const particleColor = glowColors[effect] || palette[0];
+  const points = [
+    { x: textLeft + textWidth * 0.12, y: y - fontSize * 0.83 },
+    { x: textLeft + textWidth * 0.36, y: y - fontSize * 1.02 },
+    { x: textLeft + textWidth * 0.68, y: y - fontSize * 0.92 },
+    { x: textLeft + textWidth * 0.9, y: y - fontSize * 0.78 }
+  ];
+  if (['sparkle','rainbow','neon','ice','gold','fire','demon','heart','blossom'].includes(effect)) {
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    points.forEach((p, i) => {
+      const radius = i % 2 === 0 ? 2.4 : 1.5;
+      ctx.fillStyle = effect === 'ice' ? '#dffaff' :
+        effect === 'fire' || effect === 'demon' ? (i % 2 ? '#ffcf39' : '#ff4a16') :
+        effect === 'gold' ? '#fff1a6' :
+        effect === 'heart' ? '#ffb7df' :
+        effect === 'blossom' ? '#ffd6ed' : particleColor;
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = effect === 'neon' || effect === 'sparkle' ? 10 : 5;
+      ctx.beginPath();
+      if (effect === 'sparkle' || effect === 'rainbow' || effect === 'gold') {
+        ctx.moveTo(p.x, p.y - radius * 2);
+        ctx.lineTo(p.x + radius * 0.65, p.y);
+        ctx.lineTo(p.x, p.y + radius * 2);
+        ctx.lineTo(p.x - radius * 0.65, p.y);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    ctx.restore();
+  }
   ctx.restore();
   return true;
 }
-
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
   // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
@@ -829,18 +867,23 @@ async function generateShopProductPreview(product, user) {
     ctx.globalAlpha = 0.15 + (i % 4) * 0.08; ctx.fillStyle = [item.color, '#ff49e9', '#4af5ff'][i % 3];
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
-  // [UPGRADED V28] Premium multi-layer neon frame and cinematic shop-card treatment for every item.
+  const isNameEffectPreview = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key);
+  // Name-effect previews intentionally have no surrounding box: only the name receives the cosmetic.
   const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
   const borderGlow = ctx.createLinearGradient(18, 18, W-18, H-18); borderGlow.addColorStop(0, item.color); borderGlow.addColorStop(0.48, '#7b5cff'); borderGlow.addColorStop(1, '#ff4fd8');
-  ctx.globalAlpha = 1; ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 30; ctx.strokeStyle = borderGlow; ctx.lineWidth = 5; roundRect(18,18,W-36,H-36,30); ctx.stroke(); ctx.restore();
-  ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.2; roundRect(29,29,W-58,H-58,24); ctx.stroke(); ctx.globalAlpha = 1;
+  if (!isNameEffectPreview) {
+    ctx.globalAlpha = 1; ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 30; ctx.strokeStyle = borderGlow; ctx.lineWidth = 5; roundRect(18,18,W-36,H-36,30); ctx.stroke(); ctx.restore();
+    ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.2; roundRect(29,29,W-58,H-58,24); ctx.stroke(); ctx.globalAlpha = 1;
+  }
   ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('✦ JOJOWORLD • ITEM SHOWCASE ✦', 400, 76);
   ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 30px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
-  const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(0.55, '#10162d'); gx.addColorStop(1, '#080d1c');
-  ctx.fillStyle = gx; roundRect(105,195,590,440,28); ctx.fill();
-  ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 28; ctx.strokeStyle = borderGlow; ctx.lineWidth = (key === 'frame' || previewUser.goldFrame) ? 7 : 3; roundRect(105,195,590,440,28); ctx.stroke(); ctx.restore();
-  ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = item.color; roundRect(125,212,550,54,16); ctx.fill(); ctx.restore();
-  ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY AFTER APPLY', 400, 240);
+  if (!isNameEffectPreview) {
+    const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(0.55, '#10162d'); gx.addColorStop(1, '#080d1c');
+    ctx.fillStyle = gx; roundRect(105,195,590,440,28); ctx.fill();
+    ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 28; ctx.strokeStyle = borderGlow; ctx.lineWidth = (key === 'frame' || previewUser.goldFrame) ? 7 : 3; roundRect(105,195,590,440,28); ctx.stroke(); ctx.restore();
+    ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = item.color; roundRect(125,212,550,54,16); ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY AFTER APPLY', 400, 240);
+  }
 
   if (['kubo','bahay','mansion','building'].includes(key)) {
     // Use the exact same house-art renderer as the Visual Profile so the preview matches the purchased asset.
@@ -913,7 +956,7 @@ async function generateShopProductPreview(product, user) {
       ctx.fillText(displayName.toUpperCase(), 400, 385);
       ctx.restore();
     }
-    ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485);
+    if (!isNameEffectPreview) { ctx.fillStyle = item.color; ctx.font = 'bold 68px Sans'; ctx.fillText(item.emoji, 400, 485); }
     if (key === 'vip') {
       // Match the actual verified shield drawn on the purchased user's Visual Profile.
       ctx.save(); ctx.translate(400, 545); ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 22;
