@@ -492,13 +492,17 @@ async function generateShopProductPreview(product, user) {
     ctx.globalAlpha = 0.15 + (i % 4) * 0.08; ctx.fillStyle = [item.color, '#ff49e9', '#4af5ff'][i % 3];
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
-  ctx.globalAlpha = 1; ctx.shadowColor = item.color; ctx.shadowBlur = 24; ctx.strokeStyle = item.color; ctx.lineWidth = 4; ctx.strokeRect(18, 18, W - 36, H - 36);
-  ctx.shadowColor = '#f54de8'; ctx.strokeStyle = '#f54de8'; ctx.lineWidth = 1.5; ctx.strokeRect(29, 29, W - 58, H - 58); ctx.shadowBlur = 0;
-  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('JOJOWORLD • APPLIED LOOK PREVIEW', 400, 78);
-  ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 15; ctx.font = 'bold 30px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
-  const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(1, '#080d1c');
-  ctx.fillStyle = gx; ctx.fillRect(105, 195, 590, 440);
-  ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.strokeStyle = (key === 'frame' || previewUser.goldFrame) ? '#ffd34f' : item.color; ctx.lineWidth = (key === 'frame' || previewUser.goldFrame) ? 7 : 3; ctx.strokeRect(105, 195, 590, 440); ctx.restore();
+  // [UPGRADED V28] Premium multi-layer neon frame and cinematic shop-card treatment for every item.
+  const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
+  const borderGlow = ctx.createLinearGradient(18, 18, W-18, H-18); borderGlow.addColorStop(0, item.color); borderGlow.addColorStop(0.48, '#7b5cff'); borderGlow.addColorStop(1, '#ff4fd8');
+  ctx.globalAlpha = 1; ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 30; ctx.strokeStyle = borderGlow; ctx.lineWidth = 5; roundRect(18,18,W-36,H-36,30); ctx.stroke(); ctx.restore();
+  ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.2; roundRect(29,29,W-58,H-58,24); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#f4f8ff'; ctx.font = 'bold 22px Sans'; ctx.fillText('✦ JOJOWORLD • ITEM SHOWCASE ✦', 400, 76);
+  ctx.fillStyle = item.color; ctx.shadowColor = item.color; ctx.shadowBlur = 22; ctx.font = 'bold 30px Sans'; ctx.fillText(item.title, 400, 132); ctx.shadowBlur = 0;
+  const gx = ctx.createLinearGradient(105, 205, 695, 630); gx.addColorStop(0, '#20203b'); gx.addColorStop(0.55, '#10162d'); gx.addColorStop(1, '#080d1c');
+  ctx.fillStyle = gx; roundRect(105,195,590,440,28); ctx.fill();
+  ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 28; ctx.strokeStyle = borderGlow; ctx.lineWidth = (key === 'frame' || previewUser.goldFrame) ? 7 : 3; roundRect(105,195,590,440,28); ctx.stroke(); ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.15; ctx.fillStyle = item.color; roundRect(125,212,550,54,16); ctx.fill(); ctx.restore();
   ctx.fillStyle = '#a9bdd8'; ctx.font = 'bold 16px Sans'; ctx.fillText('PROFILE DISPLAY AFTER APPLY', 400, 240);
 
   if (['kubo','bahay','mansion','building'].includes(key)) {
@@ -537,10 +541,15 @@ async function generateShopProductPreview(product, user) {
       ctx.fillStyle = item.color; ctx.font = 'bold 15px Sans'; ctx.fillText(item.subtitle, 400, 560);
     }
   }
-  ctx.fillStyle = item.color; ctx.font = 'bold 24px Sans'; ctx.fillText(item.price, 400, 710);
-  ctx.fillStyle = '#d9e8fa'; ctx.font = '17px Sans'; ctx.fillText(item.subtitle, 400, 752);
-  ctx.fillStyle = '#5af4ff'; ctx.font = 'bold 16px Sans'; ctx.fillText('PREVIEW FIRST • BUY ONLY WHEN READY', 400, 815);
-  ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('Preview uses your profile display-name and item settings', 400, 842);
+  // [UPGRADED V28] High-contrast price panel and polished call-to-action footer for all cosmetics and houses.
+  const priceGrad = ctx.createLinearGradient(170, 675, 630, 735); priceGrad.addColorStop(0, '#fff0a0'); priceGrad.addColorStop(0.45, item.color); priceGrad.addColorStop(1, '#ffffff');
+  ctx.save(); ctx.shadowColor = item.color; ctx.shadowBlur = 18; ctx.fillStyle = '#0b1025'; roundRect(185,665,430,72,22); ctx.fill(); ctx.strokeStyle = item.color; ctx.lineWidth = 2; roundRect(185,665,430,72,22); ctx.stroke(); ctx.restore();
+  ctx.fillStyle = priceGrad; ctx.shadowColor = item.color; ctx.shadowBlur = 12; ctx.font = 'bold 27px Sans'; ctx.fillText('✦ ' + item.price + ' ✦', 400, 710); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#d9e8fa'; ctx.font = '17px Sans'; ctx.fillText(item.subtitle, 400, 770);
+  const ctaGrad = ctx.createLinearGradient(175, 790, 625, 835); ctaGrad.addColorStop(0, '#ffd34f'); ctaGrad.addColorStop(0.5, '#fff3a6'); ctaGrad.addColorStop(1, '#ff9e2c');
+  ctx.save(); ctx.shadowColor = '#ffbf3f'; ctx.shadowBlur = 22; ctx.fillStyle = ctaGrad; roundRect(175,790,450,52,20); ctx.fill(); ctx.restore();
+  ctx.fillStyle = '#17112b'; ctx.font = 'bold 18px Sans'; ctx.fillText('✦ PREVIEW NOW  •  BUY WHEN READY ✦', 400, 822);
+  ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('See how it looks on your profile before you buy', 400, 865);
   const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.png');
   await fsExtra.writeFile(file, canvas.toBuffer('image/png')); return file;
 }
