@@ -624,7 +624,7 @@ async function generateProfileCanvas(user) {
   ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 31px Sans';ctx.fillText('JOJOWORLD',W/2,62);
   ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE - YOUR WORLD, YOUR STYLE',W/2,91);
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
-  panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
+  panel(28,118,744,300,'#d9a441');
   // Apply the pre-generated AI artwork behind the equipped name effect when available.
   // Profile rendering only reads the cache; it never triggers a paid generation request.
   // Restore only previously saved artwork from MongoDB; profile rendering never triggers paid generation.
@@ -711,9 +711,9 @@ async function generateProfileCanvas(user) {
   const levelStats = getProfileLevelStats(user.xp);
   const stats=[
     {x:28,w:174,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},
-    {x:218,w:174,title:'LEVEL / XP',value:'LVL '+levelStats.level,color:'#7dffb0',level:true},
-    {x:408,w:174,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},
-    {x:598,w:174,title:'PROFILE OPENS',value:String(Number(user.views)||0),color:'#7deaff'}
+    {x:218,w:174,title:'LEVEL / XP',value:'LVL '+levelStats.level,color:'#ffe08a',level:true},
+    {x:408,w:174,title:'NET WORTH',value:String(getNetWorth(user)),color:'#f4d28b'},
+    {x:598,w:174,title:'PROFILE OPENS',value:String(Number(user.views)||0),color:'#ffe7b0'}
   ];
   stats.forEach(s=>{
     panel(s.x,438,s.w,94,'#344777');
@@ -727,19 +727,19 @@ async function generateProfileCanvas(user) {
       ctx.restore();
     }
   });
-  const detailAccent = frameName!=='None' ? frameColor : (effect!=='none' ? (effectGlow[effect]||colors[0]) : '#668cff');
-  panel(28,550,744,280,detailAccent);
+  const detailAccent = '#d9a441';
+  panel(28,550,744,280,'#d9a441');
   // PROFILE DETAILS redesign: six luminous mini-cards instead of a plain text list.
   // Each detail gets its own accent marker and a clear label/value hierarchy.
   heading('PROFILE DETAILS',52,586);
   ctx.save();ctx.strokeStyle=detailAccent;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(52,599);ctx.lineTo(748,599);ctx.stroke();ctx.restore();
   const rows=[
-    {label:'NAME & AGE',value:cleanName(displayName)+(user.age?'  '+cleanText(user.age):''),color:'#8edcff'},
-    {label:'LOCATION',value:cleanText(user.location||'Not set'),color:'#75e7d0'},
-    {label:'ZODIAC',value:cleanText(user.zodiac||'Not set'),color:'#c4a0ff'},
-    {label:'RELATIONSHIP GOAL',value:cleanText(user.relationshipGoal||'Not set'),color:'#ff91c8'},
+    {label:'NAME & AGE',value:cleanName(displayName)+(user.age?'  '+cleanText(user.age):''),color:'#f4d28b'},
+    {label:'LOCATION',value:cleanText(user.location||'Not set'),color:'#e7c16d'},
+    {label:'ZODIAC',value:cleanText(user.zodiac||'Not set'),color:'#ffe7a0'},
+    {label:'RELATIONSHIP GOAL',value:cleanText(user.relationshipGoal||'Not set'),color:'#d9a441'},
     {label:'BADGE',value:cleanText(user.badge||(vip?'VIP Elite':'Newbie')),color:vip?'#ffd34f':'#a9c8ff'},
-    {label:'EQUIPPED FRAME',value:frameName,color:frameStyle.equipped?frameColor:'#9fb4d6'}
+    {label:'EQUIPPED FRAME',value:frameName,color:'#e7c16d'}
   ];
   rows.forEach((r,i)=>{
     const col=i%2,row=Math.floor(i/2),x=48+col*354,y=610+row*68,w=342,h=58;
