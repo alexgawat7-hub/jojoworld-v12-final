@@ -633,11 +633,11 @@ async function generateProfileCanvas(user) {
     ctx.moveTo(x+w-c,y+h-12);ctx.lineTo(x+w-12,y+h-12);ctx.lineTo(x+w-12,y+h-c);ctx.stroke();
     ctx.restore();
   };
-  const label=(value,x,y,size=16,color='#91a9d3',align='left')=>{ctx.textAlign=align;ctx.fillStyle=color;ctx.font=size+'px Sans';ctx.fillText(value,x,y);};
-  const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 21px Sans';ctx.fillText(value,x,y);};
+  const label=(value,x,y,size=18,color='#91a9d3',align='left')=>{ctx.textAlign=align;ctx.fillStyle=color;ctx.font=size+'px Sans';ctx.fillText(value,x,y);};
+  const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 24px Sans';ctx.fillText(value,x,y);};
   const displayName = getPlainDisplayName(user).slice(0, 26);
-  ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 31px Sans';ctx.fillText('JOJOWORLD',W/2,62);
-  ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE - YOUR WORLD, YOUR STYLE',W/2,91);
+  ctx.textAlign='center';ctx.fillStyle='#ffd875';ctx.font='bold 34px Sans';ctx.fillText('JOJOWORLD',W/2,62);
+  ctx.fillStyle='#b9c8e8';ctx.font='16px Sans';ctx.fillText('VISUAL PROFILE - YOUR WORLD, YOUR STYLE',W/2,91);
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
   panel(28,118,744,300,'#d9a441');
   // Apply the pre-generated AI artwork behind the equipped name effect when available.
@@ -703,7 +703,7 @@ async function generateProfileCanvas(user) {
   if(effect==='sparkle'){nameFill=ctx.createLinearGradient(270,0,680,0);['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((col,i)=>nameFill.addColorStop(i/4,col));}
   // [FIXED V32] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
   // [ROYAL HEADER ALIGNMENT] Keep every user's name inside a fixed column, clear of the VIP shield and stacked plates.
-  let nameFontSize=26;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>370&&nameFontSize>16){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
+  let nameFontSize=30;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>370&&nameFontSize>16){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
   const nameWidth=ctx.measureText(displayName).width;
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
@@ -788,10 +788,10 @@ async function generateProfileCanvas(user) {
   ];
   stats.forEach(s=>{
     panel(s.x,438,s.w,94,'#344777');
-    label(s.title,s.x+13,s.level?460:468,12,'#9fb4d6');
-    ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 22px Sans';ctx.fillText(s.value,s.x+13,s.level?488:507);
+    label(s.title,s.x+13,s.level?460:468,14,'#9fb4d6');
+    ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 25px Sans';ctx.fillText(s.value,s.x+13,s.level?488:507);
     if(s.level){
-      label(levelStats.currentXp+' / '+levelStats.nextLevelXp+' XP',s.x+13,504,10,'#c6d5f0');
+      label(levelStats.currentXp+' / '+levelStats.nextLevelXp+' XP',s.x+13,504,12,'#c6d5f0');
       ctx.save();rr(s.x+13,512,s.w-26,7,4);ctx.fillStyle='#0a1124';ctx.fill();
       const fillWidth=Math.max(0,(s.w-26)*levelStats.progress);
       if(fillWidth>0){const xpGradient=ctx.createLinearGradient(s.x+13,512,s.x+13+fillWidth,519);xpGradient.addColorStop(0,'#7dffb0');xpGradient.addColorStop(1,'#35eaff');ctx.fillStyle=xpGradient;rr(s.x+13,512,fillWidth,7,4);ctx.fill();}
@@ -819,8 +819,8 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=cardGrad;rr(x,y,w,h,13);ctx.fill();
     ctx.strokeStyle=r.color;ctx.globalAlpha=.75;ctx.lineWidth=1.4;rr(x,y,w,h,13);ctx.stroke();ctx.globalAlpha=1;
     ctx.shadowColor=r.color;ctx.shadowBlur=10;ctx.fillStyle=r.color;ctx.beginPath();ctx.arc(x+15,y+17,3.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
-    ctx.textAlign='left';ctx.fillStyle=r.color;ctx.font='bold 11px Sans';ctx.fillText(r.label,x+27,y+21);
-    ctx.fillStyle='#f5f7ff';ctx.font='bold 14px Sans';
+    ctx.textAlign='left';ctx.fillStyle=r.color;ctx.font='bold 13px Sans';ctx.fillText(r.label,x+27,y+21);
+    ctx.fillStyle='#f5f7ff';ctx.font='bold 16px Sans';
     let val=String(r.value||'Not set');while(ctx.measureText(val).width>w-32&&val.length>7)val=val.slice(0,-4)+'...';
     if(r.label==='BADGE' && vip){
       const pillW=Math.min(w-28,Math.max(96,ctx.measureText(val).width+34));
@@ -828,7 +828,7 @@ async function generateProfileCanvas(user) {
       const vipGrad=ctx.createLinearGradient(pillX,y+29,pillX+pillW,y+51);vipGrad.addColorStop(0,'#fff0a0');vipGrad.addColorStop(.5,'#f4b400');vipGrad.addColorStop(1,'#9b5a08');
       ctx.shadowColor='#ffd34f';ctx.shadowBlur=9;ctx.fillStyle='#111426';rr(pillX,y+29,pillW,23,11);ctx.fill();ctx.shadowBlur=0;
       ctx.strokeStyle=vipGrad;ctx.lineWidth=1.5;rr(pillX,y+29,pillW,23,11);ctx.stroke();
-      ctx.fillStyle=vipGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('👑 '+val,pillX+pillW/2,y+45);
+      ctx.fillStyle=vipGrad;ctx.font='bold 14px Sans';ctx.textAlign='center';ctx.fillText('👑 '+val,pillX+pillW/2,y+45);
     }else{ctx.textAlign='left';ctx.fillText(val,x+14,y+44);}
     ctx.restore();
   });
@@ -845,7 +845,7 @@ async function generateProfileCanvas(user) {
     label(hc.label+' - TIER '+getHouseTier(house),445,940,18,hc.color);
     label('OWNED - PROPERTY VALUE '+getHouseValue(house).toLocaleString('en-US')+'c',445,968,13,'#ffe7a0');
   }else{label('No house purchased yet - visit the Shop!',52,940,17,'#b7c8e6');}
-  panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='16px Sans';canvasText(ctx,cleanText(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,24,4);
+  panel(28,1015,358,220,'#4656a0');heading('ABOUT ME',50,1053);ctx.fillStyle='#dce8ff';ctx.textAlign='left';ctx.font='18px Sans';canvasText(ctx,cleanText(user.bio||'Welcome to my JojoWorld profile!'),50,1085,314,26,4);
   panel(404,1015,368,220,'#d6a84b');heading('GIFTS SHOWCASE',426,1053);
   const received=user.giftsReceived&&typeof user.giftsReceived==='object'?user.giftsReceived:{};
   // Plain ASCII labels only in Gifts Showcase to prevent missing-glyph boxes on every device.
@@ -856,22 +856,22 @@ async function generateProfileCanvas(user) {
   };
   const giftEntries=Object.entries(received).filter(([name,count])=>Number(count)>0);
   const giftTotal=Math.max(Number(user.giftsCount)||0,giftEntries.reduce((sum,[name,count])=>sum+(Number(count)||0),0));
-  label('TOTAL GIFTS RECEIVED: '+giftTotal,426,1086,14,'#ffe8a0');
+  label('TOTAL GIFTS RECEIVED: '+giftTotal,426,1086,16,'#ffe8a0');
   if(giftEntries.length){
     giftEntries.slice(0,5).forEach(([name,count],index)=>{
       const gift=giftCatalogForProfile[String(name).toUpperCase()]||{name:String(name).replace(/_/g,' ')};
-      const yy=1110+index*23;
+      const yy=1110+index*24;
       ctx.fillStyle=index%2===0?'#20264b':'#171d3a';
       rr(420,yy-16,326,20,7);ctx.fill();
-      label(cleanText(gift.name),430,yy,13,'#f4f7ff');
-      ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 13px Sans';ctx.fillText('x '+Number(count),735,yy);
+      label(cleanText(gift.name),430,yy,15,'#f4f7ff');
+      ctx.textAlign='right';ctx.fillStyle='#ffe08a';ctx.font='bold 15px Sans';ctx.fillText('x '+Number(count),735,yy);
     });
   }else{
     const showcase=String(user.giftsShowcase||'None yet');
-    label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
+    label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,15,'#c6d5f0');
   }
   // Gifts Showcase remains the final profile showcase; trophy panel removed as requested.
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1260);
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 16px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1260);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
