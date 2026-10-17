@@ -905,6 +905,7 @@ async function generateShopProductPreview(product, user) {
   // depend on avatar photos or changing profile details, unlike frame and other item previews.
   const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
   const isNameEffectProduct = nameEffectProducts.includes(key);
+  const isNameEffectPreview = isNameEffectProduct;
   // Generate each effect artwork lazily on its first shop preview; later previews reuse the cached PNG.
   const aiArtworkFile = isNameEffectProduct ? await getNameEffectArtwork(key, cacheDir) : null;
   const artworkCacheMode = aiArtworkFile ? 'ai' : (isNameEffectProduct && isAINameArtConfigured() ? 'fallback' : 'canvas');
@@ -938,7 +939,6 @@ async function generateShopProductPreview(product, user) {
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  const isNameEffectPreview = isNameEffectProduct;
   // Name-effect previews intentionally have no surrounding box: only the name receives the cosmetic.
   const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
   const borderGlow = ctx.createLinearGradient(18, 18, W-18, H-18); borderGlow.addColorStop(0, item.color); borderGlow.addColorStop(0.48, '#7b5cff'); borderGlow.addColorStop(1, '#ff4fd8');
