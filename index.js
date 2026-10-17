@@ -298,7 +298,7 @@ const HOUSE_CONFIG = {
   building: { tier: 4, value: 61500, price: 40000, tax: 1000, badge: '🏢' }
 };
 const HOUSE_REQUIREMENTS = { kubo: 'none', bahay: 'kubo', mansion: 'bahay', building: 'mansion' };
-const FLEX_BADGES = { rainbow: '🌈 [RARE]', sparkle: '✨ [MYTHIC]', heart: '💖 [LOVE]', fire: '🔥 [HOT]', ice: '❄️ [COLD]', neon: '⚡ [NEON]', blossom: '🌸 [CUTE]', dark: '🖤 [DARK]', red: '🔴', blue: '🔵', green: '🟢', yellow: '🟡' };
+const FLEX_BADGES = { rainbow: '🌈 [RARE]', sparkle: '✨ [MYTHIC]', heart: '💖 [LOVE]', fire: '🔥 [HOT]', ice: '❄️ [COLD]', neon: '⚡ [NEON]', blossom: '🌸 [CUTE]', dark: '🖤 [DARK]', red: '🔴', blue: '🔵', green: '🟢', yellow: '🟡', gold: '👑 [GOLD]', demon: '😈 [DEMON]' };
 function getHouseTier(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.tier ?? 0; }
 function getHouseValue(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.value ?? 0; }
 
@@ -868,6 +868,8 @@ async function generateShopProductPreview(product, user) {
     blue: { title: 'BLUE NAME EFFECT', price: '1,000 COINS', color: '#54a8ff', emoji: '🔵', subtitle: 'SOLID BLUE STYLE' },
     green: { title: 'GREEN NAME EFFECT', price: '1,000 COINS', color: '#64f59b', emoji: '🟢', subtitle: 'SOLID GREEN STYLE' },
     yellow: { title: 'YELLOW NAME EFFECT', price: '1,000 COINS', color: '#ffe65b', emoji: '🟡', subtitle: 'SOLID YELLOW STYLE' },
+    gold: { title: 'GOLD NAME EFFECT', price: '4,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'LEGENDARY • GOLDEN ROYAL GLOW' },
+    demon: { title: 'DEMON NAME EFFECT', price: '4,000 COINS', color: '#ff2424', emoji: '😈', subtitle: 'MYTHIC • INFERNAL RED AURA' },
     kubo: { title: 'KUBO HOUSE', price: '1,500 COINS', color: '#e4c18a', emoji: '🛖', subtitle: 'STARTER HOUSE • TIER 1' },
     bahay: { title: 'BAHAY HOUSE', price: '5,000 COINS', color: '#8fe5ff', emoji: '🏡', subtitle: 'UPGRADE • REQUIRES KUBO' },
     mansion: { title: 'MANSION HOUSE', price: '15,000 COINS', color: '#d9a5ff', emoji: '🏰', subtitle: 'PREMIUM • REQUIRES BAHAY' },
@@ -877,7 +879,7 @@ async function generateShopProductPreview(product, user) {
   const previewUser = { ...user, coins: Number(user.coins) || 0, id: 'preview-' + String(user.id || user.psid || 'member') + '-' + key };
   if (key === 'vip') { previewUser.vip = true; previewUser.badge = '👑 VIP Elite'; }
   else if (key === 'frame') { previewUser.goldFrame = true; previewUser.royalFrame = true; previewUser.frame = '👑 Royalty Frame'; }
-  else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(key)) previewUser.nameEffect = key;
+  else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(key)) previewUser.nameEffect = key;
   else if (['kubo','bahay','mansion','building'].includes(key)) previewUser.house = key;
 
   // Smooth visual mode: standard 800x900 product previews reduce rendering and upload time.
@@ -1901,12 +1903,12 @@ A new user successfully registered using your link! 🎁
         if (upperRaw.startsWith('PREVIEW_')) {
           const key = upperRaw.slice('PREVIEW_'.length).toLowerCase();
           const product = key.startsWith('house_') ? key.slice(6) : key;
-          const priceLabels = {vip:'1,000c',frame:'500c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
+          const priceLabels = {vip:'1,000c',frame:'500c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',gold:'4,000c',demon:'4,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
           if (!priceLabels[product]) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
           const image = await generateShopProductPreview(product, user);
           const purchasePayload = product === 'vip' ? 'BUY_VIP'
             : product === 'frame' ? 'BUY_FRAME'
-            : ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow'].includes(product) ? 'EFFECT ' + product
+            : ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(product) ? 'EFFECT ' + product
             : ['kubo','bahay','mansion','building'].includes(product) ? 'BUY ' + product.toUpperCase() : '';
           if (!purchasePayload) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
           await sendImage(psid, image, '✨ 𝐈𝐓𝐄𝐌 𝐏𝐑𝐄𝐕𝐈𝐄𝐖 ✨\n━━━━━━━━━━━━━━━━━━\n🛍️ 𝐈𝐭𝐞𝐦: ' + product.toUpperCase() + ' • ' + priceLabels[product] + '\n💰 𝐘𝐨𝐮𝐫 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: ' + (Number(user.coins)||0) + ' coins\n━━━━━━━━━━━━━━━━━━\n👑 Check out how this item looks!\n🛒 Tap 𝐁𝐔𝐘 to purchase it. Your coins will only be deducted after you tap Buy.', [
@@ -1918,8 +1920,8 @@ A new user successfully registered using your link! 🎁
 
         // [ADDED] V28 flex effect purchase command, one active effect at a time.
         if (upperRaw.trim().startsWith('EFFECT ')) {
-          const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000};
-          if (!FLEX_BADGES[effect]) { sendShopResult(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow.'); continue; }
+          const effect = upperRaw.trim().split(/\s+/)[1]?.toLowerCase(); const prices = {rainbow:5000,sparkle:10000,heart:2500,fire:2500,ice:2500,neon:3000,blossom:2000,dark:2500,red:1000,blue:1000,green:1000,yellow:1000,gold:4000,demon:4000};
+          if (!FLEX_BADGES[effect]) { sendShopResult(psid,'✨ Effects: rainbow, sparkle, heart, fire, ice, neon, blossom, dark, red, blue, green, yellow, gold, demon.'); continue; }
           if (user.nameEffect && user.nameEffect !== 'none') { sendShopResult(psid,'❌ May effect ka na boss! Type unequip. Isa lang pwede!'); continue; }
           if (user.coins < prices[effect]) { sendShopResult(psid,`❌ Insufficient coins! You need ${prices[effect]} coins, but you only have ${user.coins} coins.`); continue; }
           const old = {coins:user.coins,nameEffect:user.nameEffect}; user.coins -= prices[effect]; user.nameEffect=effect;
@@ -2750,9 +2752,8 @@ ${renderGiftCatalog()}
         if (upperRaw === 'SHOP_EFFECTS') {
           const previousPage = user.currentPage;
           user.currentPage = "SHOP";
-          // [FIXED] Do not show the category when the page state cannot be saved.
           if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
-          send(psid, "💎 JOJOWORLD SHOP — NAME EFFECTS\nPumili ng effect sa mga button sa ibaba para makita ang visual at bumili.", [
+          send(psid, "💎 JOJOWORLD SHOP — NAME EFFECTS (PAGE 1/2)\nPumili ng effect para makita ang visual preview at bumili.", [
             { content_type: "text", title: "🌈 Rainbow 5,000c", payload: "PREVIEW_rainbow" },
             { content_type: "text", title: "✨ Sparkle 10,000c", payload: "PREVIEW_sparkle" },
             { content_type: "text", title: "💖 Heart 2,500c", payload: "PREVIEW_heart" },
@@ -2763,8 +2764,22 @@ ${renderGiftCatalog()}
             { content_type: "text", title: "🖤 Dark 2,500c", payload: "PREVIEW_dark" },
             { content_type: "text", title: "🔴 Red 1,000c", payload: "PREVIEW_red" },
             { content_type: "text", title: "🔵 Blue 1,000c", payload: "PREVIEW_blue" },
+            { content_type: "text", title: "➡️ More Effects", payload: "SHOP_EFFECTS_MORE" },
+            { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
+          ]);
+          continue;
+        }
+
+        if (upperRaw === 'SHOP_EFFECTS_MORE') {
+          const previousPage = user.currentPage;
+          user.currentPage = "SHOP";
+          if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Shop ngayon. Subukan ulit mamaya."); continue; }
+          send(psid, "💎 JOJOWORLD SHOP — NAME EFFECTS (PAGE 2/2)\nMore premium styles. Bawat effect ay may sariling visual preview.", [
             { content_type: "text", title: "🟢 Green 1,000c", payload: "PREVIEW_green" },
             { content_type: "text", title: "🟡 Yellow 1,000c", payload: "PREVIEW_yellow" },
+            { content_type: "text", title: "👑 Gold 4,000c", payload: "PREVIEW_gold" },
+            { content_type: "text", title: "😈 Demon 4,000c", payload: "PREVIEW_demon" },
+            { content_type: "text", title: "↩️ Back to Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
           ]);
           continue;
