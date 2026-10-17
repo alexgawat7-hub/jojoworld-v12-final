@@ -675,41 +675,6 @@ async function generateProfileCanvas(user) {
     }
     ctx.restore();
   }
-  // [MYTHIC AVATAR BORDER] Original fantasy-MOBA-inspired frame art (not copied from game assets).
-  // Layered metal rings, angular side guards, crown crest and glowing gem studs surround the avatar.
-  if(royalFrame){
-    ctx.save();
-    ctx.shadowColor='#ffd34f';ctx.shadowBlur=18;
-    ctx.strokeStyle='#fff1ad';ctx.lineWidth=3.5;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();
-    ctx.shadowBlur=12;ctx.strokeStyle='#a65b0b';ctx.lineWidth=7;ctx.beginPath();ctx.arc(ax,ay,106,Math.PI*0.10,Math.PI*0.90);ctx.stroke();
-    ctx.strokeStyle='#f8bd36';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,106,Math.PI*1.10,Math.PI*1.90);ctx.stroke();
-    // Symmetrical angular armor guards at the sides of the portrait.
-    for(const side of [-1,1]){
-      ctx.save();ctx.translate(ax+side*100,ay);ctx.scale(side,1);
-      ctx.shadowColor='#ffc83d';ctx.shadowBlur=10;
-      const metal=ctx.createLinearGradient(-15,-34,18,34);
-      metal.addColorStop(0,'#fff3b0');metal.addColorStop(.35,'#e9a52a');metal.addColorStop(.7,'#9c570c');metal.addColorStop(1,'#ffe78b');
-      ctx.fillStyle=metal;ctx.strokeStyle='#fff0a0';ctx.lineWidth=1.8;
-      ctx.beginPath();ctx.moveTo(-8,-36);ctx.lineTo(13,-25);ctx.lineTo(20,-7);ctx.lineTo(12,0);ctx.lineTo(20,9);ctx.lineTo(10,29);ctx.lineTo(-7,38);ctx.lineTo(-16,18);ctx.lineTo(-12,0);ctx.lineTo(-16,-18);ctx.closePath();ctx.fill();ctx.stroke();
-      ctx.fillStyle='#45eaff';ctx.shadowColor='#28dfff';ctx.shadowBlur=12;
-      ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(7,-4);ctx.lineTo(0,5);ctx.lineTo(-7,-4);ctx.closePath();ctx.fill();
-      ctx.restore();
-    }
-    // Crown crest with a jewel at its center.
-    ctx.shadowColor='#ffc83d';ctx.shadowBlur=14;
-    const crown=ctx.createLinearGradient(ax-48,ay-132,ax+48,ay-88);
-    crown.addColorStop(0,'#fff2a4');crown.addColorStop(.45,'#e8a328');crown.addColorStop(1,'#9f5c0d');
-    ctx.beginPath();ctx.moveTo(ax-48,ay-88);ctx.lineTo(ax-40,ay-119);ctx.lineTo(ax-17,ay-100);ctx.lineTo(ax,ay-135);ctx.lineTo(ax+17,ay-100);ctx.lineTo(ax+40,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle=crown;ctx.fill();ctx.strokeStyle='#fff2ad';ctx.lineWidth=2.5;ctx.stroke();
-    ctx.fillStyle='#5df2ff';ctx.shadowColor='#22dfff';ctx.shadowBlur=16;ctx.beginPath();ctx.moveTo(ax,ay-120);ctx.lineTo(ax+7,ay-111);ctx.lineTo(ax,ay-101);ctx.lineTo(ax-7,ay-111);ctx.closePath();ctx.fill();
-    // Small jewel studs make the full border read as a decorated avatar frame.
-    for(let j=0;j<16;j++){
-      const a=-Math.PI/2+j*Math.PI/8,rx=ax+Math.cos(a)*102,ry=ay+Math.sin(a)*102;
-      ctx.save();ctx.translate(rx,ry);ctx.rotate(a+Math.PI/4);
-      ctx.fillStyle=j%4===0?'#e9fcff':'#ffd34f';ctx.strokeStyle='#8e4b08';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(0,-5.2);ctx.lineTo(3.8,0);ctx.lineTo(0,5.2);ctx.lineTo(-3.8,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
-    }
-    ctx.restore();
-  }
   if(goldFrame){
     // [GOLD FRAME PROFILE ART] Ornate gold double-ring treatment for every user who owns/equips Gold Frame.
     ctx.save();ctx.shadowColor='#ffc83d';ctx.shadowBlur=18;
@@ -1102,7 +1067,6 @@ async function generateShopProductPreview(product, user) {
   const key = String(product || '').toLowerCase();
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
-    frame: { title: 'MYTHIC AVATAR BORDER', price: '500 COINS', color: '#ffd34f', emoji: '🛡️', subtitle: 'ROYAL CROWN • GOLD FILIGREE • GEMS' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -3165,7 +3129,6 @@ ${renderGiftCatalog()}
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, null, [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
-            { content_type: "text", title: "🛡️ Mythic Avatar Border 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
@@ -3191,71 +3154,6 @@ ${renderGiftCatalog()}
             }
             sendShopResult(psid, `🎉 SUCCESS! You are now a VIP Elite member! 👑`);
           }
-          continue;
-        }
-
-        // [AVATAR BORDER SHOP] Mobile-Legends-inspired Royalty frame.
-        // Ownership and equipped state are saved per user; failed saves roll back coin changes.
-        if (upperRaw === "BUY_FRAME") {
-          const frameName = "Royalty Frame";
-          const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
-          if (ownedFrames.includes(frameName) || user.royalFrame || String(user.frame || "").toLowerCase().includes("royal")) {
-            sendShopResult(psid, "👑 Nasa collection mo na ang Royalty Avatar Border. I-equip mo ito sa profile mo.");
-            continue;
-          }
-          if ((Number(user.coins) || 0) < 500) {
-            sendShopResult(psid, "❌ Kulang ang coins! Ang Royalty Avatar Border ay 500 coins.");
-            continue;
-          }
-          const previous = {
-            coins: user.coins, ownedFrames: user.ownedFrames, equippedFrame: user.equippedFrame,
-            frame: user.frame, royalFrame: user.royalFrame
-          };
-          user.coins = (Number(user.coins) || 0) - 500;
-          user.ownedFrames = [...ownedFrames, frameName];
-          user.equippedFrame = frameName;
-          user.frame = frameName;
-          user.royalFrame = true;
-          if (!await saveUserToDB(psid)) {
-            user.coins = previous.coins;
-            if (previous.ownedFrames === undefined) delete user.ownedFrames; else user.ownedFrames = previous.ownedFrames;
-            if (previous.equippedFrame === undefined) delete user.equippedFrame; else user.equippedFrame = previous.equippedFrame;
-            if (previous.frame === undefined) delete user.frame; else user.frame = previous.frame;
-            if (previous.royalFrame === undefined) delete user.royalFrame; else user.royalFrame = previous.royalFrame;
-            sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
-            continue;
-          }
-          sendShopResult(psid, "🎉 Nabili at na-equip na ang 👑 Royalty Avatar Border! Tingnan ang Visual Profile para makita ang bagong frame.", [
-            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
-            { content_type: "text", title: "🛍️ Back to Shop", payload: "SHOP" }
-          ]);
-          continue;
-        }
-
-        if (upperRaw.startsWith("EQUIP_FRAME")) {
-          const frameName = "Royalty Frame";
-          const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
-          const alreadyOwned = ownedFrames.includes(frameName) || user.royalFrame || String(user.frame || "").toLowerCase().includes("royal");
-          if (!alreadyOwned) {
-            sendShopResult(psid, "❌ Wala ka pang Royalty Avatar Border. Bilhin muna ito sa Shop.");
-            continue;
-          }
-          const previous = { equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame };
-          user.ownedFrames = ownedFrames.includes(frameName) ? ownedFrames : [...ownedFrames, frameName];
-          user.equippedFrame = frameName;
-          user.frame = frameName;
-          user.royalFrame = true;
-          if (!await saveUserToDB(psid)) {
-            if (previous.equippedFrame === undefined) delete user.equippedFrame; else user.equippedFrame = previous.equippedFrame;
-            if (previous.frame === undefined) delete user.frame; else user.frame = previous.frame;
-            if (previous.royalFrame === undefined) delete user.royalFrame; else user.royalFrame = previous.royalFrame;
-            sendShopResult(psid, "⚠️ Hindi na-save ang equipped frame. Subukan ulit.");
-            continue;
-          }
-          sendShopResult(psid, "👑 Na-equip na ang Royalty Avatar Border sa profile mo.", [
-            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
-            { content_type: "text", title: "🛍️ Back to Shop", payload: "SHOP" }
-          ]);
           continue;
         }
 
