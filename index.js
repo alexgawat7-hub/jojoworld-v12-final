@@ -1073,7 +1073,7 @@ async function generateShopProductPreview(product, user) {
     diamondframe: { title: 'DIAMOND PROFILE FRAME', price: '2,500 COINS', color: '#00ffff', emoji: '💎', subtitle: 'MYTHIC • CRYSTAL CYAN GLOW' },
     neonframe: { title: 'NEON PROFILE FRAME', price: '2,000 COINS', color: '#ff00ff', emoji: '⚡', subtitle: 'EPIC • ELECTRIC MAGENTA GLOW' },
     silverframe: { title: 'SILVER PROFILE FRAME', price: '1,500 COINS', color: '#dce8ff', emoji: '❄️', subtitle: 'ELITE • POLISHED SILVER TRIM' },
-    goldframe: { title: 'LEGENDARY GOLD FRAME', price: '3,500 COINS', color: '#ffd34f', emoji: '🏆', subtitle: 'LEGENDARY • DOUBLE GOLD FILIGREE' },
+    goldframe: { title: 'GOLD PROFILE FRAME', price: '3,500 COINS', color: '#ffd34f', emoji: '🏆', subtitle: 'GOLD METALLIC • ORNATE BORDER' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -1218,7 +1218,7 @@ async function generateShopProductPreview(product, user) {
     ctx.textAlign = 'center'; ctx.font = 'bold 26px Sans'; ctx.fillStyle = '#f4f7ff';
     ctx.shadowColor = frameStyle.glow; ctx.shadowBlur = 10; ctx.fillText(displayName, 400, 535); ctx.shadowBlur = 0;
     ctx.fillStyle = frameStyle.color; ctx.font = 'bold 18px Sans';
-    const frameCaptions = { frame: 'ROYALTY FRAME • CROWN BORDER', diamondframe: 'DIAMOND FRAME • CRYSTAL GLOW', neonframe: 'NEON FRAME • ELECTRIC GLOW', silverframe: 'SILVER FRAME • POLISHED TRIM', goldframe: 'GOLD FRAME • LEGENDARY TRIM' };
+    const frameCaptions = { frame: 'ROYALTY FRAME • CROWN BORDER', diamondframe: 'DIAMOND FRAME • CRYSTAL GLOW', neonframe: 'NEON FRAME • ELECTRIC GLOW', silverframe: 'SILVER FRAME • POLISHED TRIM', goldframe: 'GOLD FRAME • METALLIC BORDER' };
     ctx.fillText(frameCaptions[key] || 'PROFILE FRAME', 400, 585);
   } else {
     const displayName = getPlainDisplayName(previewUser).slice(0, 25);
@@ -3110,12 +3110,12 @@ ${renderGiftCatalog()}
           const previousPage = user.currentPage;
           user.currentPage = "SHOP";
           if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Frame Shop ngayon. Subukan ulit mamaya."); continue; }
-          send(psid, "🖼️ JOJOWORLD PROFILE FRAME SHOP\n━━━━━━━━━━━━━━━━━━━━\nBumili ng frame, tapos automatic itong ilalagay sa profile card mo. Ang nabili mo ay mase-save sa account mo at puwede mong i-equip ulit kahit kailan.\n\n👑 Royalty — 500c\n💎 Diamond — 2,500c\n⚡ Neon — 2,000c\n❄️ Silver — 1,500c\n🏆 Legendary Gold — 3,500c", [
+          send(psid, "🖼️ JOJOWORLD PROFILE FRAME SHOP\n━━━━━━━━━━━━━━━━━━━━\nBumili ng frame, tapos automatic itong ilalagay sa profile card mo. Ang nabili mo ay mase-save sa account mo at puwede mong i-equip ulit kahit kailan.\n\n👑 Royalty — 500c\n💎 Diamond — 2,500c\n⚡ Neon — 2,000c\n❄️ Silver — 1,500c\n🏆 Gold Frame — 3,500c", [
             { content_type: "text", title: "👑 Royalty 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Diamond 2.5k", payload: "PREVIEW_DIAMONDFRAME" },
             { content_type: "text", title: "⚡ Neon 2k", payload: "PREVIEW_NEONFRAME" },
             { content_type: "text", title: "❄️ Silver 1.5k", payload: "PREVIEW_SILVERFRAME" },
-            { content_type: "text", title: "🏆 Gold 3.5k", payload: "PREVIEW_GOLDFRAME" },
+            { content_type: "text", title: "🏆 Gold Frame 3.5k", payload: "PREVIEW_GOLDFRAME" },
             { content_type: "text", title: "🎒 My Frames", payload: "MY_FRAMES" },
             { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
           ]);
@@ -3124,7 +3124,7 @@ ${renderGiftCatalog()}
 
         if (upperRaw === 'MY_FRAMES') {
           const owned = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
-          const legacyOwned = (user.royalFrame || user.goldFrame) ? [user.royalFrame ? 'Royalty Frame' : null, user.goldFrame ? 'Gold Frame' : null].filter(Boolean) : [];
+          const legacyOwned = [user.royalFrame ? 'Royalty Frame' : null, user.goldFrame ? 'Gold Frame' : null].filter(Boolean);
           const allOwned = [...new Set([...legacyOwned, ...owned])];
           const equipped = String(user.equippedFrame || user.frame || (user.royalFrame ? 'Royalty Frame' : (user.goldFrame ? 'Gold Frame' : 'None')));
           const choices = allOwned.slice(0, 8).map(name => ({
@@ -3141,7 +3141,7 @@ ${renderGiftCatalog()}
           const frameNames = { royaltyframe: "Royalty Frame", diamondframe: "Diamond Frame", neonframe: "Neon Frame", silverframe: "Silver Frame", goldframe: "Gold Frame" };
           const frameName = frameNames[frameId];
           const owned = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
-          const legacyOwned = (user.royalFrame || user.goldFrame) ? [user.royalFrame ? "Royalty Frame" : null, user.goldFrame ? "Gold Frame" : null].filter(Boolean) : [];
+          const legacyOwned = [user.royalFrame ? "Royalty Frame" : null, user.goldFrame ? "Gold Frame" : null].filter(Boolean);
           if (!frameName || ![...owned, ...legacyOwned].includes(frameName)) { sendShopResult(psid, "❌ Hindi mo pa pag-aari ang frame na iyan. Bilhin muna sa Frame Shop."); continue; }
           const old = { equippedFrame: user.equippedFrame, frame: user.frame, ownedFrames: user.ownedFrames, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
           user.ownedFrames = [...new Set([...owned, ...legacyOwned, frameName])];
