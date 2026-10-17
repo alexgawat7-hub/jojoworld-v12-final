@@ -1999,9 +1999,15 @@ A new user successfully registered using your link! 🎁
             : ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(product) ? 'EFFECT ' + product
             : ['kubo','bahay','mansion','building'].includes(product) ? 'BUY ' + product.toUpperCase() : '';
           if (!purchasePayload) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
+          // Return to the Name Effects catalog after previewing an effect, not the main Shop.
+          // Keep page 2 effects on page 2 so users can browse the remaining styles without extra taps.
+          const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
+          const effectsBackPayload = ['green','yellow','gold','demon'].includes(product) ? 'SHOP_EFFECTS_MORE' : 'SHOP_EFFECTS';
+          const backPayload = nameEffectProducts.includes(product) ? effectsBackPayload : 'SHOP';
+          const backTitle = nameEffectProducts.includes(product) ? '↩️ Back to Name Effects' : '🛍️ Back to Shop';
           await sendImage(psid, image, '✨ 𝐈𝐓𝐄𝐌 𝐏𝐑𝐄𝐕𝐈𝐄𝐖 ✨\n━━━━━━━━━━━━━━━━━━\n🛍️ 𝐈𝐭𝐞𝐦: ' + product.toUpperCase() + ' • ' + priceLabels[product] + '\n💰 𝐘𝐨𝐮𝐫 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: ' + (Number(user.coins)||0) + ' coins\n━━━━━━━━━━━━━━━━━━\n👑 Check out how this item looks!\n🛒 Tap 𝐁𝐔𝐘 to purchase it. Your coins will only be deducted after you tap Buy.', [
             { content_type: 'text', title: '🛒 Buy', payload: purchasePayload },
-            { content_type: 'text', title: '🛍️ Back to Shop', payload: 'SHOP' }
+            { content_type: 'text', title: backTitle, payload: backPayload }
           ]);
           continue;
         }
