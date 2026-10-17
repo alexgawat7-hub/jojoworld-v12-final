@@ -46,3 +46,42 @@ test('uses an already-cached effect image without requiring an API key', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+
+test('restores artwork from persistent storage without an API key', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-ai-art-store-'));
+  const stored = Buffer.alloc(2048, 7);
+  try {
+    const result = await getNameEffectArtwork('gold', dir, {
+      apiKey: '',
+      loadFromStore: async effect => {
+        assert.equal(effect, 'gold');
+        return stored;
+      },
+      client: { post: () => { throw new Error('should not call provider'); } }
+    });
+    assert.equal(result, path.join(dir, 'ai_name_art_v1_gold.png'));
+    assert.deepEqual(fs.readFileSync(result), stored);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('saves newly generated artwork to persistent storage when a provider is configured', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-ai-art-save-'));
+  const stored = Buffer.alloc(2048, 9);
+  let savedEffect = null;
+  let savedBytes = null;
+  try {
+    const result = await getNameEffectArtwork('gold', dir, {
+      apiKey: 'unit-test-key',
+      client: { post: async () => ({ data: { data: [{ b64_json: stored.toString('base64') }] } }) },
+      saveToStore: async (effect, bytes) => { savedEffect = effect; savedBytes = bytes; }
+    });
+    assert.equal(result, path.join(dir, 'ai_name_art_v1_gold.png'));
+    assert.equal(savedEffect, 'gold');
+    assert.deepEqual(savedBytes, stored);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
