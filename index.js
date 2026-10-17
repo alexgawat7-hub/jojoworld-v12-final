@@ -1069,7 +1069,7 @@ async function generateShopProductPreview(product, user) {
   const key = String(product || '').toLowerCase();
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
-    frame: { title: 'ROYALTY PROFILE FRAME', price: '500 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'ROYAL CROWN • GOLD FILIGREE' },
+    frame: { title: 'MYTHIC AVATAR BORDER', price: '500 COINS', color: '#ffd34f', emoji: '🛡️', subtitle: 'ROYAL CROWN • GOLD FILIGREE • GEMS' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -2195,8 +2195,8 @@ A new user successfully registered using your link! 🎁
           const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
           const frameBackProducts = ['frame'];
           const effectsBackPayload = ['green','yellow','gold','demon'].includes(product) ? 'SHOP_EFFECTS_MORE' : 'SHOP_EFFECTS';
-          const backPayload = nameEffectProducts.includes(product) ? effectsBackPayload : (frameBackProducts.includes(product) ? 'SHOP_FRAMES' : 'SHOP');
-          const backTitle = nameEffectProducts.includes(product) ? '↩️ Back to Name Effects' : (frameBackProducts.includes(product) ? '↩️ Back to Frames' : '🛍️ Back to Shop');
+          const backPayload = nameEffectProducts.includes(product) ? effectsBackPayload : 'SHOP';
+          const backTitle = nameEffectProducts.includes(product) ? '↩️ Back to Name Effects' : '🛍️ Back to Shop';
           await sendImage(psid, image, '✨ 𝐈𝐓𝐄𝐌 𝐏𝐑𝐄𝐕𝐈𝐄𝐖 ✨\n━━━━━━━━━━━━━━━━━━\n🛍️ 𝐈𝐭𝐞𝐦: ' + product.toUpperCase() + ' • ' + priceLabels[product] + '\n💰 𝐘𝐨𝐮𝐫 𝐁𝐚𝐥𝐚𝐧𝐜𝐞: ' + (Number(user.coins)||0) + ' coins\n━━━━━━━━━━━━━━━━━━\n👑 Check out how this item looks!\n🛒 Tap 𝐁𝐔𝐘 to purchase it. Your coins will only be deducted after you tap Buy.', [
             { content_type: 'text', title: purchasePayload.startsWith('EQUIP_FRAME ') ? '✅ Equip Frame' : '🛒 Buy', payload: purchasePayload },
             { content_type: 'text', title: backTitle, payload: backPayload }
@@ -3132,7 +3132,7 @@ ${renderGiftCatalog()}
           const shopImage = await generateShopCanvas();
           await sendImage(psid, shopImage, null, [
             { content_type: "text", title: "☑️ Verified VIP 1,000c", payload: "PREVIEW_VIP" },
-            { content_type: "text", title: "👑 Royalty Frame 500c", payload: "PREVIEW_FRAME" },
+            { content_type: "text", title: "🛡️ Mythic Avatar Border 500c", payload: "PREVIEW_FRAME" },
             { content_type: "text", title: "💎 Name Effects", payload: "SHOP_EFFECTS" },
             { content_type: "text", title: "🏠 Houses", payload: "SHOP_HOUSES" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
@@ -3161,9 +3161,70 @@ ${renderGiftCatalog()}
           continue;
         }
 
-        // New custom frame products were retired; only the original Royalty Frame remains for sale.
+        // [AVATAR BORDER SHOP] Mobile-Legends-inspired Royalty frame.
+        // Ownership and equipped state are saved per user; failed saves roll back coin changes.
+        if (upperRaw === "BUY_FRAME") {
+          const frameName = "Royalty Frame";
+          const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
+          if (ownedFrames.includes(frameName) || user.royalFrame || String(user.frame || "").toLowerCase().includes("royal")) {
+            sendShopResult(psid, "👑 Nasa collection mo na ang Royalty Avatar Border. I-equip mo ito sa profile mo.");
+            continue;
+          }
+          if ((Number(user.coins) || 0) < 500) {
+            sendShopResult(psid, "❌ Kulang ang coins! Ang Royalty Avatar Border ay 500 coins.");
+            continue;
+          }
+          const previous = {
+            coins: user.coins, ownedFrames: user.ownedFrames, equippedFrame: user.equippedFrame,
+            frame: user.frame, royalFrame: user.royalFrame
+          };
+          user.coins = (Number(user.coins) || 0) - 500;
+          user.ownedFrames = [...ownedFrames, frameName];
+          user.equippedFrame = frameName;
+          user.frame = frameName;
+          user.royalFrame = true;
+          if (!await saveUserToDB(psid)) {
+            user.coins = previous.coins;
+            if (previous.ownedFrames === undefined) delete user.ownedFrames; else user.ownedFrames = previous.ownedFrames;
+            if (previous.equippedFrame === undefined) delete user.equippedFrame; else user.equippedFrame = previous.equippedFrame;
+            if (previous.frame === undefined) delete user.frame; else user.frame = previous.frame;
+            if (previous.royalFrame === undefined) delete user.royalFrame; else user.royalFrame = previous.royalFrame;
+            sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas.");
+            continue;
+          }
+          sendShopResult(psid, "🎉 Nabili at na-equip na ang 👑 Royalty Avatar Border! Tingnan ang Visual Profile para makita ang bagong frame.", [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
+            { content_type: "text", title: "🛍️ Back to Shop", payload: "SHOP" }
+          ]);
+          continue;
+        }
 
-        // Legacy profile-frame purchase retired at user request.
+        if (upperRaw.startsWith("EQUIP_FRAME")) {
+          const frameName = "Royalty Frame";
+          const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
+          const alreadyOwned = ownedFrames.includes(frameName) || user.royalFrame || String(user.frame || "").toLowerCase().includes("royal");
+          if (!alreadyOwned) {
+            sendShopResult(psid, "❌ Wala ka pang Royalty Avatar Border. Bilhin muna ito sa Shop.");
+            continue;
+          }
+          const previous = { equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame };
+          user.ownedFrames = ownedFrames.includes(frameName) ? ownedFrames : [...ownedFrames, frameName];
+          user.equippedFrame = frameName;
+          user.frame = frameName;
+          user.royalFrame = true;
+          if (!await saveUserToDB(psid)) {
+            if (previous.equippedFrame === undefined) delete user.equippedFrame; else user.equippedFrame = previous.equippedFrame;
+            if (previous.frame === undefined) delete user.frame; else user.frame = previous.frame;
+            if (previous.royalFrame === undefined) delete user.royalFrame; else user.royalFrame = previous.royalFrame;
+            sendShopResult(psid, "⚠️ Hindi na-save ang equipped frame. Subukan ulit.");
+            continue;
+          }
+          sendShopResult(psid, "👑 Na-equip na ang Royalty Avatar Border sa profile mo.", [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
+            { content_type: "text", title: "🛍️ Back to Shop", payload: "SHOP" }
+          ]);
+          continue;
+        }
 
         // [UPGRADED V28] Image-only leaderboard: no text caption or text fallback.
         if (["leaderboard", "lb", "top"].includes(cleanText) || ["LEADERBOARD", "LB", "TOP"].includes(upperRaw)) {
