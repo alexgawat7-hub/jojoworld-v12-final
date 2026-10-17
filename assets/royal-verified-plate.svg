@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="200" viewBox="0 0 700 200">
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff8bd"/><stop offset=".22" stop-color="#ffdf62"/><stop offset=".48" stop-color="#b86b08"/><stop offset=".7" stop-color="#ffe98a"/><stop offset="1" stop-color="#8a4300"/></linearGradient>
+ <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#163f8e"/><stop offset=".5" stop-color="#07152f"/><stop offset="1" stop-color="#247be9"/></linearGradient>
+ <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".5"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#66d9ff" stop-opacity=".15"/></linearGradient>
+</defs>
+<!-- transparent outside, layered royal plaque -->
+<path d="M42 34 L95 15 L605 15 L658 34 L681 65 L681 140 L648 169 L52 169 L19 140 L19 65Z" fill="#050b1b" stroke="#f9c94d" stroke-width="8"/>
+<path d="M48 39 L100 25 L600 25 L652 39 L668 68 L668 134 L639 155 L61 155 L32 134 L32 68Z" fill="url(#blue)" stroke="url(#gold)" stroke-width="4"/>
+<path d="M55 47 L105 35 L595 35 L645 47 L655 73 L655 128 L632 145 L68 145 L45 128 L45 73Z" fill="url(#shine)" stroke="#73dfff" stroke-opacity=".8" stroke-width="2"/>
+<!-- crown -->
+<path d="M66 73 L78 43 L101 62 L120 29 L140 62 L164 43 L176 73 L165 89 L78 89Z" fill="url(#gold)" stroke="#fff6bb" stroke-width="3" stroke-linejoin="round"/>
+<path d="M82 77 L160 77 L153 85 L89 85Z" fill="#18386a"/>
+<circle cx="120" cy="51" r="7" fill="#6df2ff" stroke="#fff" stroke-width="2"/>
+<path d="M83 105 L99 121 L131 88" fill="none" stroke="#5df2ff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M83 105 L99 121 L131 88" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<!-- rivets -->
+<g fill="#fff1a6" stroke="#9b5a08" stroke-width="2"><circle cx="53" cy="62" r="5"/><circle cx="647" cy="62" r="5"/><circle cx="53" cy="130" r="5"/><circle cx="647" cy="130" r="5"/></g>
+<text x="395" y="91" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="38" font-weight="900" letter-spacing="2" fill="#fff5bc" stroke="#7e4a00" stroke-width="1.5" paint-order="stroke">ROYAL VERIFIED</text>
+<text x="395" y="122" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="17" font-weight="700" letter-spacing="4" fill="#7eeaff">VIP ELITE MEMBER</text>
+<path d="M210 137 H580" stroke="url(#gold)" stroke-width="2"/>
+<path d="M229 137 l10 -7 l10 7 l-10 7Z M560 137 l10 -7 l10 7 l-10 7Z" fill="#ffe37b"/>
+</svg>
