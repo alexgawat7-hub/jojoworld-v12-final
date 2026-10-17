@@ -602,7 +602,7 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
   // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
-  const W = 800, H = 1320, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  const W = 800, H = 1390, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'], gold:['#ffd34f','#fff1a8','#ffb000','#9b4d00'], demon:['#ff2424','#ff8a8a','#a50000','#210000'] };
@@ -765,10 +765,12 @@ async function generateProfileCanvas(user) {
   rows.forEach((r,i)=>{
     const col=i%2,row=Math.floor(i/2),x=48+col*354,y=610+row*68,w=342,h=58;
     ctx.save();
-    const cardGrad=ctx.createLinearGradient(x,y,x+w,y+h);cardGrad.addColorStop(0,'#172748');cardGrad.addColorStop(1,'#090f21');
-    ctx.fillStyle=cardGrad;rr(x,y,w,h,13);ctx.fill();
-    ctx.strokeStyle=r.color;ctx.globalAlpha=.75;ctx.lineWidth=1.4;rr(x,y,w,h,13);ctx.stroke();ctx.globalAlpha=1;
-    ctx.shadowColor=r.color;ctx.shadowBlur=10;ctx.fillStyle=r.color;ctx.beginPath();ctx.arc(x+15,y+17,3.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    const cardGrad=ctx.createLinearGradient(x,y,x+w,y+h);
+    cardGrad.addColorStop(0,r.color+'36');cardGrad.addColorStop(.45,'#172748');cardGrad.addColorStop(1,'#090f21');
+    ctx.save();ctx.shadowColor=r.color;ctx.shadowBlur=13;ctx.fillStyle=cardGrad;rr(x,y,w,h,13);ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle=r.color;ctx.globalAlpha=.98;ctx.lineWidth=2;rr(x,y,w,h,13);ctx.stroke();ctx.globalAlpha=1;
+    ctx.fillStyle=r.color;rr(x+2,y+8,4,h-16,2);ctx.fill();
+    ctx.shadowColor=r.color;ctx.shadowBlur=12;ctx.fillStyle=r.color;ctx.beginPath();ctx.arc(x+16,y+17,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
     ctx.textAlign='left';ctx.fillStyle=r.color;ctx.font='bold 11px Sans';ctx.fillText(r.label,x+27,y+21);
     ctx.fillStyle='#f5f7ff';ctx.font='bold 14px Sans';
     let val=String(r.value||'Not set');while(ctx.measureText(val).width>w-32&&val.length>7)val=val.slice(0,-4)+'...';
@@ -820,8 +822,26 @@ async function generateProfileCanvas(user) {
     const showcase=String(user.giftsShowcase||'None yet');
     label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
-  // Gifts Showcase remains the final profile showcase; trophy panel removed as requested.
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1280);
+  // [PROFILE CARD BOTTOM PLATES] Two colorful plates sit side-by-side at the bottom, never stacked.
+  const bottomPlate=(x,y,w,h,title,subtitle,accent,kind)=>{
+    ctx.save();
+    const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,accent+'55');g.addColorStop(.48,'#151a38');g.addColorStop(1,'#070d20');
+    ctx.shadowColor=accent;ctx.shadowBlur=16;ctx.fillStyle=g;rr(x,y,w,h,16);ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle=accent;ctx.lineWidth=2.2;rr(x,y,w,h,16);ctx.stroke();
+    ctx.strokeStyle='#ffffff';ctx.globalAlpha=.35;ctx.lineWidth=1;rr(x+5,y+5,w-10,h-10,12);ctx.stroke();ctx.globalAlpha=1;
+    ctx.save();ctx.translate(x+35,y+h/2);ctx.fillStyle=accent;ctx.strokeStyle=accent;ctx.shadowColor=accent;ctx.shadowBlur=13;
+    if(kind==='bolt'){
+      ctx.beginPath();ctx.moveTo(4,-22);ctx.lineTo(-13,2);ctx.lineTo(-2,2);ctx.lineTo(-7,22);ctx.lineTo(14,-6);ctx.lineTo(3,-6);ctx.closePath();ctx.fill();
+    }else{
+      ctx.beginPath();ctx.moveTo(0,17);ctx.bezierCurveTo(-5,12,-20,2,-18,-8);ctx.bezierCurveTo(-16,-21,-2,-21,0,-10);ctx.bezierCurveTo(5,-21,18,-19,18,-8);ctx.bezierCurveTo(18,2,6,12,0,17);ctx.fill();
+    }
+    ctx.restore();ctx.textAlign='left';ctx.fillStyle=accent;ctx.font='bold 16px Sans';ctx.fillText(title,x+64,y+29);
+    ctx.fillStyle='#f3f6ff';ctx.font='12px Sans';ctx.fillText(subtitle,x+64,y+49);ctx.restore();
+  };
+  bottomPlate(28,1248,358,76,'⚡ LIGHTNING STYLE','BOLD • BRIGHT • ELECTRIC','#47eaff','bolt');
+  bottomPlate(404,1248,368,76,'♥ HEART STYLE','COLORFUL • SWEET • GLOWING','#ff63c7','heart');
+  // Footer moved below the two requested bottom plates.
+  ctx.textAlign='center';ctx.fillStyle='#a8b9ef';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1362);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
