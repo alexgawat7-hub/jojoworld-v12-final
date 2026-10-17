@@ -667,12 +667,13 @@ async function generateProfileCanvas(user) {
   if(effect==='rainbow'){nameFill=ctx.createLinearGradient(270,0,680,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
   if(effect==='sparkle'){nameFill=ctx.createLinearGradient(270,0,680,0);['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((col,i)=>nameFill.addColorStop(i/4,col));}
   // [FIXED V32] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
-  let nameFontSize=29;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>405&&nameFontSize>17){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
+  // [ROYAL HEADER ALIGNMENT] Keep every user's name inside a fixed column, clear of the VIP shield and stacked plates.
+  let nameFontSize=26;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>340&&nameFontSize>16){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
   const nameWidth=ctx.measureText(displayName).width;
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
   if (!drawPremiumNameEffect(ctx, displayName, 270, 183, vip ? 405 : 450, effect, 'left')) {
-    ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,183);ctx.shadowBlur=0;
+    ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,178);ctx.shadowBlur=0;
   }
   // [UPGRADED V34] Name effects are text-only; no extra glyphs or ornaments are placed beside the name.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
