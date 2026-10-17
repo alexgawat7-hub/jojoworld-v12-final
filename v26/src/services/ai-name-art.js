@@ -36,16 +36,34 @@ function cachedArtworkPath(effect, cacheDir) {
   return path.join(cacheDir, 'ai_name_art_v1_' + key + '.png');
 }
 
+function hasUsableCachedArtwork(file) {
+  if (!file) return false;
+  try {
+    return fs.statSync(file).isFile() && fs.statSync(file).size >= 1024;
+  } catch (_) {
+    return false;
+  }
+}
+
 function getCachedNameEffectArtwork(effect, cacheDir) {
   const file = cachedArtworkPath(effect, cacheDir);
-  return file && fs.existsSync(file) ? file : null;
+  return hasUsableCachedArtwork(file) ? file : null;
 }
 
 async function getNameEffectArtwork(effect, cacheDir, options = {}) {
   const key = String(effect || '').toLowerCase();
   const file = cachedArtworkPath(key, cacheDir);
   if (!file) return null;
-  if (fs.existsSync(file)) return file;
+  if (hasUsableCachedArtwork(file)) return file;
+  // Recover from an interrupted/partial cache restore instead of reusing a broken image forever.
+  if (fs.existsSync(file)) {
+    try {
+      await fs.promises.unlink(file);
+      console.warn('[AI NAME ART] Removed incomplete local artwork cache:', key);
+    } catch (error) {
+      console.warn('[AI NAME ART] Could not remove incomplete local cache for ' + key + ':', error.message);
+    }
+  }
 
   // MongoDB/GridFS is the durable cache; restore artwork before considering paid generation.
   if (typeof options.loadFromStore === 'function') {
