@@ -380,7 +380,7 @@ function getProfileAchievements(user = {}) {
     { id: 'scatter', title: 'Lucky Winner', icon: '🎰', description: 'Win 5 Scatter games', unlocked: scatterWins >= 5 },
     { id: 'style', title: 'Style Icon', icon: '✨', description: 'Equip a name effect', unlocked: hasEffect },
     { id: 'vip', title: 'VIP Elite', icon: '👑', description: 'Own the VIP profile badge', unlocked: Boolean(user.vip || String(user.badge || '').toLowerCase().includes('vip')) },
-    { id: 'profileviews', title: 'In the Spotlight', icon: '📸', description: 'Reach 10 profile views', unlocked: views >= 10 }
+    { id: 'profileviews', title: 'In the Spotlight', icon: '📸', description: 'Open your profile 10 times', unlocked: views >= 10 }
   ];
 }
 
@@ -714,7 +714,7 @@ async function generateProfileCanvas(user) {
     {x:28,w:174,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},
     {x:218,w:174,title:'LEVEL / XP',value:'LVL '+levelStats.level,color:'#7dffb0',level:true},
     {x:408,w:174,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},
-    {x:598,w:174,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}
+    {x:598,w:174,title:'PROFILE OPENS',value:String(Number(user.views)||0),color:'#7deaff'}
   ];
   stats.forEach(s=>{
     panel(s.x,438,s.w,94,'#344777');
