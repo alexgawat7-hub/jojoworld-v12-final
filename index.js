@@ -1923,7 +1923,7 @@ app.post('/webhook', async (req, res) => {
 
         // Award a small amount of XP for genuine activity, with a per-user 60-second cooldown.
         // The cooldown is persisted in the same user document to discourage message-spam farming.
-        if (user.registered === true && typeof rawText === "string" && rawText.trim()) {
+        if (user.registered === true && ev.message && typeof ev.message.text === "string" && !ev.message.quick_reply && ev.message.text.trim()) {
           const xpNow = Date.now();
           const lastXpAt = Math.max(0, Number(user.lastXpAt) || 0);
           if (xpNow - lastXpAt >= 60000) {
