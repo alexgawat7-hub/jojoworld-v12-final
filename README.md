@@ -43,6 +43,12 @@ In Meta's developer dashboard, set the callback URL to `https://YOUR-HOST/webhoo
 
 Set `MONGODB_URI` for persistent user data. Gift transfers and wallet/jackpot saves use MongoDB transactions, so the database must support transactions (for example, MongoDB Atlas or a replica set). Without it, the legacy application falls back to local `db.json`, which is not suitable for ephemeral hosting; automatic payment top-ups stay disabled unless MongoDB is connected. Configure both `PAYMONGO_SECRET` and `PAYMONGO_WEBHOOK_SECRET` before enabling live payment flows. Use test credentials while validating checkout and webhook behavior.
 
+## AI-generated name-effect artwork
+
+JojoWorld can optionally generate premium artwork for each of its 14 name effects through the OpenAI Images API. Add `OPENAI_API_KEY` as a private environment secret on the hosting service (for example, Render); never commit the real key. The default model is `gpt-image-1.5` at low quality to limit cost. You can override this with `OPENAI_IMAGE_MODEL` and `OPENAI_IMAGE_QUALITY`.
+
+Artwork is generated lazily when a name-effect shop preview is requested, then cached in the host's `cache/` directory and reused. The user's name remains rendered by Canvas so it is accurate and consistent. Visual profiles only read cached artwork and do not trigger generation by themselves. If the API key is absent or generation fails, the existing Canvas effect remains available as a fallback. OpenAI API usage is billed separately from a ChatGPT subscription, and first-time generation can take longer than a cached preview.
+
 ## Automated checks
 
 GitHub Actions runs JavaScript syntax checks and unit tests on pushes and pull requests to the V26 branch. A green check confirms those checks passed; it does **not** mean the bot has been deployed or verified against live Facebook, MongoDB, or PayMongo services.
