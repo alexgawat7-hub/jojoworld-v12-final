@@ -602,7 +602,7 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
   // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
-  const W = 800, H = 1480, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  const W = 800, H = 1320, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'], gold:['#ffd34f','#fff1a8','#ffb000','#9b4d00'], demon:['#ff2424','#ff8a8a','#a50000','#210000'] };
@@ -753,7 +753,14 @@ async function generateProfileCanvas(user) {
     ctx.textAlign='left';ctx.fillStyle=r.color;ctx.font='bold 11px Sans';ctx.fillText(r.label,x+27,y+21);
     ctx.fillStyle='#f5f7ff';ctx.font='bold 14px Sans';
     let val=String(r.value||'Not set');while(ctx.measureText(val).width>w-32&&val.length>7)val=val.slice(0,-4)+'...';
-    ctx.fillText(val,x+14,y+44);
+    if(r.label==='BADGE' && vip){
+      const pillW=Math.min(w-28,Math.max(96,ctx.measureText(val).width+34));
+      const pillX=x+(w-pillW)/2;
+      const vipGrad=ctx.createLinearGradient(pillX,y+29,pillX+pillW,y+51);vipGrad.addColorStop(0,'#fff0a0');vipGrad.addColorStop(.5,'#f4b400');vipGrad.addColorStop(1,'#9b5a08');
+      ctx.shadowColor='#ffd34f';ctx.shadowBlur=9;ctx.fillStyle='#111426';rr(pillX,y+29,pillW,23,11);ctx.fill();ctx.shadowBlur=0;
+      ctx.strokeStyle=vipGrad;ctx.lineWidth=1.5;rr(pillX,y+29,pillW,23,11);ctx.stroke();
+      ctx.fillStyle=vipGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('👑 '+val,pillX+pillW/2,y+45);
+    }else{ctx.textAlign='left';ctx.fillText(val,x+14,y+44);}
     ctx.restore();
   });
   // [UPGRADED V28] House showcase kept as its own compact panel.
@@ -794,31 +801,8 @@ async function generateProfileCanvas(user) {
     const showcase=String(user.giftsShowcase||'None yet');
     label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
-  // PROFILE TROPHY SHOWCASE (VISUAL): show real achievements calculated from this user's saved stats.
-  panel(28,1248,744,166,'#ffd34f');
-  heading('🏆 TROPHY SHOWCASE',52,1281);
-  const profileAchievements = getProfileAchievements(user);
-  const unlockedProfileAchievements = profileAchievements.filter(item => item.unlocked);
-  label(unlockedProfileAchievements.length+' / '+profileAchievements.length+' ACHIEVEMENTS UNLOCKED',748,1280,12,'#ffe7a0','right');
-  if (unlockedProfileAchievements.length) {
-    unlockedProfileAchievements.slice(0,6).forEach((item,index)=>{
-      const col=index%3,row=Math.floor(index/3),x=48+col*238,y=1300+row*43,w=226,h=35;
-      const accent=['#ffd34f','#70eaff','#d5a4ff','#7dffb0','#ff91c8','#ff9d68'][index%6];
-      ctx.save();
-      const trophyGrad=ctx.createLinearGradient(x,y,x+w,y+h);trophyGrad.addColorStop(0,'#1a294b');trophyGrad.addColorStop(1,'#090f21');
-      ctx.fillStyle=trophyGrad;rr(x,y,w,h,10);ctx.fill();
-      ctx.strokeStyle=accent;ctx.globalAlpha=.9;ctx.lineWidth=1.3;rr(x,y,w,h,10);ctx.stroke();ctx.globalAlpha=1;
-      ctx.shadowColor=accent;ctx.shadowBlur=8;ctx.font='18px Sans';ctx.textAlign='left';ctx.fillStyle=accent;ctx.fillText(item.icon,x+10,y+24);
-      ctx.shadowBlur=0;ctx.fillStyle='#f5f7ff';ctx.font='bold 12px Sans';
-      let trophyTitle=item.title;while(ctx.measureText(trophyTitle).width>w-48&&trophyTitle.length>7)trophyTitle=trophyTitle.slice(0,-4)+'...';
-      ctx.fillText(trophyTitle,x+37,y+22);ctx.restore();
-    });
-    if(unlockedProfileAchievements.length>6) label('+'+(unlockedProfileAchievements.length-6)+' MORE UNLOCKED',400,1402,11,'#c6d5f0','center');
-  } else {
-    label('Complete activities to earn your first trophy!',52,1330,15,'#c6d5f0');
-    label('Type ACHIEVEMENTS in Messenger to see your goals.',52,1357,13,'#8da8e4');
-  }
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1450);
+  // Gifts Showcase remains the final profile showcase; trophy panel removed as requested.
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1280);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
