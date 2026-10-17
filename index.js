@@ -3143,7 +3143,8 @@ ${renderGiftCatalog()}
           const owned = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
           const legacyOwned = (user.royalFrame || user.goldFrame) ? [user.royalFrame ? "Royalty Frame" : null, user.goldFrame ? "Gold Frame" : null].filter(Boolean) : [];
           if (!frameName || ![...owned, ...legacyOwned].includes(frameName)) { sendShopResult(psid, "❌ Hindi mo pa pag-aari ang frame na iyan. Bilhin muna sa Frame Shop."); continue; }
-          const old = { equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
+          const old = { equippedFrame: user.equippedFrame, frame: user.frame, ownedFrames: user.ownedFrames, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
+          user.ownedFrames = [...new Set([...owned, ...legacyOwned, frameName])];
           user.equippedFrame = frameName; user.frame = frameName;
           user.royalFrame = frameName === "Royalty Frame";
           user.goldFrame = frameName === "Gold Frame";
@@ -3220,7 +3221,7 @@ ${renderGiftCatalog()}
           };
           const item = catalog[product];
           if (!item) { sendShopResult(psid, "❌ Hindi mahanap ang frame. Pili ulit sa Frame Shop."); continue; }
-          const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
+          const ownedFrames = [...new Set([...(Array.isArray(user.ownedFrames) ? user.ownedFrames : []), ...((user.royalFrame || user.goldFrame) ? ["Royalty Frame"] : [])])];
           if (ownedFrames.includes(item.name) || (product === "goldframe" && user.goldFrame)) { sendShopResult(psid, "❌ Pag-aari mo na ang " + item.name + "! Puwede mo itong i-equip sa My Frames."); continue; }
           if ((Number(user.coins) || 0) < item.price) { sendShopResult(psid, "❌ Kulang ang coins! " + item.name + " costs " + item.price.toLocaleString("en-US") + " coins."); continue; }
           const old = { coins: user.coins, ownedFrames: user.ownedFrames, equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
