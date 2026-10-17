@@ -2982,6 +2982,7 @@ app.get('/ready', (req, res) => {
     mongodb: Boolean(MONGODB_URI),
     mongodbConnected: !MONGODB_URI || mongoose.connection.readyState === 1,
     metaAppSecret: Boolean(META_APP_SECRET),
+    aiNameArt: isAINameArtConfigured(),
     paymongoSecret: Boolean(PAYMONGO_SECRET),
     paymongoWebhookSecret: Boolean(PAYMONGO_WEBHOOK_SECRET)
   };
