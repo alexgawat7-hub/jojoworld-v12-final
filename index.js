@@ -15,6 +15,7 @@ const crypto = require('crypto');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
+const { isConfigured: isAINameArtConfigured, getCachedNameEffectArtwork, getNameEffectArtwork } = require('./v26/src/services/ai-name-art');
 
 // [GLOBAL TEXT CLEANER] Remove private-use icon glyphs and unsupported symbols
 // before dynamic user text is drawn on Canvas, for every account.
@@ -543,6 +544,18 @@ async function generateProfileCanvas(user) {
   ctx.fillStyle='#b9c8e8';ctx.font='15px Sans';ctx.fillText('VISUAL PROFILE - YOUR WORLD, YOUR STYLE',W/2,91);
   // [UPGRADED V28] Main identity card; avatar and text no longer overlap.
   panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
+  // Apply the pre-generated AI artwork behind the equipped name effect when available.
+  // Profile rendering only reads the cache; it never triggers a paid generation request.
+  const profileArtFile = effect !== 'none' ? getCachedNameEffectArtwork(effect, cacheDir) : null;
+  if (profileArtFile) {
+    try {
+      const profileArt = await loadImage(profileArtFile);
+      ctx.save(); rr(28,118,744,300,22); ctx.clip(); ctx.globalAlpha = 0.24;
+      const artScale = Math.max(744 / profileArt.width, 300 / profileArt.height);
+      ctx.drawImage(profileArt, 28 + (744 - profileArt.width * artScale) / 2, 118 + (300 - profileArt.height * artScale) / 2, profileArt.width * artScale, profileArt.height * artScale);
+      ctx.globalAlpha = 0.46; ctx.fillStyle = '#050a19'; ctx.fillRect(28,118,744,300); ctx.restore();
+    } catch (artError) { console.warn('[PROFILE AI ART] Could not load cached artwork:', artError.message); }
+  }
   const ax=150, ay=257;
   ctx.save();ctx.shadowColor=frameGlow;ctx.shadowBlur=frameName!=='None'?25:20;ctx.fillStyle='#091226';ctx.beginPath();ctx.arc(ax,ay,91,0,Math.PI*2);ctx.fill();ctx.restore();
   let photoShown=false;
@@ -892,12 +905,15 @@ async function generateShopProductPreview(product, user) {
   // depend on avatar photos or changing profile details, unlike frame and other item previews.
   const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
   const isNameEffectProduct = nameEffectProducts.includes(key);
+  // Generate each effect artwork lazily on its first shop preview; later previews reuse the cached PNG.
+  const aiArtworkFile = isNameEffectProduct ? await getNameEffectArtwork(key, cacheDir) : null;
+  const artworkCacheMode = aiArtworkFile ? 'ai' : (isNameEffectProduct && isAINameArtConfigured() ? 'fallback' : 'canvas');
   const previewOwner = String(user.psid || user.id || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
   const previewNameText = String(getPlainDisplayName(previewUser) || 'member');
   const previewName = previewNameText.replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'member';
   const previewNameHash = previewNameText.split('').reduce((hash, char) => ((hash * 31) + char.charCodeAt(0)) >>> 0, 0).toString(36);
   const previewProduct = String(product || 'item').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'item';
-  const file = path.join(cacheDir, 'shop_preview_v2_' + previewOwner + '_' + previewProduct + '_' + previewName + '_' + previewNameHash + '.jpg');
+  const file = path.join(cacheDir, 'shop_preview_v3_' + artworkCacheMode + '_' + previewOwner + '_' + previewProduct + '_' + previewName + '_' + previewNameHash + '.jpg');
   if (isNameEffectProduct && fs.existsSync(file)) return file;
 
   // Smooth visual mode: standard 800x900 product previews reduce rendering and upload time.
@@ -906,6 +922,17 @@ async function generateShopProductPreview(product, user) {
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#050510'); bg.addColorStop(0.5, '#11102b'); bg.addColorStop(1, '#030a17');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  if (aiArtworkFile && isNameEffectPreview) {
+    try {
+      const art = await loadImage(aiArtworkFile);
+      const artScale = Math.max(W / art.width, H / art.height);
+      ctx.save(); ctx.globalAlpha = 0.92;
+      ctx.drawImage(art, (W - art.width * artScale) / 2, (H - art.height * artScale) / 2, art.width * artScale, art.height * artScale);
+      const veil = ctx.createLinearGradient(0, 0, 0, H);
+      veil.addColorStop(0, 'rgba(3,5,16,0.78)'); veil.addColorStop(0.38, 'rgba(3,5,16,0.36)'); veil.addColorStop(0.72, 'rgba(3,5,16,0.46)'); veil.addColorStop(1, 'rgba(3,5,16,0.84)');
+      ctx.globalAlpha = 1; ctx.fillStyle = veil; ctx.fillRect(0, 0, W, H); ctx.restore();
+    } catch (artError) { console.warn('[SHOP AI ART] Could not load cached artwork:', artError.message); }
+  }
   for (let i = 0; i < 95; i++) {
     ctx.globalAlpha = 0.15 + (i % 4) * 0.08; ctx.fillStyle = [item.color, '#ff49e9', '#4af5ff'][i % 3];
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
