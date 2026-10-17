@@ -617,7 +617,22 @@ async function generateProfileCanvas(user) {
   for(let i=0;i<115;i++){ctx.globalAlpha=.10+(i%3)*.045;ctx.fillStyle=[colors[i%colors.length],'#4af5ff','#ff49e9'][i%3];ctx.beginPath();ctx.arc((i*127+19)%W,(i*83+27)%H,i%9===0?2:1,0,Math.PI*2);ctx.fill();}
   ctx.globalAlpha=1;
   const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};
-  const panel=(x,y,w,h,accent='#344777')=>{const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#121d3b');g.addColorStop(1,'#080e20');ctx.fillStyle=g;rr(x,y,w,h,22);ctx.fill();ctx.strokeStyle=accent;ctx.lineWidth=2;rr(x,y,w,h,22);ctx.stroke();};
+  // [ROYAL PROFILE POLISH] Reusable jewel-tone panels with layered borders, corner filigree, and soft accent glow.
+  const panel=(x,y,w,h,accent='#344777')=>{
+    ctx.save();
+    const g=ctx.createLinearGradient(x,y,x+w,y+h);g.addColorStop(0,'#172849');g.addColorStop(.42,'#0d1730');g.addColorStop(1,'#070c1c');
+    ctx.shadowColor=accent;ctx.shadowBlur=10;ctx.fillStyle=g;rr(x,y,w,h,22);ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle=accent;ctx.globalAlpha=.95;ctx.lineWidth=2;rr(x,y,w,h,22);ctx.stroke();
+    ctx.strokeStyle='#fff0b0';ctx.globalAlpha=.55;ctx.lineWidth=1;rr(x+5,y+5,w-10,h-10,17);ctx.stroke();
+    // Small metallic corner cuts give each section a premium frame without crowding content.
+    ctx.globalAlpha=.9;ctx.strokeStyle=accent;ctx.lineWidth=3;
+    const c=18;
+    ctx.beginPath();ctx.moveTo(x+12,y+c);ctx.lineTo(x+12,y+12);ctx.lineTo(x+c,y+12);
+    ctx.moveTo(x+w-c,y+12);ctx.lineTo(x+w-12,y+12);ctx.lineTo(x+w-12,y+c);
+    ctx.moveTo(x+12,y+h-c);ctx.lineTo(x+12,y+h-12);ctx.lineTo(x+c,y+h-12);
+    ctx.moveTo(x+w-c,y+h-12);ctx.lineTo(x+w-12,y+h-12);ctx.lineTo(x+w-12,y+h-c);ctx.stroke();
+    ctx.restore();
+  };
   const label=(value,x,y,size=16,color='#91a9d3',align='left')=>{ctx.textAlign=align;ctx.fillStyle=color;ctx.font=size+'px Sans';ctx.fillText(value,x,y);};
   const heading=(value,x,y)=>{ctx.textAlign='left';ctx.fillStyle='#f4f7ff';ctx.font='bold 21px Sans';ctx.fillText(value,x,y);};
   const displayName = getPlainDisplayName(user).slice(0, 26);
