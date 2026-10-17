@@ -711,6 +711,37 @@ async function generateProfileCanvas(user) {
   // [EMOJI-MARKED HEADER PLACEMENT] VIP name sits at the user's heart marker, to the right of the verified plate; non-VIP layout stays unchanged.
   // [HEADER FINAL LAYOUT] Center every user's display name so purchased text effects stay fully visible; VIP plates stack beneath it.
   const nameX=500, nameY=237, nameAlign='center', nameMaxWidth=390;
+  // [GLOBAL GLOWING NAMEPLATE] A premium neon-metal plaque sits behind EVERY user's display name.
+  // Its glow follows the equipped name effect, while the text effect itself remains unchanged.
+  {
+    const plateX=278, plateY=190, plateW=444, plateH=76, plateR=17;
+    const plateGlow=effectGlow[effect] || (goldFrame || royalFrame ? '#ffd34f' : (frameStyle.equipped ? frameGlow : '#55dfff'));
+    const platePath=()=>{
+      ctx.beginPath();ctx.moveTo(plateX+plateR,plateY);ctx.lineTo(plateX+plateW-plateR,plateY);
+      ctx.lineTo(plateX+plateW,plateY+plateR);ctx.lineTo(plateX+plateW,plateY+plateH-plateR);
+      ctx.lineTo(plateX+plateW-plateR,plateY+plateH);ctx.lineTo(plateX+plateR,plateY+plateH);
+      ctx.lineTo(plateX,plateY+plateH-plateR);ctx.lineTo(plateX,plateY+plateR);ctx.closePath();
+    };
+    ctx.save();
+    ctx.shadowColor=plateGlow;ctx.shadowBlur=effect==='none'?17:25;
+    const plateFill=ctx.createLinearGradient(plateX,plateY,plateX+plateW,plateY+plateH);
+    plateFill.addColorStop(0,'#07101f');plateFill.addColorStop(.24,'#172744');plateFill.addColorStop(.5,'#080e20');plateFill.addColorStop(.78,'#18213c');plateFill.addColorStop(1,'#060b18');
+    ctx.fillStyle=plateFill;platePath();ctx.fill();ctx.shadowBlur=0;
+    ctx.strokeStyle=plateGlow;ctx.globalAlpha=.95;ctx.lineWidth=2.5;platePath();ctx.stroke();
+    ctx.strokeStyle='#fff2c0';ctx.globalAlpha=.72;ctx.lineWidth=1;ctx.beginPath();
+    ctx.moveTo(plateX+22,plateY+8);ctx.lineTo(plateX+plateW-22,plateY+8);
+    ctx.moveTo(plateX+22,plateY+plateH-8);ctx.lineTo(plateX+plateW-22,plateY+plateH-8);ctx.stroke();
+    // Glowing corner cuts and jewel studs make it read as a designed plate, not a plain box.
+    ctx.globalAlpha=1;ctx.strokeStyle=plateGlow;ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(plateX+12,plateY+25);ctx.lineTo(plateX+12,plateY+12);ctx.lineTo(plateX+30,plateY+12);
+    ctx.moveTo(plateX+plateW-30,plateY+12);ctx.lineTo(plateX+plateW-12,plateY+12);ctx.lineTo(plateX+plateW-12,plateY+25);
+    ctx.moveTo(plateX+12,plateY+plateH-25);ctx.lineTo(plateX+12,plateY+plateH-12);ctx.lineTo(plateX+30,plateY+plateH-12);
+    ctx.moveTo(plateX+plateW-30,plateY+plateH-12);ctx.lineTo(plateX+plateW-12,plateY+plateH-12);ctx.lineTo(plateX+plateW-12,plateY+plateH-25);ctx.stroke();
+    for(const sx of [plateX+21,plateX+plateW-21]){
+      ctx.shadowColor=plateGlow;ctx.shadowBlur=9;ctx.fillStyle='#fff2b0';ctx.beginPath();ctx.arc(sx,plateY+plateH/2,3.2,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
   if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
