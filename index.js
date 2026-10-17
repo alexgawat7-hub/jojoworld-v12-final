@@ -673,16 +673,33 @@ async function generateProfileCanvas(user) {
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
   stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
-  panel(28,550,744,280,frameName!=='None'?frameColor:'#3c4d83');heading('PROFILE DETAILS',52,586);
+  const detailAccent = frameName!=='None' ? frameColor : (effect!=='none' ? (effectGlow[effect]||colors[0]) : '#668cff');
+  panel(28,550,744,280,detailAccent);
+  // PROFILE DETAILS redesign: six luminous mini-cards instead of a plain text list.
+  // Each detail gets its own accent marker and a clear label/value hierarchy.
+  heading('PROFILE DETAILS',52,586);
+  ctx.save();ctx.strokeStyle=detailAccent;ctx.globalAlpha=.55;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(52,599);ctx.lineTo(748,599);ctx.stroke();ctx.restore();
   const rows=[
-    ['NAME & AGE',cleanName(displayName)+(user.age?'  '+cleanText(user.age):'')],
-    ['LOCATION',cleanText(user.location||'Not set')],
-    ['ZODIAC',cleanText(user.zodiac||'Not set')],
-    ['RELATIONSHIP GOAL',cleanText(user.relationshipGoal||'Not set')],
-    ['BADGE',cleanText(user.badge||(vip?'VIP Elite':'Newbie'))],
-    ['EQUIPPED FRAME',frameName]
+    {label:'NAME & AGE',value:cleanName(displayName)+(user.age?'  '+cleanText(user.age):''),color:'#8edcff'},
+    {label:'LOCATION',value:cleanText(user.location||'Not set'),color:'#75e7d0'},
+    {label:'ZODIAC',value:cleanText(user.zodiac||'Not set'),color:'#c4a0ff'},
+    {label:'RELATIONSHIP GOAL',value:cleanText(user.relationshipGoal||'Not set'),color:'#ff91c8'},
+    {label:'BADGE',value:cleanText(user.badge||(vip?'VIP Elite':'Newbie')),color:vip?'#ffd34f':'#a9c8ff'},
+    {label:'EQUIPPED FRAME',value:frameName,color:frameStyle.equipped?frameColor:'#9fb4d6'}
   ];
-  rows.forEach((r,i)=>{const yy=622+i*32;if(i>0){ctx.strokeStyle='#27385f';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(52,yy-19);ctx.lineTo(748,yy-19);ctx.stroke();}label(r[0],54,yy,13,'#91a9d3');ctx.textAlign='right';ctx.fillStyle=r[0]==='EQUIPPED FRAME'&&frameName!=='None'?frameColor:'#f4f7ff';ctx.font='bold 15px Sans';let val=r[1];while(ctx.measureText(val).width>440&&val.length>8)val=val.slice(0,-4)+'...';ctx.fillText(val,746,yy);});
+  rows.forEach((r,i)=>{
+    const col=i%2,row=Math.floor(i/2),x=48+col*354,y=610+row*68,w=342,h=58;
+    ctx.save();
+    const cardGrad=ctx.createLinearGradient(x,y,x+w,y+h);cardGrad.addColorStop(0,'#172748');cardGrad.addColorStop(1,'#090f21');
+    ctx.fillStyle=cardGrad;rr(x,y,w,h,13);ctx.fill();
+    ctx.strokeStyle=r.color;ctx.globalAlpha=.75;ctx.lineWidth=1.4;rr(x,y,w,h,13);ctx.stroke();ctx.globalAlpha=1;
+    ctx.shadowColor=r.color;ctx.shadowBlur=10;ctx.fillStyle=r.color;ctx.beginPath();ctx.arc(x+15,y+17,3.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.textAlign='left';ctx.fillStyle=r.color;ctx.font='bold 11px Sans';ctx.fillText(r.label,x+27,y+21);
+    ctx.fillStyle='#f5f7ff';ctx.font='bold 14px Sans';
+    let val=String(r.value||'Not set');while(ctx.measureText(val).width>w-32&&val.length>7)val=val.slice(0,-4)+'...';
+    ctx.fillText(val,x+14,y+44);
+    ctx.restore();
+  });
   // [UPGRADED V28] House showcase kept as its own compact panel.
   const house=String(user.house||'none').toLowerCase(), houseConfig={kubo:{label:'KUBO',color:'#e4c18a'},bahay:{label:'BAHAY',color:'#8fe5ff'},mansion:{label:'MANSION',color:'#d9a5ff'},building:{label:'BUILDING',color:'#ffd34f'}},hc=houseConfig[house];
   panel(28,850,744,145,hc?hc.color:'#344777');heading('MY HOUSE',52,885);
