@@ -47,6 +47,22 @@ async function getNameEffectArtwork(effect, cacheDir, options = {}) {
   if (!file) return null;
   if (fs.existsSync(file)) return file;
 
+  // MongoDB/GridFS is the durable cache; restore artwork before considering paid generation.
+  if (typeof options.loadFromStore === 'function') {
+    try {
+      const stored = await options.loadFromStore(key);
+      const bytes = Buffer.isBuffer(stored) ? stored : (stored ? Buffer.from(stored) : null);
+      if (bytes && bytes.length >= 1024) {
+        await fs.promises.mkdir(cacheDir, { recursive: true });
+        await fs.promises.writeFile(file, bytes);
+        console.log('[AI NAME ART] Restored artwork from persistent storage:', key);
+        return file;
+      }
+    } catch (error) {
+      console.warn('[AI NAME ART] Persistent cache read failed for ' + key + ':', error.message);
+    }
+  }
+
   const apiKey = String(options.apiKey ?? process.env.OPENAI_API_KEY ?? '').trim();
   if (!apiKey) return null;
   const cooldownKey = key + ':' + apiKey.slice(-6);
@@ -91,6 +107,15 @@ async function getNameEffectArtwork(effect, cacheDir, options = {}) {
           if (!fs.existsSync(file)) throw error;
         } else throw error;
       });
+      if (typeof options.saveToStore === 'function') {
+        try {
+          await options.saveToStore(key, bytes);
+          console.log('[AI NAME ART] Saved artwork to persistent storage:', key);
+        } catch (storageError) {
+          // Local cache remains usable if durable storage is temporarily unavailable.
+          console.warn('[AI NAME ART] Persistent cache write failed for ' + key + ':', storageError.message);
+        }
+      }
       retryAfter.delete(cooldownKey);
       console.log('[AI NAME ART] Generated and cached artwork for effect:', key);
       return fs.existsSync(file) ? file : null;
