@@ -683,27 +683,27 @@ async function generateProfileCanvas(user) {
   if(effect==='sparkle'){nameFill=ctx.createLinearGradient(270,0,680,0);['#fffde8','#d7a4ff','#ffffff','#ffe58a','#f2d9ff'].forEach((col,i)=>nameFill.addColorStop(i/4,col));}
   // [FIXED V32] Reserve space on the right for the purchased verified emblem so long names cannot cover it.
   // [ROYAL HEADER ALIGNMENT] Keep every user's name inside a fixed column, clear of the VIP shield and stacked plates.
-  let nameFontSize=26;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>340&&nameFontSize>16){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
+  let nameFontSize=26;ctx.font='bold '+nameFontSize+'px Sans';while(ctx.measureText(displayName).width>370&&nameFontSize>16){nameFontSize--;ctx.font='bold '+nameFontSize+'px Sans';}
   const nameWidth=ctx.measureText(displayName).width;
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
   // [ROYAL HEADER ALIGNMENT V2] VIP layout stacks verified plate, centered name, and equipped-frame chip with clear gaps.
   // [EMOJI-MARKED HEADER PLACEMENT] VIP name sits at the user's heart marker, to the right of the verified plate; non-VIP layout stays unchanged.
   // [HEADER FINAL LAYOUT] Center every user's display name so purchased text effects stay fully visible; VIP plates stack beneath it.
-  const nameX=400, nameY=237, nameAlign='center', nameMaxWidth=520;
+  const nameX=500, nameY=237, nameAlign='center', nameMaxWidth=390;
   if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
   // [UPGRADED V34] Name effects are text-only; no extra glyphs or ornaments are placed beside the name.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
   // Premium SVG plate artwork is rendered by Canvas as transparent vector images.
-  // Keep the small VIP shield beside the name, and place the detailed plates side-by-side at the bottom.
+  // Keep the avatar in the left column; align the name and both premium plates in the right column, inside the identity panel.
   if(vip){
     try {
       const royalPlate = await loadImage(path.join(__dirname, 'assets', 'royal-verified-plate.svg'));
       ctx.save();
       ctx.shadowColor = '#55cfff'; ctx.shadowBlur = 12;
-      ctx.drawImage(royalPlate, 22, 292, 370, 106);
+      ctx.drawImage(royalPlate, 270, 330, 230, 66);
       ctx.restore();
     } catch (plateError) { console.warn('[PROFILE PLATE] Royal Verified artwork could not load:', plateError.message); }
     ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
@@ -717,12 +717,12 @@ async function generateProfileCanvas(user) {
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
   }
-  // Gold Frame artwork is shown on the right; name and footer remain above both plates.
+  // Gold Frame artwork sits beside Royal Verified in a shared bottom row, fully inside the identity panel.
   try {
     const goldPlate = await loadImage(path.join(__dirname, 'assets', 'gold-frame-plate.svg'));
     ctx.save();
     ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 12;
-    ctx.drawImage(goldPlate, 408, 292, 370, 106);
+    ctx.drawImage(goldPlate, 515, 330, 230, 66);
     ctx.restore();
   } catch (plateError) { console.warn('[PROFILE PLATE] Gold Frame artwork could not load:', plateError.message); }
   const frameLabel = frameName.toUpperCase();
