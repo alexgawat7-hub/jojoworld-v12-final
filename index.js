@@ -12,6 +12,8 @@ const fsExtra = require('fs-extra');
 const mongoose = require('mongoose');
 const axios = require('axios');
 const crypto = require('crypto');
+const { GridFSBucket } = require('mongodb');
+const { Readable } = require('stream');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
@@ -50,6 +52,47 @@ function getEquippedFrameStyle(user = {}) {
 // [ADDED] V28 cache directory for generated profile and leaderboard images.
 const cacheDir = path.join(__dirname, 'cache');
 fsExtra.ensureDirSync(cacheDir);
+
+// Durable AI name-art cache in MongoDB GridFS, separate from user/profile documents.
+// MongoDB is already the bot's configured database; no extra connection or API key is needed.
+const AI_NAME_ART_BUCKET = 'jojoWorldNameArt';
+let aiNameArtBucket = null;
+function getAINameArtBucket() {
+  if (!MONGODB_URI || mongoose.connection.readyState !== 1 || !mongoose.connection.db) return null;
+  if (!aiNameArtBucket) aiNameArtBucket = new GridFSBucket(mongoose.connection.db, { bucketName: AI_NAME_ART_BUCKET });
+  return aiNameArtBucket;
+}
+async function loadAINameArtFromMongo(effect) {
+  const bucket = getAINameArtBucket();
+  if (!bucket) return null;
+  const filename = 'ai_name_art_v1_' + String(effect) + '.png';
+  const files = await bucket.find({ filename }).sort({ uploadDate: -1 }).limit(1).toArray();
+  if (!files.length) return null;
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    const stream = bucket.openDownloadStream(files[0]._id);
+    stream.on('data', chunk => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+async function saveAINameArtToMongo(effect, bytes) {
+  const bucket = getAINameArtBucket();
+  if (!bucket) throw new Error('MongoDB GridFS is not connected');
+  const filename = 'ai_name_art_v1_' + String(effect) + '.png';
+  const existing = await bucket.find({ filename }).limit(1).toArray();
+  if (existing.length) return;
+  await new Promise((resolve, reject) => {
+    const stream = bucket.openUploadStream(filename, {
+      contentType: 'image/png',
+      metadata: { type: 'jojoworld-ai-name-art', effect: String(effect), version: 1 }
+    });
+    stream.on('error', reject);
+    stream.on('finish', resolve);
+    Readable.from(bytes).pipe(stream);
+  });
+}
+
 
 // Reuse decoded profile photos across profile and leaderboard renders.
 // This avoids repeatedly decoding the same base64 photo or downloading the same URL.
@@ -907,7 +950,7 @@ async function generateShopProductPreview(product, user) {
   const isNameEffectProduct = nameEffectProducts.includes(key);
   const isNameEffectPreview = isNameEffectProduct;
   // Generate each effect artwork lazily on its first shop preview; later previews reuse the cached PNG.
-  const aiArtworkFile = isNameEffectProduct ? await getNameEffectArtwork(key, cacheDir) : null;
+  const aiArtworkFile = isNameEffectProduct ? await getNameEffectArtwork(key, cacheDir, { loadFromStore: loadAINameArtFromMongo, saveToStore: saveAINameArtToMongo }) : null;
   const artworkCacheMode = aiArtworkFile ? 'ai' : (isNameEffectProduct && isAINameArtConfigured() ? 'fallback' : 'canvas');
   const previewOwner = String(user.psid || user.id || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
   const previewNameText = String(getPlainDisplayName(previewUser) || 'member');
@@ -2981,6 +3024,7 @@ app.get('/ready', (req, res) => {
     verifyToken: Boolean(VERIFY_TOKEN),
     mongodb: Boolean(MONGODB_URI),
     mongodbConnected: !MONGODB_URI || mongoose.connection.readyState === 1,
+    aiNameArtPersistentCache: Boolean(MONGODB_URI && mongoose.connection.readyState === 1),
     metaAppSecret: Boolean(META_APP_SECRET),
     aiNameArt: isAINameArtConfigured(),
     paymongoSecret: Boolean(PAYMONGO_SECRET),
