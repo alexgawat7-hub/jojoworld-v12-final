@@ -676,6 +676,26 @@ async function generateProfileCanvas(user) {
   }
   // [UPGRADED V29] Royalty frame: glowing layered rings, jewel points and a crown silhouette around the profile photo.
   if(royalFrame){ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();ctx.strokeStyle='#d99018';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();ctx.fillStyle='#ffdf69';for(let j=0;j<12;j++){const a=-Math.PI/2+j*Math.PI/6,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;ctx.beginPath();ctx.arc(rx,ry,j%3===0?5:2.5,0,Math.PI*2);ctx.fill();}ctx.beginPath();ctx.moveTo(ax-47,ay-88);ctx.lineTo(ax-38,ay-119);ctx.lineTo(ax-13,ay-97);ctx.lineTo(ax,ay-132);ctx.lineTo(ax+14,ay-97);ctx.lineTo(ax+39,ay-119);ctx.lineTo(ax+48,ay-88);ctx.closePath();ctx.fillStyle='#d99a25';ctx.fill();ctx.strokeStyle='#fff0a6';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#63eaff';ctx.beginPath();ctx.arc(ax,ay-113,5,0,Math.PI*2);ctx.fill();}ctx.restore();
+  if(goldFrame){
+    // [GOLD FRAME PROFILE ART] Ornate gold double-ring treatment for every user who owns/equips Gold Frame.
+    ctx.save();ctx.shadowColor='#ffc83d';ctx.shadowBlur=18;
+    ctx.strokeStyle='#fff1a8';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,98,0,Math.PI*2);ctx.stroke();
+    ctx.strokeStyle='#b97812';ctx.lineWidth=5;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*0.08,Math.PI*0.92);ctx.stroke();
+    ctx.strokeStyle='#ffd34f';ctx.lineWidth=3;ctx.beginPath();ctx.arc(ax,ay,105,Math.PI*1.08,Math.PI*1.92);ctx.stroke();
+    for(let j=0;j<16;j++){
+      const a=-Math.PI/2+j*Math.PI/8,rx=ax+Math.cos(a)*101,ry=ay+Math.sin(a)*101;
+      ctx.save();ctx.translate(rx,ry);ctx.rotate(a+Math.PI/4);
+      ctx.fillStyle=j%4===0?'#fff2a8':'#f5b52e';ctx.strokeStyle='#8b5307';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,-5.5);ctx.lineTo(4,0);ctx.lineTo(0,5.5);ctx.lineTo(-4,0);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+    }
+    // Matching gold flourishes above and below the portrait, without the Royalty crown.
+    for(const sy of [ay-113,ay+113]){
+      ctx.beginPath();ctx.moveTo(ax-42,sy);ctx.lineTo(ax-24,sy-7);ctx.lineTo(ax-12,sy);ctx.lineTo(ax,sy-10);ctx.lineTo(ax+12,sy);ctx.lineTo(ax+24,sy-7);ctx.lineTo(ax+42,sy);
+      ctx.strokeStyle='#fff0a6';ctx.lineWidth=3;ctx.stroke();
+      ctx.fillStyle='#ffd34f';ctx.beginPath();ctx.arc(ax,sy,4,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
   // [UPGRADED V32] Every purchased name effect gets a distinct gradient, glow and matching visual accent in the generated Visual Profile.
   ctx.textAlign='left';let nameFill=colors[0];
   if(effect!=='none'&&colors.length>1){nameFill=ctx.createLinearGradient(270,0,680,0);colors.forEach((col,i)=>nameFill.addColorStop(i/(colors.length-1),col));}
