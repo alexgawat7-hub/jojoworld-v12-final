@@ -602,7 +602,7 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
 async function generateProfileCanvas(user) {
   // [UPGRADED V28] Cleaner, aligned visual profile with separated sections and readable profile details.
   // Smooth visual mode: render at standard resolution to reduce CPU, memory, and image upload time.
-  const W = 800, H = 1320, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
+  const W = 800, H = 1360, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
   const effect = String(user.nameEffect || 'none').toLowerCase();
   const effectColors = { rainbow:['#ff5353','#ffad43','#fff05c','#4bff91','#4bdfff','#a57aff','#ff70dd'], sparkle:['#fff2a8','#d5a4ff','#ffffff'], heart:['#ff62b5','#ff9bd6','#ffd5ed'], fire:['#ff4d22','#ff8a3d','#ffe36a'], ice:['#78eaff','#d8fbff','#5b9dff'], neon:['#45ffff','#a77bff','#ff4fe1'], blossom:['#ff9cdb','#ffd4ed','#ff70a6'], dark:['#bd9bff','#5c4b8a','#e5dcff'], red:['#ff5252','#ff9b9b'], blue:['#54a8ff','#a6d8ff'], green:['#64f59b','#c2ffd9'], yellow:['#ffe65b','#fff4b0'], gold:['#ffd34f','#fff1a8','#ffb000','#9b4d00'], demon:['#ff2424','#ff8a8a','#a50000','#210000'] };
@@ -690,7 +690,7 @@ async function generateProfileCanvas(user) {
   // [ROYAL HEADER ALIGNMENT V2] VIP layout stacks verified plate, centered name, and equipped-frame chip with clear gaps.
   // [EMOJI-MARKED HEADER PLACEMENT] VIP name sits at the user's heart marker, to the right of the verified plate; non-VIP layout stays unchanged.
   // [HEADER FINAL LAYOUT] Center every user's display name so purchased text effects stay fully visible; VIP plates stack beneath it.
-  const nameX=400, nameY=183, nameAlign='center', nameMaxWidth=520;
+  const nameX=400, nameY=237, nameAlign='center', nameMaxWidth=520;
   if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
@@ -712,11 +712,11 @@ async function generateProfileCanvas(user) {
     // [EMOJI-REFERENCED FINAL PLACEMENT] Name remains centered; both VIP plates sit side-by-side on the row below it.
     const badgeGrad=ctx.createLinearGradient(260,215,480,251);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
     ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;
-    ctx.fillStyle='#080b17';rr(260,215,220,36,11);ctx.fill();
-    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2;rr(260,215,220,36,11);ctx.stroke();
-    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(265,220,210,26,8);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle=badgeGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',370,230);
-    ctx.fillStyle='#fff4c2';ctx.font='bold 8px Sans';ctx.fillText('VIP ELITE MEMBER',370,242);ctx.restore();
+    ctx.fillStyle='#080b17';rr(260,1280,220,36,11);ctx.fill();
+    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2;rr(260,1280,220,36,11);ctx.stroke();
+    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(265,1285,210,26,8);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=badgeGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',370,1295);
+    ctx.fillStyle='#fff4c2';ctx.font='bold 8px Sans';ctx.fillText('VIP ELITE MEMBER',370,1307);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
   const frameLabel = frameName.toUpperCase();
@@ -726,7 +726,7 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
   };
-  chip(vip?495:270,215,vip?210:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
+  chip(vip?495:270,1280,vip?210:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
@@ -821,7 +821,7 @@ async function generateProfileCanvas(user) {
     label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
   // Gifts Showcase remains the final profile showcase; trophy panel removed as requested.
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1280);
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1255);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
