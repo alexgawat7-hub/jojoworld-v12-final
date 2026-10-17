@@ -2188,7 +2188,7 @@ A new user successfully registered using your link! 🎁
           const frameIds = { frame: 'royaltyframe', diamondframe: 'diamondframe', neonframe: 'neonframe', silverframe: 'silverframe', goldframe: 'goldframe' };
           const frameNames = { frame: 'Royalty Frame', diamondframe: 'Diamond Frame', neonframe: 'Neon Frame', silverframe: 'Silver Frame', goldframe: 'Gold Frame' };
           const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
-          const frameAlreadyOwned = frameProducts.includes(product) && (ownedFrames.includes(frameNames[product]) || (product === 'frame' && (user.royalFrame || String(user.frame || '').toLowerCase().includes('royal'))) || (product === 'goldframe' && user.goldFrame));
+          const frameAlreadyOwned = frameProducts.includes(product) && (ownedFrames.includes(frameNames[product]) || (product === 'frame' && (user.royalFrame || String(user.frame || '').toLowerCase().includes('royal'))));
           const purchasePayload = product === 'vip' ? 'BUY_VIP'
             : frameProducts.includes(product) ? (frameAlreadyOwned ? 'EQUIP_FRAME ' + frameIds[product] : (product === 'frame' ? 'BUY_FRAME' : 'BUY_PROFILE_FRAME ' + product))
             : ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(product) ? 'EFFECT ' + product
@@ -3222,7 +3222,7 @@ ${renderGiftCatalog()}
           const item = catalog[product];
           if (!item) { sendShopResult(psid, "❌ Hindi mahanap ang frame. Pili ulit sa Frame Shop."); continue; }
           const ownedFrames = [...new Set([...(Array.isArray(user.ownedFrames) ? user.ownedFrames : []), ...((user.royalFrame || user.goldFrame) ? ["Royalty Frame"] : [])])];
-          if (ownedFrames.includes(item.name) || (product === "goldframe" && user.goldFrame)) { sendShopResult(psid, "❌ Pag-aari mo na ang " + item.name + "! Puwede mo itong i-equip sa My Frames."); continue; }
+          if (ownedFrames.includes(item.name)) { sendShopResult(psid, "❌ Pag-aari mo na ang " + item.name + "! Puwede mo itong i-equip sa My Frames."); continue; }
           if ((Number(user.coins) || 0) < item.price) { sendShopResult(psid, "❌ Kulang ang coins! " + item.name + " costs " + item.price.toLocaleString("en-US") + " coins."); continue; }
           const old = { coins: user.coins, ownedFrames: user.ownedFrames, equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
           user.coins = (Number(user.coins) || 0) - item.price;
