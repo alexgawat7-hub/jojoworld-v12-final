@@ -1070,10 +1070,6 @@ async function generateShopProductPreview(product, user) {
   const cfg = {
     vip: { title: 'VIP VERIFIED BADGE', price: '1,000 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'VIP ELITE • VERIFIED PROFILE' },
     frame: { title: 'ROYALTY PROFILE FRAME', price: '500 COINS', color: '#ffd34f', emoji: '👑', subtitle: 'ROYAL CROWN • GOLD FILIGREE' },
-    diamondframe: { title: 'DIAMOND PROFILE FRAME', price: '2,500 COINS', color: '#00ffff', emoji: '💎', subtitle: 'MYTHIC • CRYSTAL CYAN GLOW' },
-    neonframe: { title: 'NEON PROFILE FRAME', price: '2,000 COINS', color: '#ff00ff', emoji: '⚡', subtitle: 'EPIC • ELECTRIC MAGENTA GLOW' },
-    silverframe: { title: 'SILVER PROFILE FRAME', price: '1,500 COINS', color: '#dce8ff', emoji: '❄️', subtitle: 'ELITE • POLISHED SILVER TRIM' },
-    goldframe: { title: 'GOLD PROFILE FRAME', price: '3,500 COINS', color: '#ffd34f', emoji: '🏆', subtitle: 'GOLD METALLIC • ORNATE BORDER' },
     rainbow: { title: 'RAINBOW NAME EFFECT', price: '5,000 COINS', color: '#ff69e8', emoji: '🌈', subtitle: 'RARE • MULTICOLOR NAME' },
     sparkle: { title: 'SPARKLE NAME EFFECT', price: '10,000 COINS', color: '#d5a4ff', emoji: '✨', subtitle: 'MYTHIC • SHIMMERING NAME' },
     heart: { title: 'HEART NAME EFFECT', price: '2,500 COINS', color: '#ff62b5', emoji: '💖', subtitle: 'LOVE • PINK HEART STYLE' },
@@ -2181,12 +2177,12 @@ A new user successfully registered using your link! 🎁
         if (upperRaw.startsWith('PREVIEW_')) {
           const key = upperRaw.slice('PREVIEW_'.length).toLowerCase();
           const product = key.startsWith('house_') ? key.slice(6) : key;
-          const priceLabels = {vip:'1,000c',frame:'500c',diamondframe:'2,500c',neonframe:'2,000c',silverframe:'1,500c',goldframe:'3,500c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',gold:'4,000c',demon:'4,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
+          const priceLabels = {vip:'1,000c',frame:'500c',rainbow:'5,000c',sparkle:'10,000c',heart:'2,500c',fire:'2,500c',ice:'2,500c',neon:'3,000c',blossom:'2,000c',dark:'2,500c',red:'1,000c',blue:'1,000c',green:'1,000c',yellow:'1,000c',gold:'4,000c',demon:'4,000c',kubo:'1,500c',bahay:'5,000c',mansion:'15,000c',building:'40,000c'};
           if (!priceLabels[product]) { sendShopResult(psid, '❌ Hindi mahanap ang item. Pili ulit sa Shop.'); continue; }
           const image = await generateShopProductPreview(product, user);
-          const frameProducts = ['frame','diamondframe','neonframe','silverframe','goldframe'];
-          const frameIds = { frame: 'royaltyframe', diamondframe: 'diamondframe', neonframe: 'neonframe', silverframe: 'silverframe', goldframe: 'goldframe' };
-          const frameNames = { frame: 'Royalty Frame', diamondframe: 'Diamond Frame', neonframe: 'Neon Frame', silverframe: 'Silver Frame', goldframe: 'Gold Frame' };
+          const frameProducts = ['frame'];
+          const frameIds = { frame: 'royaltyframe' };
+          const frameNames = { frame: 'Royalty Frame' };
           const ownedFrames = Array.isArray(user.ownedFrames) ? user.ownedFrames : [];
           const frameAlreadyOwned = frameProducts.includes(product) && (ownedFrames.includes(frameNames[product]) || (product === 'frame' && (user.royalFrame || String(user.frame || '').toLowerCase().includes('royal'))));
           const purchasePayload = product === 'vip' ? 'BUY_VIP'
@@ -2197,7 +2193,7 @@ A new user successfully registered using your link! 🎁
           // Return to the Name Effects catalog after previewing an effect, not the main Shop.
           // Keep page 2 effects on page 2 so users can browse the remaining styles without extra taps.
           const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
-          const frameBackProducts = ['frame','diamondframe','neonframe','silverframe','goldframe'];
+          const frameBackProducts = ['frame'];
           const effectsBackPayload = ['green','yellow','gold','demon'].includes(product) ? 'SHOP_EFFECTS_MORE' : 'SHOP_EFFECTS';
           const backPayload = nameEffectProducts.includes(product) ? effectsBackPayload : (frameBackProducts.includes(product) ? 'SHOP_FRAMES' : 'SHOP');
           const backTitle = nameEffectProducts.includes(product) ? '↩️ Back to Name Effects' : (frameBackProducts.includes(product) ? '↩️ Back to Frames' : '🛍️ Back to Shop');
@@ -3110,12 +3106,8 @@ ${renderGiftCatalog()}
           const previousPage = user.currentPage;
           user.currentPage = "SHOP";
           if (!await saveUserToDB(psid)) { user.currentPage = previousPage; send(psid, "⚠️ Hindi mabuksan ang Frame Shop ngayon. Subukan ulit mamaya."); continue; }
-          send(psid, "🖼️ JOJOWORLD PROFILE FRAME SHOP\n━━━━━━━━━━━━━━━━━━━━\nBumili ng frame, tapos automatic itong ilalagay sa profile card mo. Ang nabili mo ay mase-save sa account mo at puwede mong i-equip ulit kahit kailan.\n\n👑 Royalty — 500c\n💎 Diamond — 2,500c\n⚡ Neon — 2,000c\n❄️ Silver — 1,500c\n🏆 Gold Frame — 3,500c", [
+          send(psid, "🖼️ JOJOWORLD PROFILE FRAME SHOP\n━━━━━━━━━━━━━━━━━━━━\n👑 Royalty Frame — 500 coins\n\nAng available dito ay ang original Royalty Frame. Inalis na ang mga bagong frame design na hindi tumutugma sa Mobile Legends avatar border.\n\nMase-save sa account mo ang frame na mabibili mo at puwede mo itong i-equip ulit.", [
             { content_type: "text", title: "👑 Royalty 500c", payload: "PREVIEW_FRAME" },
-            { content_type: "text", title: "💎 Diamond 2.5k", payload: "PREVIEW_DIAMONDFRAME" },
-            { content_type: "text", title: "⚡ Neon 2k", payload: "PREVIEW_NEONFRAME" },
-            { content_type: "text", title: "❄️ Silver 1.5k", payload: "PREVIEW_SILVERFRAME" },
-            { content_type: "text", title: "🏆 Gold Frame 3.5k", payload: "PREVIEW_GOLDFRAME" },
             { content_type: "text", title: "🎒 My Frames", payload: "MY_FRAMES" },
             { content_type: "text", title: "↩️ Back to Shop", payload: "SHOP" }
           ]);
@@ -3211,28 +3203,7 @@ ${renderGiftCatalog()}
           continue;
         }
 
-        if (upperRaw.startsWith("BUY_PROFILE_FRAME ")) {
-          const product = upperRaw.slice("BUY_PROFILE_FRAME ".length).trim().toLowerCase();
-          const catalog = {
-            diamondframe: { name: "Diamond Frame", price: 2500 },
-            neonframe: { name: "Neon Frame", price: 2000 },
-            silverframe: { name: "Silver Frame", price: 1500 },
-            goldframe: { name: "Gold Frame", price: 3500 }
-          };
-          const item = catalog[product];
-          if (!item) { sendShopResult(psid, "❌ Hindi mahanap ang frame. Pili ulit sa Frame Shop."); continue; }
-          const ownedFrames = [...new Set([...(Array.isArray(user.ownedFrames) ? user.ownedFrames : []), ...((user.royalFrame || user.goldFrame) ? ["Royalty Frame"] : [])])];
-          if (ownedFrames.includes(item.name)) { sendShopResult(psid, "❌ Pag-aari mo na ang " + item.name + "! Puwede mo itong i-equip sa My Frames."); continue; }
-          if ((Number(user.coins) || 0) < item.price) { sendShopResult(psid, "❌ Kulang ang coins! " + item.name + " costs " + item.price.toLocaleString("en-US") + " coins."); continue; }
-          const old = { coins: user.coins, ownedFrames: user.ownedFrames, equippedFrame: user.equippedFrame, frame: user.frame, royalFrame: user.royalFrame, goldFrame: user.goldFrame };
-          user.coins = (Number(user.coins) || 0) - item.price;
-          user.ownedFrames = [...new Set([...ownedFrames, item.name])];
-          user.equippedFrame = item.name; user.frame = item.name;
-          user.royalFrame = false; user.goldFrame = product === "goldframe";
-          if (!await saveUserToDB(psid)) { Object.assign(user, old); sendShopResult(psid, "⚠️ Hindi na-save ang frame purchase. Walang coins na ikakaltas."); continue; }
-          sendShopResult(psid, "🎉 Nabili at na-equip na ang " + item.name + "! Makikita ito sa profile card mo. Nasa My Frames na rin ito para magamit mo ulit.");
-          continue;
-        }
+        // New custom frame products were retired; only the original Royalty Frame remains for sale.
 
         if (upperRaw === "BUY_FRAME") {
           // [FIXED] Duplicate gold-frame validation happens before deducting coins.
