@@ -17,7 +17,7 @@ const { Readable } = require('stream');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
-const { isConfigured: isAINameArtConfigured, getCachedNameEffectArtwork, restoreCachedNameEffectArtwork, getNameEffectArtwork } = require('./v26/src/services/ai-name-art');
+const { isConfigured: isAINameArtConfigured, restoreCachedNameEffectArtwork, getNameEffectArtwork } = require('./v26/src/services/ai-name-art');
 
 // [GLOBAL TEXT CLEANER] Remove private-use icon glyphs and unsupported symbols
 // before dynamic user text is drawn on Canvas, for every account.
