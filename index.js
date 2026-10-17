@@ -1013,7 +1013,12 @@ async function generateShopProductPreview(product, user) {
   ctx.save(); ctx.shadowColor = '#ffbf3f'; ctx.shadowBlur = 22; ctx.fillStyle = ctaGrad; roundRect(175,790,450,52,20); ctx.fill(); ctx.restore();
   ctx.fillStyle = '#17112b'; ctx.font = 'bold 18px Sans'; ctx.fillText('✦ PREVIEW NOW  •  BUY WHEN READY ✦', 400, 822);
   ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('See how it looks on your profile before you buy', 400, 865);
-  const file = path.join(cacheDir, 'shop_preview_' + String(product).replace(/[^a-z0-9_-]/gi, '') + '.jpg');
+  // Keep previews isolated per user and displayed name. A shared product-only filename lets
+  // simultaneous requests overwrite each other's image before Messenger finishes uploading it.
+  const previewOwner = String(user.psid || user.id || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
+  const previewName = String(getPlainDisplayName(previewUser) || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
+  const previewProduct = String(product || 'item').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'item';
+  const file = path.join(cacheDir, 'shop_preview_' + previewOwner + '_' + previewProduct + '_' + previewName + '.jpg');
   await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
 }
 // [ADDED] [UPGRADED V28] Brief leaderboard data cache avoids a full MongoDB scan on rapid repeat taps.
