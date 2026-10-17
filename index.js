@@ -674,7 +674,8 @@ async function generateProfileCanvas(user) {
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
   // [ROYAL HEADER ALIGNMENT V2] VIP layout stacks verified plate, centered name, and equipped-frame chip with clear gaps.
   // [EMOJI-MARKED HEADER PLACEMENT] VIP name sits at the user's heart marker, to the right of the verified plate; non-VIP layout stays unchanged.
-  const nameX=vip?470:270, nameY=vip?242:183, nameAlign=vip?'center':'left', nameMaxWidth=vip?250:450;
+  // [HEADER FINAL LAYOUT] Center every user's display name so purchased text effects stay fully visible; VIP plates stack beneath it.
+  const nameX=400, nameY=183, nameAlign='center', nameMaxWidth=520;
   if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
@@ -693,13 +694,13 @@ async function generateProfileCanvas(user) {
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
     // Royal black-and-gold nameplate: shown only when the account owns the VIP badge.
-    const badgeGrad=ctx.createLinearGradient(270,158,535,208);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
-    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;
-    ctx.fillStyle='#080b17';rr(265,158,270,48,14);ctx.fill();
-    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2.5;rr(265,158,270,48,14);ctx.stroke();
-    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,164,258,36,10);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle=badgeGrad;ctx.font='bold 15px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,178);
-    ctx.fillStyle='#fff4c2';ctx.font='bold 10px Sans';ctx.fillText('VIP ELITE MEMBER',400,194);ctx.restore();
+    const badgeGrad=ctx.createLinearGradient(270,205,535,247);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
+    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=14;
+    ctx.fillStyle='#080b17';rr(265,205,270,42,13);ctx.fill();
+    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2.5;rr(265,205,270,42,13);ctx.stroke();
+    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,211,258,30,9);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=badgeGrad;ctx.font='bold 14px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,222);
+    ctx.fillStyle='#fff4c2';ctx.font='bold 9px Sans';ctx.fillText('VIP ELITE MEMBER',400,237);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
   const frameLabel = frameName.toUpperCase();
@@ -709,7 +710,7 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
   };
-  chip(vip?350:270,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
+  chip(vip?265:270,253,vip?270:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
