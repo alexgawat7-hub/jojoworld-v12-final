@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="200" viewBox="0 0 700 200">
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffbd0"/><stop offset=".18" stop-color="#f7c640"/><stop offset=".38" stop-color="#9a5107"/><stop offset=".55" stop-color="#ffe77a"/><stop offset=".76" stop-color="#c27a0b"/><stop offset="1" stop-color="#fff0a1"/></linearGradient>
+ <linearGradient id="black" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#242018"/><stop offset=".5" stop-color="#0a0b12"/><stop offset="1" stop-color="#38230b"/></linearGradient>
+</defs>
+<path d="M37 34 L78 18 L622 18 L663 34 L686 64 L672 143 L638 169 L62 169 L28 143 L14 64Z" fill="#090b12" stroke="url(#gold)" stroke-width="9"/>
+<path d="M47 42 L86 29 L614 29 L653 42 L669 68 L656 135 L628 155 L72 155 L44 135 L31 68Z" fill="url(#black)" stroke="#ffe58a" stroke-width="2.5"/>
+<path d="M63 49 L99 39 L601 39 L637 49 L650 72 L638 127 L618 142 L82 142 L62 127 L50 72Z" fill="none" stroke="url(#gold)" stroke-width="2"/>
+<!-- crown -->
+<path d="M297 53 L309 26 L329 43 L350 13 L371 43 L391 26 L403 53 L391 64 L309 64Z" fill="url(#gold)" stroke="#fff6bd" stroke-width="2.5" stroke-linejoin="round"/>
+<circle cx="350" cy="34" r="5" fill="#8cecff" stroke="#fff" stroke-width="1.5"/>
+<!-- laurel branches -->
+<g fill="url(#gold)" stroke="#fff0a0" stroke-width="1.2">
+ <path d="M112 125 Q85 91 111 62 Q119 84 112 96 Q131 83 139 91 Q133 111 112 125Z"/>
+ <path d="M128 132 Q107 105 135 79 Q142 101 134 111 Q155 101 161 111 Q149 127 128 132Z"/>
+ <path d="M588 125 Q615 91 589 62 Q581 84 588 96 Q569 83 561 91 Q567 111 588 125Z"/>
+ <path d="M572 132 Q593 105 565 79 Q558 101 566 111 Q545 101 539 111 Q551 127 572 132Z"/>
+</g>
+<path d="M110 133 Q350 159 590 133" fill="none" stroke="url(#gold)" stroke-width="3"/>
+<text x="350" y="91" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="32" font-weight="900" letter-spacing="3" fill="#fff2a0" stroke="#6e3900" stroke-width="1.8" paint-order="stroke">GOLD FRAME</text>
+<text x="350" y="119" text-anchor="middle" font-family="DejaVu Sans, sans-serif" font-size="15" font-weight="700" letter-spacing="4" fill="#e5c66a">LEGENDARY EDITION</text>
+<path d="M226 130 H474" stroke="url(#gold)" stroke-width="2"/>
+<path d="M213 130 l8 -6 l8 6 l-8 6Z M471 130 l8 -6 l8 6 l-8 6Z" fill="#fff1a0"/>
+<g fill="#fff0a0"><circle cx="57" cy="67" r="4"/><circle cx="643" cy="67" r="4"/><circle cx="70" cy="130" r="3"/><circle cx="630" cy="130" r="3"/></g>
+</svg>
