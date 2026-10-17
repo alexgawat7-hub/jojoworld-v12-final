@@ -480,7 +480,7 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
     heart(left+textWidth*.10,top,Math.max(13,fontSize*.30),'#ff62b5');heart(right-textWidth*.10,top-5,Math.max(11,fontSize*.25),'#ffd5ed');
     heart(left+textWidth*.83,mid,Math.max(8,fontSize*.18),'#ff9bd6');
   } else if(effect==='fire'||effect==='demon'){
-    positions.forEach((px,i)=>{const h=fontSize*.42;ctx.fillStyle=i%2?'#ffcf39':'#ff4a16';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=12;ctx.beginPath();ctx.moveTo(px,y-fontSize*.08);ctx.quadraticCurveTo(px-h*.8,y-fontSize*.42,px,y-fontSize*.68);ctx.quadraticCurveTo(px+h*.85,y-fontSize*.40,px+h*.25,y-fontSize*.12);ctx.closePath();ctx.fill();if(effect==='demon'){ctx.fillStyle='#fff0f0';ctx.beginPath();ctx.arc(px,y-fontSize*.35,2.2,0,Math.PI*2);ctx.fill();}});
+    positions.forEach((px,i)=>{const h=fontSize*.42;ctx.fillStyle=effect==='demon'?(i%2?'#ff2424':'#a50000'):(i%2?'#ffcf39':'#ff4a16');ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=effect==='demon'?16:12;ctx.beginPath();ctx.moveTo(px,y-fontSize*.08);ctx.quadraticCurveTo(px-h*.8,y-fontSize*.42,px,y-fontSize*.68);ctx.quadraticCurveTo(px+h*.85,y-fontSize*.40,px+h*.25,y-fontSize*.12);ctx.closePath();ctx.fill();if(effect==='demon'){ctx.fillStyle='#fff0f0';ctx.beginPath();ctx.arc(px,y-fontSize*.35,2.2,0,Math.PI*2);ctx.fill();}});
   } else if(effect==='ice'){
     positions.forEach((px,i)=>snowflake(px,top-(i%2)*5,Math.max(6,fontSize*.15),'#dffaff'));
   } else if(effect==='neon'){
