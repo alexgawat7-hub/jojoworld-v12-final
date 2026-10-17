@@ -40,7 +40,7 @@ test('uses an already-cached effect image without requiring an API key', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-ai-art-'));
   try {
     const cached = path.join(dir, 'ai_name_art_v1_gold.png');
-    fs.writeFileSync(cached, Buffer.from('cached artwork'));
+    fs.writeFileSync(cached, Buffer.alloc(2048, 7));
     assert.equal(getCachedNameEffectArtwork('gold', dir), cached);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -62,6 +62,25 @@ test('restores artwork from persistent storage without an API key', async () => 
     });
     assert.equal(result, path.join(dir, 'ai_name_art_v1_gold.png'));
     assert.deepEqual(fs.readFileSync(result), stored);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('discards an incomplete local cache and restores the durable copy', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-ai-art-recover-'));
+  const local = path.join(dir, 'ai_name_art_v1_gold.png');
+  const stored = Buffer.alloc(2048, 5);
+  try {
+    fs.writeFileSync(local, Buffer.from('partial'));
+    const result = await getNameEffectArtwork('gold', dir, {
+      apiKey: '',
+      loadFromStore: async () => stored,
+      client: { post: () => { throw new Error('should not call provider'); } }
+    });
+    assert.equal(result, local);
+    assert.deepEqual(fs.readFileSync(local), stored);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
