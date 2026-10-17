@@ -50,6 +50,30 @@ function getCachedNameEffectArtwork(effect, cacheDir) {
   return hasUsableCachedArtwork(file) ? file : null;
 }
 
+// Restore a previously saved image without ever calling the paid image provider.
+async function restoreCachedNameEffectArtwork(effect, cacheDir, options = {}) {
+  const file = cachedArtworkPath(effect, cacheDir);
+  if (!file) return null;
+  if (hasUsableCachedArtwork(file)) return file;
+  if (fs.existsSync(file)) {
+    try { await fs.promises.unlink(file); }
+    catch (error) { console.warn('[AI NAME ART] Could not remove incomplete local cache for ' + String(effect) + ':', error.message); }
+  }
+  if (typeof options.loadFromStore !== 'function') return null;
+  try {
+    const stored = await options.loadFromStore(String(effect).toLowerCase());
+    const bytes = Buffer.isBuffer(stored) ? stored : (stored ? Buffer.from(stored) : null);
+    if (!bytes || bytes.length < 1024) return null;
+    await fs.promises.mkdir(cacheDir, { recursive: true });
+    await fs.promises.writeFile(file, bytes);
+    console.log('[AI NAME ART] Restored profile artwork from persistent storage:', String(effect).toLowerCase());
+    return hasUsableCachedArtwork(file) ? file : null;
+  } catch (error) {
+    console.warn('[AI NAME ART] Profile artwork restore failed for ' + String(effect) + ':', error.message);
+    return null;
+  }
+}
+
 async function getNameEffectArtwork(effect, cacheDir, options = {}) {
   const key = String(effect || '').toLowerCase();
   const file = cachedArtworkPath(key, cacheDir);
@@ -150,4 +174,4 @@ async function getNameEffectArtwork(effect, cacheDir, options = {}) {
   return task;
 }
 
-module.exports = { EFFECT_PROMPTS, isConfigured, getCachedNameEffectArtwork, getNameEffectArtwork };
+module.exports = { EFFECT_PROMPTS, isConfigured, getCachedNameEffectArtwork, restoreCachedNameEffectArtwork, getNameEffectArtwork };
