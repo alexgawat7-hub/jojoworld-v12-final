@@ -703,7 +703,7 @@ async function generateProfileCanvas(user) {
       const royalPlate = await loadImage(path.join(__dirname, 'assets', 'royal-verified-plate.svg'));
       ctx.save();
       ctx.shadowColor = '#55cfff'; ctx.shadowBlur = 12;
-      ctx.drawImage(royalPlate, 22, 1242, 370, 106);
+      ctx.drawImage(royalPlate, 22, 292, 370, 106);
       ctx.restore();
     } catch (plateError) { console.warn('[PROFILE PLATE] Royal Verified artwork could not load:', plateError.message); }
     ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
@@ -722,7 +722,7 @@ async function generateProfileCanvas(user) {
     const goldPlate = await loadImage(path.join(__dirname, 'assets', 'gold-frame-plate.svg'));
     ctx.save();
     ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 12;
-    ctx.drawImage(goldPlate, 408, 1242, 370, 106);
+    ctx.drawImage(goldPlate, 408, 292, 370, 106);
     ctx.restore();
   } catch (plateError) { console.warn('[PROFILE PLATE] Gold Frame artwork could not load:', plateError.message); }
   const frameLabel = frameName.toUpperCase();
