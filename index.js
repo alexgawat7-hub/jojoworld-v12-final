@@ -882,6 +882,18 @@ async function generateShopProductPreview(product, user) {
   else if (['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(key)) previewUser.nameEffect = key;
   else if (['kubo','bahay','mansion','building'].includes(key)) previewUser.house = key;
 
+  // Reuse finished name-effect artwork for the same user/name/effect. These previews do not
+  // depend on avatar photos or changing profile details, unlike frame and other item previews.
+  const nameEffectProducts = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'];
+  const isNameEffectProduct = nameEffectProducts.includes(key);
+  const previewOwner = String(user.psid || user.id || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
+  const previewNameText = String(getPlainDisplayName(previewUser) || 'member');
+  const previewName = previewNameText.replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'member';
+  const previewNameHash = previewNameText.split('').reduce((hash, char) => ((hash * 31) + char.charCodeAt(0)) >>> 0, 0).toString(36);
+  const previewProduct = String(product || 'item').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'item';
+  const file = path.join(cacheDir, 'shop_preview_v2_' + previewOwner + '_' + previewProduct + '_' + previewName + '_' + previewNameHash + '.jpg');
+  if (isNameEffectProduct && fs.existsSync(file)) return file;
+
   // Smooth visual mode: standard 800x900 product previews reduce rendering and upload time.
   const W = 800, H = 900, RENDER_SCALE = 1, canvas = createCanvas(W * RENDER_SCALE, H * RENDER_SCALE), ctx = canvas.getContext('2d');
   ctx.scale(RENDER_SCALE, RENDER_SCALE);
@@ -893,7 +905,7 @@ async function generateShopProductPreview(product, user) {
     ctx.beginPath(); ctx.arc((i * 127 + 19) % W, (i * 83 + 27) % H, i % 8 === 0 ? 3 : 1.2, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  const isNameEffectPreview = ['rainbow','sparkle','heart','fire','ice','neon','blossom','dark','red','blue','green','yellow','gold','demon'].includes(key);
+  const isNameEffectPreview = isNameEffectProduct;
   // Name-effect previews intentionally have no surrounding box: only the name receives the cosmetic.
   const roundRect = (x,y,w,h,r) => { ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); };
   const borderGlow = ctx.createLinearGradient(18, 18, W-18, H-18); borderGlow.addColorStop(0, item.color); borderGlow.addColorStop(0.48, '#7b5cff'); borderGlow.addColorStop(1, '#ff4fd8');
@@ -1013,12 +1025,7 @@ async function generateShopProductPreview(product, user) {
   ctx.save(); ctx.shadowColor = '#ffbf3f'; ctx.shadowBlur = 22; ctx.fillStyle = ctaGrad; roundRect(175,790,450,52,20); ctx.fill(); ctx.restore();
   ctx.fillStyle = '#17112b'; ctx.font = 'bold 18px Sans'; ctx.fillText('✦ PREVIEW NOW  •  BUY WHEN READY ✦', 400, 822);
   ctx.fillStyle = '#a7bad1'; ctx.font = '13px Sans'; ctx.fillText('See how it looks on your profile before you buy', 400, 865);
-  // Keep previews isolated per user and displayed name. A shared product-only filename lets
-  // simultaneous requests overwrite each other's image before Messenger finishes uploading it.
-  const previewOwner = String(user.psid || user.id || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
-  const previewName = String(getPlainDisplayName(previewUser) || 'member').replace(/[^a-z0-9_-]/gi, '').slice(0, 48) || 'member';
-  const previewProduct = String(product || 'item').replace(/[^a-z0-9_-]/gi, '').slice(0, 32) || 'item';
-  const file = path.join(cacheDir, 'shop_preview_' + previewOwner + '_' + previewProduct + '_' + previewName + '.jpg');
+  // Name-effect previews are safely reused on later requests; other item previews are refreshed.
   await fsExtra.writeFile(file, canvas.toBuffer('image/jpeg', { quality: 0.9 })); return file;
 }
 // [ADDED] [UPGRADED V28] Brief leaderboard data cache avoids a full MongoDB scan on rapid repeat taps.
