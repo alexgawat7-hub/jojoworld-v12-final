@@ -694,13 +694,14 @@ async function generateProfileCanvas(user) {
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
     // Royal black-and-gold nameplate: shown only when the account owns the VIP badge.
-    const badgeGrad=ctx.createLinearGradient(270,205,535,247);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
-    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=14;
-    ctx.fillStyle='#080b17';rr(265,205,270,42,13);ctx.fill();
-    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2.5;rr(265,205,270,42,13);ctx.stroke();
-    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,211,258,30,9);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle=badgeGrad;ctx.font='bold 14px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,222);
-    ctx.fillStyle='#fff4c2';ctx.font='bold 9px Sans';ctx.fillText('VIP ELITE MEMBER',400,237);ctx.restore();
+    // [EMOJI-REFERENCED FINAL PLACEMENT] Name remains centered; both VIP plates sit side-by-side on the row below it.
+    const badgeGrad=ctx.createLinearGradient(260,215,480,251);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
+    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;
+    ctx.fillStyle='#080b17';rr(260,215,220,36,11);ctx.fill();
+    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2;rr(260,215,220,36,11);ctx.stroke();
+    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(265,220,210,26,8);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=badgeGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',370,230);
+    ctx.fillStyle='#fff4c2';ctx.font='bold 8px Sans';ctx.fillText('VIP ELITE MEMBER',370,242);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
   const frameLabel = frameName.toUpperCase();
@@ -710,7 +711,7 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
   };
-  chip(vip?265:270,253,vip?270:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
+  chip(vip?495:270,215,vip?210:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
