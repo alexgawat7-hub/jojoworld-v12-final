@@ -696,11 +696,19 @@ async function generateProfileCanvas(user) {
   }
   // [UPGRADED V34] Name effects are text-only; no extra glyphs or ornaments are placed beside the name.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
+  // Premium SVG plate artwork is rendered by Canvas as transparent vector images.
+  // Keep the small VIP shield beside the name, and place the detailed plates side-by-side at the bottom.
   if(vip){
+    try {
+      const royalPlate = await loadImage(path.join(__dirname, 'assets', 'royal-verified-plate.svg'));
+      ctx.save();
+      ctx.shadowColor = '#55cfff'; ctx.shadowBlur = 12;
+      ctx.drawImage(royalPlate, 22, 1242, 370, 106);
+      ctx.restore();
+    } catch (plateError) { console.warn('[PROFILE PLATE] Royal Verified artwork could not load:', plateError.message); }
     ctx.save();ctx.translate(721,158);ctx.shadowColor='#ffd34f';ctx.shadowBlur=22;
     const shield=()=>{ctx.beginPath();ctx.moveTo(0,-27);ctx.lineTo(23,-17);ctx.lineTo(21,7);ctx.quadraticCurveTo(13,23,0,30);ctx.quadraticCurveTo(-13,23,-21,7);ctx.lineTo(-23,-17);ctx.closePath();};
     const gold=ctx.createLinearGradient(-23,-27,23,30);gold.addColorStop(0,'#fffbd0');gold.addColorStop(.38,'#ffd447');gold.addColorStop(.72,'#f4a900');gold.addColorStop(1,'#a95b05');ctx.fillStyle=gold;shield();ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='#fff8cf';ctx.lineWidth=2.5;shield();ctx.stroke();
-    // Royal crown topper, gem studs, and a double outline make the purchased badge feel elite.
     ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;ctx.fillStyle='#f6b900';ctx.strokeStyle='#fff4b0';ctx.lineWidth=1.8;
     ctx.beginPath();ctx.moveTo(-18,-25);ctx.lineTo(-16,-40);ctx.lineTo(-7,-31);ctx.lineTo(0,-44);ctx.lineTo(8,-31);ctx.lineTo(17,-40);ctx.lineTo(19,-25);ctx.closePath();ctx.fill();ctx.stroke();
     ctx.fillStyle='#64eaff';ctx.beginPath();ctx.arc(0,-35,3,0,Math.PI*2);ctx.fill();
@@ -708,25 +716,16 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle='#fff5c2';for(const gx of [-15,15]){ctx.beginPath();ctx.arc(gx,-9,2.2,0,Math.PI*2);ctx.fill();}
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
-    // Royal black-and-gold nameplate: shown only when the account owns the VIP badge.
-    // [EMOJI-REFERENCED FINAL PLACEMENT] Name remains centered; both VIP plates sit side-by-side on the row below it.
-    const badgeGrad=ctx.createLinearGradient(260,215,480,251);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
-    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=12;
-    ctx.fillStyle='#080b17';rr(260,1280,220,36,11);ctx.fill();
-    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2;rr(260,1280,220,36,11);ctx.stroke();
-    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(265,1285,210,26,8);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle=badgeGrad;ctx.font='bold 12px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',370,1295);
-    ctx.fillStyle='#fff4c2';ctx.font='bold 8px Sans';ctx.fillText('VIP ELITE MEMBER',370,1307);ctx.restore();
   }
-  // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
+  // Gold Frame artwork is shown on the right; name and footer remain above both plates.
+  try {
+    const goldPlate = await loadImage(path.join(__dirname, 'assets', 'gold-frame-plate.svg'));
+    ctx.save();
+    ctx.shadowColor = '#ffd34f'; ctx.shadowBlur = 12;
+    ctx.drawImage(goldPlate, 408, 1242, 370, 106);
+    ctx.restore();
+  } catch (plateError) { console.warn('[PROFILE PLATE] Gold Frame artwork could not load:', plateError.message); }
   const frameLabel = frameName.toUpperCase();
-  const chip = (x,y,w,textValue,color) => {
-    ctx.save();ctx.shadowColor=color;ctx.shadowBlur=10;
-    const grad=ctx.createLinearGradient(x,y,x+w,y+30);grad.addColorStop(0,'#182849');grad.addColorStop(1,'#080f22');
-    ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
-    ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
-  };
-  chip(vip?495:270,1280,vip?210:240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
@@ -821,7 +820,7 @@ async function generateProfileCanvas(user) {
     label(showcase!=='None yet'?cleanText(showcase):'No gifts yet - be the first!',426,1124,13,'#c6d5f0');
   }
   // Gifts Showcase remains the final profile showcase; trophy panel removed as requested.
-  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1255);
+  ctx.textAlign='center';ctx.fillStyle='#8da8e4';ctx.font='bold 14px Sans';ctx.fillText('JOJOWORLD - PROFILE & STATS',400,1218);
   const file=path.join(cacheDir,'profile_'+String(user.id||user.psid||'user').replace(/[^a-zA-Z0-9_-]/g,'')+'.jpg');
   // JPEG is much smaller than PNG for this large canvas, reducing encode and Messenger upload time.
   await fsExtra.writeFile(file,canvas.toBuffer('image/jpeg',{quality:0.9}));return file;
