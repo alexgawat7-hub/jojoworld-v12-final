@@ -673,7 +673,8 @@ async function generateProfileCanvas(user) {
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
   // [ROYAL HEADER ALIGNMENT V2] VIP layout stacks verified plate, centered name, and equipped-frame chip with clear gaps.
-  const nameX=vip?400:270, nameY=vip?242:183, nameAlign=vip?'center':'left', nameMaxWidth=vip?270:450;
+  // [EMOJI-MARKED HEADER PLACEMENT] VIP name sits at the user's heart marker, to the right of the verified plate; non-VIP layout stays unchanged.
+  const nameX=vip?470:270, nameY=vip?242:183, nameAlign=vip?'center':'left', nameMaxWidth=vip?250:450;
   if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
     ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
@@ -708,7 +709,7 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
   };
-  chip(270,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
+  chip(vip?350:270,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
