@@ -672,8 +672,10 @@ async function generateProfileCanvas(user) {
   const nameWidth=ctx.measureText(displayName).width;
   const effectGlow={rainbow:'#ff70dd',sparkle:'#d7a4ff',heart:'#ff62b5',fire:'#ff4d22',ice:'#78eaff',neon:'#45ffff',blossom:'#ff9cdb',dark:'#9b7cff',red:'#ff5252',blue:'#54a8ff',green:'#64f59b',yellow:'#ffe65b'};
   // [UPGRADED V33] Purchased premium plain-text effects render in uppercase with glow and outline.
-  if (!drawPremiumNameEffect(ctx, displayName, 270, 183, vip ? 405 : 450, effect, 'left')) {
-    ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.fillText(displayName,270,178);ctx.shadowBlur=0;
+  // [ROYAL HEADER ALIGNMENT V2] VIP layout stacks verified plate, centered name, and equipped-frame chip with clear gaps.
+  const nameX=vip?400:270, nameY=vip?242:183, nameAlign=vip?'center':'left', nameMaxWidth=vip?270:450;
+  if (!drawPremiumNameEffect(ctx, displayName, nameX, nameY, nameMaxWidth, effect, nameAlign)) {
+    ctx.fillStyle=nameFill;ctx.shadowColor=effectGlow[effect]||colors[0];ctx.shadowBlur=effect==='none'?0:(effect==='sparkle'||effect==='neon'?25:18);ctx.textAlign=nameAlign;ctx.fillText(displayName,nameX,nameY);ctx.shadowBlur=0;
   }
   // [UPGRADED V34] Name effects are text-only; no extra glyphs or ornaments are placed beside the name.
   // It is rendered directly into the profile image whenever the user owns the VIP shop item.
@@ -690,13 +692,13 @@ async function generateProfileCanvas(user) {
     ctx.strokeStyle='#ffffff';ctx.lineWidth=4.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(-10,1);ctx.lineTo(-3,9);ctx.lineTo(12,-9);ctx.stroke();
     ctx.restore();
     // Royal black-and-gold nameplate: shown only when the account owns the VIP badge.
-    const badgeGrad=ctx.createLinearGradient(270,198,535,248);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
-    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=20;
-    ctx.fillStyle='#080b17';rr(265,196,270,52,15);ctx.fill();
-    ctx.strokeStyle=badgeGrad;ctx.lineWidth=3;rr(265,196,270,52,15);ctx.stroke();
-    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,202,258,40,11);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle=badgeGrad;ctx.font='bold 16px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,219);
-    ctx.fillStyle='#fff4c2';ctx.font='bold 10px Sans';ctx.fillText('VIP ELITE MEMBER',400,235);ctx.restore();
+    const badgeGrad=ctx.createLinearGradient(270,158,535,208);badgeGrad.addColorStop(0,'#fffbd0');badgeGrad.addColorStop(.22,'#ffd447');badgeGrad.addColorStop(.5,'#f4a900');badgeGrad.addColorStop(.78,'#a95b05');badgeGrad.addColorStop(1,'#fff0a0');
+    ctx.save();ctx.shadowColor='#ffd34f';ctx.shadowBlur=16;
+    ctx.fillStyle='#080b17';rr(265,158,270,48,14);ctx.fill();
+    ctx.strokeStyle=badgeGrad;ctx.lineWidth=2.5;rr(265,158,270,48,14);ctx.stroke();
+    ctx.strokeStyle='#fff0a0';ctx.lineWidth=1;rr(271,164,258,36,10);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=badgeGrad;ctx.font='bold 15px Sans';ctx.textAlign='center';ctx.fillText('ROYAL VERIFIED',400,178);
+    ctx.fillStyle='#fff4c2';ctx.font='bold 10px Sans';ctx.fillText('VIP ELITE MEMBER',400,194);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
   const frameLabel = frameName.toUpperCase();
