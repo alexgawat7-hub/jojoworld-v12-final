@@ -490,7 +490,13 @@ function drawPremiumNameEffect(ctx, name, x, y, maxWidth, effectKey, align = 'le
   } else if(effect==='rainbow'){
     positions.forEach((px,i)=>sparkle(px,top-(i%2)*6,Math.max(4,fontSize*.10),['#ff5353','#fff05c','#4bff91','#a57aff'][i]));
   } else if(effect==='gold'){
+    // Royal gold gets gem-cut sparkles plus a tiny crown silhouette, distinct from the generic sparkle effect.
     positions.forEach((px,i)=>sparkle(px,top-(i%2)*5,Math.max(4,fontSize*.10),'#fff1a6'));
+    const crownX = x, crownY = top - fontSize*.10, crownW = Math.max(22, Math.min(42, textWidth*.16)), crownH = Math.max(12, fontSize*.24);
+    ctx.save(); ctx.translate(crownX, crownY); ctx.shadowColor='#ffd34f'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.moveTo(-crownW/2,crownH*.35); ctx.lineTo(-crownW*.42,-crownH*.45); ctx.lineTo(-crownW*.12,crownH*.02); ctx.lineTo(0,-crownH*.72); ctx.lineTo(crownW*.14,crownH*.02); ctx.lineTo(crownW*.43,-crownH*.45); ctx.lineTo(crownW/2,crownH*.35); ctx.closePath();
+    ctx.fillStyle='#ffd34f'; ctx.fill(); ctx.strokeStyle='#fff7c2'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.fillStyle='#65eaff'; ctx.beginPath(); ctx.arc(0,crownH*.10,Math.max(1.5,crownH*.09),0,Math.PI*2); ctx.fill(); ctx.restore();
   } else if(effect==='dark'){
     positions.forEach((px,i)=>{dot(px,top-(i%2)*5,Math.max(2,fontSize*.055),'#b29aff');dot(px+6,top+7,Math.max(1.5,fontSize*.035),'#5c4b8a');});
   } else {
