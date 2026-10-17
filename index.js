@@ -824,7 +824,7 @@ async function generateProfileCanvas(user) {
 }
 async function generateShopCanvas() {
   // Reuse the static shop poster after its first render to keep repeat SHOP commands fast.
-  const file = path.join(cacheDir, 'shop.jpg');
+  const file = path.join(cacheDir, 'shop_v2.jpg');
   if (fs.existsSync(file)) return file;
   // [UPGRADED V28] Product-first neon shop: each item has its own visual card, name and price.
   // Smooth visual mode: standard 800x1480 output keeps the full shop layout while reducing render cost.
@@ -966,14 +966,15 @@ async function generateShopCanvas() {
   card(52, 223, 345, 128, '#ffd34f', '👑', 'VIP VERIFIED BADGE', '1,000 COINS', 'ELITE PROFILE');
   card(413, 223, 335, 128, '#ffb83f', '👑', 'ROYALTY PROFILE FRAME', '500 COINS', 'ROYAL CROWN • GOLD FILIGREE');
 
-  panel(35, 384, 730, 550, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
+  panel(35, 384, 730, 562, '#e45bff', '💎 NAME EFFECTS • PROFILE STYLE');
   const effects = [
     ['🌈','RAINBOW','5,000c','#ff64d9'], ['✨','SPARKLE','10,000c','#d7a0ff'], ['💖','HEART','2,500c','#ff62b5'],
     ['🔥','FIRE','2,500c','#ff8748'], ['❄️','ICE','2,500c','#62eaff'], ['⚡','NEON','3,000c','#4affff'],
     ['🌸','BLOSSOM','2,000c','#ffa0dc'], ['🖤','DARK','2,500c','#b99bff'], ['🔴','RED','1,000c','#ff5555'],
-    ['🔵','BLUE','1,000c','#59aaff'], ['🟢','GREEN','1,000c','#65f3a2'], ['🟡','YELLOW','1,000c','#ffe45c']
+    ['🔵','BLUE','1,000c','#59aaff'], ['🟢','GREEN','1,000c','#65f3a2'], ['🟡','YELLOW','1,000c','#ffe45c'],
+    ['👑','GOLD','4,000c','#ffd34f'], ['😈','DEMON','4,000c','#ff4545']
   ];
-  const ew = 224, eh = 120, ex = [52, 288, 524], ey = [431, 555, 679, 803];
+  const ew = 224, eh = 96, ex = [52, 288, 524], ey = [425, 526, 627, 728, 829];
   effects.forEach((e, i) => card(ex[i % 3], ey[Math.floor(i / 3)], ew, eh, e[3], e[0], e[1], e[2], 'NAME EFFECT'));
 
   panel(35, 952, 730, 300, '#55efff', '🏠 HOUSE COLLECTION • UPGRADE YOUR HOME');
