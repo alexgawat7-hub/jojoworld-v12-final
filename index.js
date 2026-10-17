@@ -357,6 +357,33 @@ function getProfileLevelStats(totalXp = 0) {
   return { totalXp: xp, level, currentXp, nextLevelXp, progress: currentXp / nextLevelXp };
 }
 
+
+// ACHIEVEMENTS & TROPHY SHOWCASE: derived from existing saved user stats.
+// This adds no new collection and does not alter wallet or payment logic.
+function getProfileAchievements(user = {}) {
+  const levelStats = getProfileLevelStats(user.xp);
+  const coins = Math.max(0, Number(user.coins) || 0);
+  const referrals = Math.max(0, Number(user.refCount) || 0);
+  const scatterWins = Math.max(0, Number(user.scatterWins) || 0);
+  const views = Math.max(0, Number(user.views) || 0);
+  const houseTier = getHouseTier(user.house);
+  const hasEffect = Boolean(user.nameEffect && user.nameEffect !== 'none');
+  return [
+    { id: 'registered', title: 'First Steps', icon: '🌱', description: 'Become a registered JojoWorld member', unlocked: user.registered === true },
+    { id: 'level5', title: 'Rising Star', icon: '⭐', description: 'Reach Level 5', unlocked: levelStats.level >= 5 },
+    { id: 'level10', title: 'Elite Climber', icon: '🌟', description: 'Reach Level 10', unlocked: levelStats.level >= 10 },
+    { id: 'coins1000', title: 'Coin Collector', icon: '🪙', description: 'Hold 1,000 coins or more', unlocked: coins >= 1000 },
+    { id: 'coins10000', title: 'Treasure Keeper', icon: '💰', description: 'Hold 10,000 coins or more', unlocked: coins >= 10000 },
+    { id: 'house', title: 'Homeowner', icon: '🏠', description: 'Own a JojoWorld house', unlocked: houseTier >= 1 },
+    { id: 'mansion', title: 'Property Tycoon', icon: '🏰', description: 'Own a mansion or building', unlocked: houseTier >= 3 },
+    { id: 'referral', title: 'Community Builder', icon: '🤝', description: 'Invite at least 3 registered members', unlocked: referrals >= 3 },
+    { id: 'scatter', title: 'Lucky Winner', icon: '🎰', description: 'Win 5 Scatter games', unlocked: scatterWins >= 5 },
+    { id: 'style', title: 'Style Icon', icon: '✨', description: 'Equip a name effect', unlocked: hasEffect },
+    { id: 'vip', title: 'VIP Elite', icon: '👑', description: 'Own the VIP profile badge', unlocked: Boolean(user.vip || String(user.badge || '').toLowerCase().includes('vip')) },
+    { id: 'profileviews', title: 'In the Spotlight', icon: '📸', description: 'Reach 10 profile views', unlocked: views >= 10 }
+  ];
+}
+
 function drawHouseArt(ctx, house, x, y, w, h) {
   const key = String(house || 'none').toLowerCase();
   const palette = {
@@ -2302,6 +2329,25 @@ A new user successfully registered using your link! 🎁
           const xpBarFilled = Math.floor(levelStats.progress * 10);
           const xpBar = "🟩".repeat(xpBarFilled) + "⬜".repeat(10 - xpBarFilled);
           send(psid, `🌟 JOJOWORLD LEVEL STATUS\n━━━━━━━━━━━━━━━━━━━━\n🏆 Level: ${levelStats.level}\n✨ Total XP: ${levelStats.totalXp}\n📈 Progress: ${levelStats.currentXp} / ${levelStats.nextLevelXp} XP\n${xpBar}\n\n💬 Earn **5 XP** from eligible activity, with a 1-minute cooldown.\n🎯 Next level: ${levelStats.nextLevelXp - levelStats.currentXp} XP to go.`, [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+          ]);
+          continue;
+        }
+
+
+        // ACHIEVEMENTS / TROPHY SHOWCASE
+        if (["ACHIEVEMENTS", "ACHIEVEMENT", "TROPHIES", "TROPHY", "MY BADGES"].includes(upperRaw.trim())) {
+          const achievements = getProfileAchievements(user);
+          const unlocked = achievements.filter(item => item.unlocked);
+          const locked = achievements.filter(item => !item.unlocked);
+          const showcase = unlocked.length
+            ? unlocked.map(item => item.icon + " " + item.title).join("\n")
+            : "Wala pang unlocked trophy — kaya mo 'yan, boss!";
+          const nextGoals = locked.slice(0, 3).map(item => "🔒 " + item.title + " — " + item.description).join("\n");
+          const message = "🏆 JOJOWORLD • TROPHY SHOWCASE\n━━━━━━━━━━━━━━━━━━━━\n✨ Unlocked: " + unlocked.length + " / " + achievements.length + "\n\n" + showcase + (nextGoals ? "\n\n🎯 NEXT TROPHIES\n" + nextGoals : "\n\n👑 Perfect collection! All trophies unlocked!");
+          send(psid, message, [
+            { content_type: "text", title: "🌟 My Level / XP", payload: "LEVEL" },
             { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
             { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
           ]);
