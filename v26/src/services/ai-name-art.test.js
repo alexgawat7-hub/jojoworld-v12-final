@@ -6,6 +6,7 @@ const path = require('node:path');
 const {
   EFFECT_PROMPTS,
   getCachedNameEffectArtwork,
+  restoreCachedNameEffectArtwork,
   getNameEffectArtwork
 } = require('./ai-name-art');
 
@@ -67,6 +68,31 @@ test('restores artwork from persistent storage without an API key', async () => 
   }
 });
 
+
+test('restores profile artwork from persistent storage without calling the paid provider', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-profile-art-'));
+  const stored = Buffer.alloc(2048, 6);
+  try {
+    const result = await restoreCachedNameEffectArtwork('demon', dir, {
+      loadFromStore: async effect => { assert.equal(effect, 'demon'); return stored; }
+    });
+    assert.equal(result, path.join(dir, 'ai_name_art_v1_demon.png'));
+    assert.deepEqual(fs.readFileSync(result), stored);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('profile artwork restore does not generate or replace artwork when durable cache is missing', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-profile-art-miss-'));
+  try {
+    const result = await restoreCachedNameEffectArtwork('gold', dir, { loadFromStore: async () => null });
+    assert.equal(result, null);
+    assert.deepEqual(fs.readdirSync(dir), []);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('discards an incomplete local cache and restores the durable copy', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jojoworld-ai-art-recover-'));
