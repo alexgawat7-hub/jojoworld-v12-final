@@ -346,6 +346,17 @@ const FLEX_BADGES = { rainbow: '🌈 [RARE]', sparkle: '✨ [MYTHIC]', heart: '�
 function getHouseTier(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.tier ?? 0; }
 function getHouseValue(house = 'none') { return HOUSE_CONFIG[String(house).toLowerCase()]?.value ?? 0; }
 
+// PROFILE LEVEL + XP: every level requires 100 more XP than the previous one.
+// Total XP is stored on the existing user data object, so MongoDB/local persistence stays compatible.
+function getProfileLevelStats(totalXp = 0) {
+  const xp = Math.max(0, Math.min(1000000000, Math.floor(Number(totalXp) || 0)));
+  const level = Math.floor((Math.sqrt(1 + (8 * xp) / 100) - 1) / 2) + 1;
+  const xpSpent = (100 * (level - 1) * level) / 2;
+  const currentXp = xp - xpSpent;
+  const nextLevelXp = level * 100;
+  return { totalXp: xp, level, currentXp, nextLevelXp, progress: currentXp / nextLevelXp };
+}
+
 function drawHouseArt(ctx, house, x, y, w, h) {
   const key = String(house || 'none').toLowerCase();
   const palette = {
@@ -671,8 +682,25 @@ async function generateProfileCanvas(user) {
   chip(490,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
-  const stats=[{x:28,w:235,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},{x:282,w:235,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},{x:536,w:236,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}];
-  stats.forEach(s=>{panel(s.x,438,s.w,94,'#344777');label(s.title,s.x+18,468,13,'#9fb4d6');ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 27px Sans';ctx.fillText(s.value,s.x+18,507);});
+  const levelStats = getProfileLevelStats(user.xp);
+  const stats=[
+    {x:28,w:174,title:'COINS',value:String(Number(user.coins)||0),color:'#ffd875'},
+    {x:218,w:174,title:'LEVEL / XP',value:'LVL '+levelStats.level,color:'#7dffb0',level:true},
+    {x:408,w:174,title:'NET WORTH',value:String(getNetWorth(user)),color:'#a9c8ff'},
+    {x:598,w:174,title:'PROFILE VIEWS',value:String(Number(user.views)||0),color:'#7deaff'}
+  ];
+  stats.forEach(s=>{
+    panel(s.x,438,s.w,94,'#344777');
+    label(s.title,s.x+13,s.level?460:468,12,'#9fb4d6');
+    ctx.textAlign='left';ctx.fillStyle=s.color;ctx.font='bold 22px Sans';ctx.fillText(s.value,s.x+13,s.level?488:507);
+    if(s.level){
+      label(levelStats.currentXp+' / '+levelStats.nextLevelXp+' XP',s.x+13,504,10,'#c6d5f0');
+      ctx.save();rr(s.x+13,512,s.w-26,7,4);ctx.fillStyle='#0a1124';ctx.fill();
+      const fillWidth=Math.max(0,(s.w-26)*levelStats.progress);
+      if(fillWidth>0){const xpGradient=ctx.createLinearGradient(s.x+13,512,s.x+13+fillWidth,519);xpGradient.addColorStop(0,'#7dffb0');xpGradient.addColorStop(1,'#35eaff');ctx.fillStyle=xpGradient;rr(s.x+13,512,fillWidth,7,4);ctx.fill();}
+      ctx.restore();
+    }
+  });
   const detailAccent = frameName!=='None' ? frameColor : (effect!=='none' ? (effectGlow[effect]||colors[0]) : '#668cff');
   panel(28,550,744,280,detailAccent);
   // PROFILE DETAILS redesign: six luminous mini-cards instead of a plain text list.
@@ -1762,6 +1790,8 @@ app.post('/webhook', async (req, res) => {
             giftsShowcase: "None yet",
             lastDaily: 0,
             lastSpin: 0,
+            xp: 0,
+            lastXpAt: 0,
             refCount: 0,
             views: 0,
             theme: "Default",
@@ -1836,6 +1866,30 @@ app.post('/webhook', async (req, res) => {
         if (isActiveChatLinkMessage) {
           send(psid, "⛔ Bawal mag-send ng link habang nasa active chat para maiwasan ang scam at bentahan ng coins. Mag-chat gamit ang text na walang link.");
           continue;
+        }
+
+        // Award a small amount of XP for genuine activity, with a per-user 60-second cooldown.
+        // The cooldown is persisted in the same user document to discourage message-spam farming.
+        if (user.registered === true && typeof rawText === "string" && rawText.trim()) {
+          const xpNow = Date.now();
+          const lastXpAt = Math.max(0, Number(user.lastXpAt) || 0);
+          if (xpNow - lastXpAt >= 60000) {
+            const previousXp = user.xp;
+            const previousLastXpAt = user.lastXpAt;
+            const beforeLevel = getProfileLevelStats(user.xp).level;
+            user.xp = getProfileLevelStats(user.xp).totalXp + 5;
+            user.lastXpAt = xpNow;
+            const afterLevel = getProfileLevelStats(user.xp).level;
+            if (!await saveUserToDB(psid, { saveJackpot: false })) {
+              if (previousXp === undefined) delete user.xp;
+              else user.xp = previousXp;
+              if (previousLastXpAt === undefined) delete user.lastXpAt;
+              else user.lastXpAt = previousLastXpAt;
+              console.warn("[PROFILE XP] Could not persist XP award; user data was restored.");
+            } else if (afterLevel > beforeLevel) {
+              send(psid, `🎉 LEVEL UP! You reached **Level ${afterLevel}**!\n✨ Keep chatting to earn more XP and unlock higher levels.`);
+            }
+          }
         }
 
         let cleanText = sanitizeInput(rawText);
@@ -2242,6 +2296,18 @@ A new user successfully registered using your link! 🎁
           continue;
         }
 
+        // PROFILE LEVEL / XP STATUS
+        if (["LEVEL", "XP", "MY LEVEL", "LEVEL STATUS"].includes(upperRaw.trim())) {
+          const levelStats = getProfileLevelStats(user.xp);
+          const xpBarFilled = Math.floor(levelStats.progress * 10);
+          const xpBar = "🟩".repeat(xpBarFilled) + "⬜".repeat(10 - xpBarFilled);
+          send(psid, `🌟 JOJOWORLD LEVEL STATUS\n━━━━━━━━━━━━━━━━━━━━\n🏆 Level: ${levelStats.level}\n✨ Total XP: ${levelStats.totalXp}\n📈 Progress: ${levelStats.currentXp} / ${levelStats.nextLevelXp} XP\n${xpBar}\n\n💬 Earn **5 XP** from eligible activity, with a 1-minute cooldown.\n🎯 Next level: ${levelStats.nextLevelXp - levelStats.currentXp} XP to go.`, [
+            { content_type: "text", title: "👤 View Profile", payload: "PROFILE" },
+            { content_type: "text", title: "↩️ Main Menu", payload: "MENU" }
+          ]);
+          continue;
+        }
+
         // MAIN MENU ROUTING
         if (cleanText === "menu" || upperRaw === "MENU") {
           const previousMenuState = { currentPage: user.currentPage, state: user.state, activeMatchPsid: user.activeMatchPsid };
@@ -2270,7 +2336,7 @@ A new user successfully registered using your link! 🎁
           }
           try {
             const profileImage = await generateProfileCanvas({ ...user, id: psid });
-            await sendImage(psid, profileImage, `👑✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 • 𝐕𝐈𝐒𝐔𝐀𝐋 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 ✨👑\n💎 Your equipped shop items, proudly displayed.\n⚡ Use the buttons below to customize your profile.`, [
+            await sendImage(psid, profileImage, `👑✨ 𝐉𝐎𝐉𝐎𝐖𝐎𝐑𝐋𝐃 • 𝐕𝐈𝐒𝐔𝐀𝐋 𝐏𝐑𝐎𝐅𝐈𝐋𝐄 ✨👑\n💎 Your equipped shop items, proudly displayed.\n🌟 Type LEVEL to check your XP progress.\n⚡ Use the buttons below to customize your profile.`, [
               { content_type: "text", title: "✏️ Edit Profile", payload: "EDIT_PROFILE_MENU" },
               { content_type: "text", title: "♈ Set Zodiac", payload: "SET_ZODIAC_MENU" },
               { content_type: "text", title: "🎯 Set Goal", payload: "SET_GOAL_MENU" },
