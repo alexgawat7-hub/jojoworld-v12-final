@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check v26/src/security/paymongo.js && node --check v26/src/security/paymongo.test.js && node --check v26/src/services/gifts.js && node --check v26/src/services/gifts.test.js && node --check v26/src/security/messenger.js && node --check v26/src/security/messenger.test.js",
+    "check": "node --check index.js && node --check v26/src/services/ai-name-art.js && node --check v26/src/services/ai-name-art.test.js && node --check v26/src/security/paymongo.js && node --check v26/src/security/paymongo.test.js && node --check v26/src/services/gifts.js && node --check v26/src/services/gifts.test.js && node --check v26/src/security/messenger.js && node --check v26/src/security/messenger.test.js",
     "test": "node --test v26/src/security/paymongo.test.js v26/src/services/gifts.test.js v26/src/security/messenger.test.js"
   },
   "dependencies": {
