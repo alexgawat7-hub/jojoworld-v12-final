@@ -17,7 +17,7 @@ const { Readable } = require('stream');
 const { verifyPayMongoSignature } = require('./v26/src/security/paymongo');
 const { verifyMessengerSignature } = require('./v26/src/security/messenger');
 const { GiftHubError, sendGift: applyGift, renderGiftCatalog } = require('./v26/src/services/gifts');
-const { isConfigured: isAINameArtConfigured, getCachedNameEffectArtwork, getNameEffectArtwork } = require('./v26/src/services/ai-name-art');
+const { isConfigured: isAINameArtConfigured, getCachedNameEffectArtwork, restoreCachedNameEffectArtwork, getNameEffectArtwork } = require('./v26/src/services/ai-name-art');
 
 // [GLOBAL TEXT CLEANER] Remove private-use icon glyphs and unsupported symbols
 // before dynamic user text is drawn on Canvas, for every account.
@@ -627,7 +627,8 @@ async function generateProfileCanvas(user) {
   panel(28,118,744,300,goldFrame?'#f2c65b':'#4656a0');
   // Apply the pre-generated AI artwork behind the equipped name effect when available.
   // Profile rendering only reads the cache; it never triggers a paid generation request.
-  const profileArtFile = effect !== 'none' ? getCachedNameEffectArtwork(effect, cacheDir) : null;
+  // Restore only previously saved artwork from MongoDB; profile rendering never triggers paid generation.
+  const profileArtFile = effect !== 'none' ? await restoreCachedNameEffectArtwork(effect, cacheDir, { loadFromStore: loadAINameArtFromMongo }) : null;
   if (profileArtFile) {
     try {
       const profileArt = await loadImage(profileArtFile);
