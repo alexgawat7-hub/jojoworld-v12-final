@@ -698,7 +698,6 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle='#fff4c2';ctx.font='bold 10px Sans';ctx.fillText('VIP ELITE MEMBER',400,235);ctx.restore();
   }
   // [PROFILE FLEX BOOST] Clearly label currently applied cosmetics on the profile card.
-  const effectLabel = effect !== 'none' ? effect.replace(/[^a-z0-9 ]/g,' ').toUpperCase() : 'DEFAULT';
   const frameLabel = frameName.toUpperCase();
   const chip = (x,y,w,textValue,color) => {
     ctx.save();ctx.shadowColor=color;ctx.shadowBlur=10;
@@ -706,8 +705,7 @@ async function generateProfileCanvas(user) {
     ctx.fillStyle=grad;rr(x,y,w,30,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;rr(x,y,w,30,10);ctx.stroke();
     ctx.shadowBlur=0;ctx.fillStyle=color;ctx.font='bold 12px Sans';ctx.textAlign='left';ctx.fillText(textValue.slice(0,34),x+10,y+19);ctx.restore();
   };
-  chip(270,267,210,'NAME FX: '+effectLabel,effect==='none'?'#9fb4d6':(effectGlow[effect]||colors[0]));
-  chip(490,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
+  chip(270,267,240,'FRAME: '+frameLabel,frameStyle.equipped?frameColor:'#9fb4d6');
   // [GLOBAL PROFILE CLEANUP] Keep the identity header limited to the name and verified emblem.
   // Location, zodiac, goal and frame details appear only in PROFILE DETAILS below.
   const levelStats = getProfileLevelStats(user.xp);
